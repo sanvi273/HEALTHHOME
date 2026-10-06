@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "241364579734",
+    "project_id": "healthhome-c6346",
+    "storage_bucket": "healthhome-c6346.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:241364579734:android:0087123d41ed1924a6d9b7",
+        "android_client_info": {
+          "package_name": "com.example.healthhome"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbkBPZly5nxw7HyFGkMMH5LH7zrOjH0NM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

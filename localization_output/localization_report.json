@@ -1,0 +1,388 @@
+{
+  "total_strings": 60,
+  "files": {
+    "lib\\lab_dashboard.dart": [
+      {
+        "line": 481,
+        "key": "inProgress",
+        "text": "In Progress"
+      },
+      {
+        "line": 1181,
+        "key": "collectorIsOnTheWay",
+        "text": "Collector is on the way"
+      },
+      {
+        "line": 1537,
+        "key": "errorE",
+        "text": "Error: $e"
+      },
+      {
+        "line": 3296,
+        "key": "collectorName",
+        "text": "Collector Name"
+      },
+      {
+        "line": 3884,
+        "key": "testNameIsRequired",
+        "text": "Test name is required"
+      },
+      {
+        "line": 3893,
+        "key": "enterAValidPrice",
+        "text": "Enter a valid price"
+      },
+      {
+        "line": 3905,
+        "key": "labIdNotFound",
+        "text": "Lab ID not found"
+      },
+      {
+        "line": 4022,
+        "key": "testName",
+        "text": "Test Name *"
+      },
+      {
+        "line": 4047,
+        "key": "price",
+        "text": "Price *"
+      },
+      {
+        "line": 4058,
+        "key": "sampleType",
+        "text": "Sample Type"
+      },
+      {
+        "line": 4069,
+        "key": "reportTime",
+        "text": "Report Time"
+      },
+      {
+        "line": 4155,
+        "key": "deleteLabTest",
+        "text": "Delete Lab Test"
+      },
+      {
+        "line": 4196,
+        "key": "labTestDeletedSuccessfully",
+        "text": "Lab test deleted successfully"
+      }
+    ],
+    "lib\\lab_profile_setup.dart": [
+      {
+        "line": 95,
+        "key": "labProfileSaved",
+        "text": "Lab Profile Saved"
+      }
+    ],
+    "lib\\login_screen.dart": [
+      {
+        "line": 376,
+        "key": "addressType",
+        "text": "Address Type"
+      }
+    ],
+    "lib\\pharmacy_dashboard.dart": [
+      {
+        "line": 245,
+        "key": "addDeliveryPartner",
+        "text": "Add Delivery Partner"
+      },
+      {
+        "line": 255,
+        "key": "partnerName",
+        "text": "Partner Name"
+      },
+      {
+        "line": 276,
+        "key": "phoneNumber",
+        "text": "Phone Number"
+      },
+      {
+        "line": 457,
+        "key": "deliveryPartnerRemoved",
+        "text": "Delivery partner removed."
+      },
+      {
+        "line": 2058,
+        "key": "addDeliveryPartner",
+        "text": "Add Delivery Partner"
+      },
+      {
+        "line": 2068,
+        "key": "partnerName",
+        "text": "Partner Name"
+      },
+      {
+        "line": 2089,
+        "key": "phoneNumber",
+        "text": "Phone Number"
+      },
+      {
+        "line": 2150,
+        "key": "thisDeliveryPartnerAlreadyExists",
+        "text": "This delivery partner already exists."
+      },
+      {
+        "line": 2178,
+        "key": "deliveryPartnerAdded",
+        "text": "Delivery partner added."
+      },
+      {
+        "line": 2193,
+        "key": "orderIdNotFound",
+        "text": "Order ID not found."
+      },
+      {
+        "line": 2343,
+        "key": "selectDeliveryPartner",
+        "text": "Select Delivery Partner"
+      },
+      {
+        "line": 2349,
+        "key": "addPartner",
+        "text": "Add Partner"
+      },
+      {
+        "line": 2530,
+        "key": "addDeliveryPartner",
+        "text": "Add Delivery Partner"
+      },
+      {
+        "line": 3245,
+        "key": "editPartner",
+        "text": "Edit Partner"
+      },
+      {
+        "line": 3787,
+        "key": "shopType",
+        "text": "Shop Type"
+      },
+      {
+        "line": 3849,
+        "key": "addDeliveryPartner",
+        "text": "Add Delivery Partner"
+      }
+    ],
+    "lib\\screens\\patient\\appointments_page.dart": [
+      {
+        "line": 761,
+        "key": "appointmentDetails",
+        "text": "Appointment Details"
+      }
+    ],
+    "lib\\screens\\patient\\book_appointment_page.dart": [
+      {
+        "line": 371,
+        "key": "paymentCancelled",
+        "text": "Payment cancelled"
+      }
+    ],
+    "lib\\screens\\patient\\book_lab_test_page.dart": [
+      {
+        "line": 658,
+        "key": "searchTests",
+        "text": "Search tests..."
+      },
+      {
+        "line": 886,
+        "key": "testDetailsNotAvailable",
+        "text": "Test details not available."
+      },
+      {
+        "line": 1390,
+        "key": "homeCollection",
+        "text": "Home Collection"
+      },
+      {
+        "line": 1404,
+        "key": "visitLaboratory",
+        "text": "Visit Laboratory"
+      }
+    ],
+    "lib\\screens\\patient\\doctor_list_page.dart": [
+      {
+        "line": 110,
+        "key": "searchDoctor",
+        "text": "Search Doctor"
+      }
+    ],
+    "lib\\screens\\patient\\doctor_page.dart": [
+      {
+        "line": 38,
+        "key": "searchDoctors",
+        "text": "Search doctors..."
+      },
+      {
+        "line": 184,
+        "key": "labTests",
+        "text": "Lab Tests"
+      }
+    ],
+    "lib\\screens\\patient\\doctor_profile_page.dart": [
+      {
+        "line": 55,
+        "key": "doctorProfile",
+        "text": "Doctor Profile"
+      }
+    ],
+    "lib\\screens\\patient\\lab_booking_details_page.dart": [
+      {
+        "line": 130,
+        "key": "22Jun2024",
+        "text": "22 Jun 2024"
+      },
+      {
+        "line": 176,
+        "key": "labExecutive",
+        "text": "Lab Executive"
+      }
+    ],
+    "lib\\screens\\patient\\lab_cart_page.dart": [
+      {
+        "line": 96,
+        "key": "unableToLoadLaboratoriesE",
+        "text": "Unable to load laboratories: $e"
+      },
+      {
+        "line": 443,
+        "key": "selectedLabTests",
+        "text": "Selected Lab Tests"
+      },
+      {
+        "line": 518,
+        "key": "selectLaboratory",
+        "text": "Select Laboratory"
+      },
+      {
+        "line": 626,
+        "key": "collectionMethod",
+        "text": "Collection Method"
+      },
+      {
+        "line": 631,
+        "key": "homeCollection",
+        "text": "Home Collection"
+      },
+      {
+        "line": 640,
+        "key": "visitLaboratory",
+        "text": "Visit Laboratory"
+      },
+      {
+        "line": 744,
+        "key": "collectionAddress",
+        "text": "Collection Address"
+      },
+      {
+        "line": 770,
+        "key": "additionalNotes",
+        "text": "Additional Notes"
+      },
+      {
+        "line": 776,
+        "key": "optionalNotes",
+        "text": "Optional notes"
+      }
+    ],
+    "lib\\screens\\patient\\lab_orders_page.dart": [
+      {
+        "line": 108,
+        "key": "unableToLoadLabOrdersE",
+        "text": "Unable to load lab orders: $e"
+      },
+      {
+        "line": 140,
+        "key": "labOrderIdNotFound",
+        "text": "Lab Order ID not found."
+      }
+    ],
+    "lib\\screens\\patient\\lab_order_tracking_page.dart": [
+      {
+        "line": 56,
+        "key": "unableToLoadLabOrderE",
+        "text": "Unable to load lab order: $e"
+      }
+    ],
+    "lib\\screens\\patient\\order_medicines_page.dart": [
+      {
+        "line": 107,
+        "key": "unableToLoadMedicinesE",
+        "text": "Unable to load medicines: $e"
+      },
+      {
+        "line": 390,
+        "key": "viewCart",
+        "text": "VIEW CART"
+      },
+      {
+        "line": 1393,
+        "key": "errorE",
+        "text": "Error: $e"
+      },
+      {
+        "line": 4214,
+        "key": "unableToLoadOrderE",
+        "text": "Unable to load order: $e"
+      }
+    ],
+    "lib\\screens\\patient\\patient_main.dart": [
+      {
+        "line": 59,
+        "key": "labTests",
+        "text": "Lab Tests"
+      }
+    ],
+    "lib\\screens\\patient\\pharmacy_page.dart": [
+      {
+        "line": 80,
+        "key": "medicineDelivery",
+        "text": "Medicine Delivery"
+      },
+      {
+        "line": 81,
+        "key": "orderMedicines",
+        "text": "Order Medicines"
+      },
+      {
+        "line": 105,
+        "key": "uploadPrescription",
+        "text": "Upload Prescription"
+      },
+      {
+        "line": 106,
+        "key": "uploadRx",
+        "text": "Upload Rx"
+      }
+    ],
+    "lib\\screens\\patient\\profile_setup_page.dart": [
+      {
+        "line": 299,
+        "key": "a",
+        "text": "A+"
+      },
+      {
+        "line": 309,
+        "key": "b",
+        "text": "B+"
+      },
+      {
+        "line": 319,
+        "key": "o",
+        "text": "O+"
+      },
+      {
+        "line": 329,
+        "key": "ab",
+        "text": "AB+"
+      }
+    ],
+    "lib\\screens\\patient\\reports_page.dart": [
+      {
+        "line": 1033,
+        "key": "unableToOpenPdfE",
+        "text": "Unable to open PDF: $e"
+      }
+    ]
+  }
+}

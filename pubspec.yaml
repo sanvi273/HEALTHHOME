@@ -1,0 +1,107 @@
+name: healthhome
+
+description: "HealthHome Healthcare Application"
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Firebase
+  firebase_core: ^3.15.2
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.12
+  firebase_storage: ^12.4.10
+  firebase_messaging: ^15.2.10
+
+  # OneSignal
+  onesignal_flutter: ^5.3.3
+
+  # State Management
+  provider: ^6.1.2
+
+  # UI
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.10+1
+  smooth_page_indicator: ^1.2.0
+  curved_navigation_bar: ^1.0.6
+
+  # Image Picker
+  image_picker: ^1.1.2
+  file_picker: ^8.0.0
+
+  # Cloudinary
+  cloudinary_public: ^0.23.1
+
+  # Payment Gateway
+  razorpay_flutter: ^1.4.5
+
+  # Video Consultation
+  agora_rtc_engine: ^6.6.4
+
+  # Google Maps
+  google_maps_flutter: ^2.13.1
+
+  # Location & Address
+  geolocator: ^13.0.2
+  geocoding: ^5.0.0
+
+
+  # Date & Time
+  intl: any
+  table_calendar: ^3.1.2
+
+   # Local Storage
+  shared_preferences: ^2.5.5
+
+  # Localization
+  easy_localization: ^3.0.8
+  easy_localization_loader: ^2.0.0
+  auto_app_translate: ^0.1.18
+
+  # Network & File Handling
+  dio: ^5.4.3
+  share_plus: ^10.0.2
+  path_provider: ^2.1.4
+  open_filex: ^4.7.0
+  syncfusion_flutter_pdfviewer: ^30.2.7
+
+  # Notifications
+  flutter_local_notifications: ^17.2.3
+
+  # HTTP & URL
+  http: ^1.6.0
+  url_launcher: ^6.3.2
+  tdlib_ex: ^0.43.0
+  sendotp_flutter_sdk: ^0.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - lib/l10n/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"

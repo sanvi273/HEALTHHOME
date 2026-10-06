@@ -1,0 +1,13 @@
+# This file configures the Dart analyzer.
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - telegram-x-reference/**
+    - android/app/src/main/cpp/tgvoip/**
+
+linter:
+  rules:
+    # avoid_print: false
+    # prefer_single_quotes: true

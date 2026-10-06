@@ -1,0 +1,558 @@
+{
+  "total_dart_files": 50,
+  "potential_ui_strings": 60,
+  "new_english_keys": 0,
+  "new_hindi_keys": 0,
+  "new_gujarati_keys": 0,
+  "strings": [
+    {
+      "text": "Collector is on the way",
+      "key": "collectorIsOnTheWay",
+      "file": "lib/lab_dashboard.dart",
+      "line": 1181,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:1181"
+      ]
+    },
+    {
+      "text": "Error: $e",
+      "key": "errorE",
+      "file": "lib/lab_dashboard.dart",
+      "line": 1537,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:1537",
+        "lib/screens/patient/order_medicines_page.dart:1393"
+      ]
+    },
+    {
+      "text": "Collector Name",
+      "key": "collectorName",
+      "file": "lib/lab_dashboard.dart",
+      "line": 3296,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:3296"
+      ]
+    },
+    {
+      "text": "Test name is required",
+      "key": "testNameIsRequired",
+      "file": "lib/lab_dashboard.dart",
+      "line": 3884,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:3884"
+      ]
+    },
+    {
+      "text": "Enter a valid price",
+      "key": "enterAValidPrice",
+      "file": "lib/lab_dashboard.dart",
+      "line": 3893,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:3893"
+      ]
+    },
+    {
+      "text": "Lab ID not found",
+      "key": "labIdNotFound",
+      "file": "lib/lab_dashboard.dart",
+      "line": 3905,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:3905"
+      ]
+    },
+    {
+      "text": "Test Name *",
+      "key": "testName",
+      "file": "lib/lab_dashboard.dart",
+      "line": 4022,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:4022"
+      ]
+    },
+    {
+      "text": "Price *",
+      "key": "price",
+      "file": "lib/lab_dashboard.dart",
+      "line": 4047,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:4047"
+      ]
+    },
+    {
+      "text": "Sample Type",
+      "key": "sampleType",
+      "file": "lib/lab_dashboard.dart",
+      "line": 4058,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:4058"
+      ]
+    },
+    {
+      "text": "Report Time",
+      "key": "reportTime",
+      "file": "lib/lab_dashboard.dart",
+      "line": 4069,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:4069"
+      ]
+    },
+    {
+      "text": "Delete Lab Test",
+      "key": "deleteLabTest",
+      "file": "lib/lab_dashboard.dart",
+      "line": 4155,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:4155"
+      ]
+    },
+    {
+      "text": "Lab test deleted successfully",
+      "key": "labTestDeletedSuccessfully",
+      "file": "lib/lab_dashboard.dart",
+      "line": 4196,
+      "all_occurrences": [
+        "lib/lab_dashboard.dart:4196"
+      ]
+    },
+    {
+      "text": "Lab Profile Saved",
+      "key": "labProfileSaved",
+      "file": "lib/lab_profile_setup.dart",
+      "line": 95,
+      "all_occurrences": [
+        "lib/lab_profile_setup.dart:95"
+      ]
+    },
+    {
+      "text": "Address Type",
+      "key": "addressType",
+      "file": "lib/login_screen.dart",
+      "line": 376,
+      "all_occurrences": [
+        "lib/login_screen.dart:376"
+      ]
+    },
+    {
+      "text": "Add Delivery Partner",
+      "key": "addDeliveryPartner",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 245,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:245",
+        "lib/pharmacy_dashboard.dart:2058",
+        "lib/pharmacy_dashboard.dart:2530",
+        "lib/pharmacy_dashboard.dart:3849"
+      ]
+    },
+    {
+      "text": "Partner Name",
+      "key": "partnerName",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 255,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:255",
+        "lib/pharmacy_dashboard.dart:2068"
+      ]
+    },
+    {
+      "text": "Phone Number",
+      "key": "phoneNumber",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 276,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:276",
+        "lib/pharmacy_dashboard.dart:2089"
+      ]
+    },
+    {
+      "text": "Delivery partner removed.",
+      "key": "deliveryPartnerRemoved",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 457,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:457"
+      ]
+    },
+    {
+      "text": "This delivery partner already exists.",
+      "key": "thisDeliveryPartnerAlreadyExists",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 2150,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:2150"
+      ]
+    },
+    {
+      "text": "Delivery partner added.",
+      "key": "deliveryPartnerAdded",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 2178,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:2178"
+      ]
+    },
+    {
+      "text": "Order ID not found.",
+      "key": "orderIdNotFound",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 2193,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:2193"
+      ]
+    },
+    {
+      "text": "Select Delivery Partner",
+      "key": "selectDeliveryPartner",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 2343,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:2343"
+      ]
+    },
+    {
+      "text": "Add Partner",
+      "key": "addPartner",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 2349,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:2349"
+      ]
+    },
+    {
+      "text": "Edit Partner",
+      "key": "editPartner",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 3245,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:3245"
+      ]
+    },
+    {
+      "text": "Shop Type",
+      "key": "shopType",
+      "file": "lib/pharmacy_dashboard.dart",
+      "line": 3787,
+      "all_occurrences": [
+        "lib/pharmacy_dashboard.dart:3787"
+      ]
+    },
+    {
+      "text": "$title :",
+      "key": null,
+      "file": "lib/prescription_screen.dart",
+      "line": 2565,
+      "all_occurrences": [
+        "lib/prescription_screen.dart:2565",
+        "lib/screens/patient/book_lab_test_page.dart:2266"
+      ]
+    },
+    {
+      "text": "हिंदी",
+      "key": null,
+      "file": "lib/role_selection_screen.dart",
+      "line": 259,
+      "all_occurrences": [
+        "lib/role_selection_screen.dart:259"
+      ]
+    },
+    {
+      "text": "ગુજરાતી",
+      "key": null,
+      "file": "lib/role_selection_screen.dart",
+      "line": 273,
+      "all_occurrences": [
+        "lib/role_selection_screen.dart:273"
+      ]
+    },
+    {
+      "text": "Appointment Details",
+      "key": "appointmentDetails",
+      "file": "lib/screens/patient/appointments_page.dart",
+      "line": 761,
+      "all_occurrences": [
+        "lib/screens/patient/appointments_page.dart:761"
+      ]
+    },
+    {
+      "text": "Payment cancelled",
+      "key": "paymentCancelled",
+      "file": "lib/screens/patient/book_appointment_page.dart",
+      "line": 371,
+      "all_occurrences": [
+        "lib/screens/patient/book_appointment_page.dart:371"
+      ]
+    },
+    {
+      "text": "Search tests...",
+      "key": "searchTests",
+      "file": "lib/screens/patient/book_lab_test_page.dart",
+      "line": 658,
+      "all_occurrences": [
+        "lib/screens/patient/book_lab_test_page.dart:658"
+      ]
+    },
+    {
+      "text": "Test details not available.",
+      "key": "testDetailsNotAvailable",
+      "file": "lib/screens/patient/book_lab_test_page.dart",
+      "line": 886,
+      "all_occurrences": [
+        "lib/screens/patient/book_lab_test_page.dart:886"
+      ]
+    },
+    {
+      "text": "Home Collection",
+      "key": "homeCollection",
+      "file": "lib/screens/patient/book_lab_test_page.dart",
+      "line": 1390,
+      "all_occurrences": [
+        "lib/screens/patient/book_lab_test_page.dart:1390",
+        "lib/screens/patient/lab_cart_page.dart:631"
+      ]
+    },
+    {
+      "text": "Visit Laboratory",
+      "key": "visitLaboratory",
+      "file": "lib/screens/patient/book_lab_test_page.dart",
+      "line": 1404,
+      "all_occurrences": [
+        "lib/screens/patient/book_lab_test_page.dart:1404",
+        "lib/screens/patient/lab_cart_page.dart:640"
+      ]
+    },
+    {
+      "text": "Search Doctor",
+      "key": "searchDoctor",
+      "file": "lib/screens/patient/doctor_list_page.dart",
+      "line": 110,
+      "all_occurrences": [
+        "lib/screens/patient/doctor_list_page.dart:110"
+      ]
+    },
+    {
+      "text": "Search doctors...",
+      "key": "searchDoctors",
+      "file": "lib/screens/patient/doctor_page.dart",
+      "line": 38,
+      "all_occurrences": [
+        "lib/screens/patient/doctor_page.dart:38"
+      ]
+    },
+    {
+      "text": "Doctor Profile",
+      "key": "doctorProfile",
+      "file": "lib/screens/patient/doctor_profile_page.dart",
+      "line": 55,
+      "all_occurrences": [
+        "lib/screens/patient/doctor_profile_page.dart:55"
+      ]
+    },
+    {
+      "text": "22 Jun 2024",
+      "key": "22Jun2024",
+      "file": "lib/screens/patient/lab_booking_details_page.dart",
+      "line": 130,
+      "all_occurrences": [
+        "lib/screens/patient/lab_booking_details_page.dart:130"
+      ]
+    },
+    {
+      "text": "Lab Executive",
+      "key": "labExecutive",
+      "file": "lib/screens/patient/lab_booking_details_page.dart",
+      "line": 176,
+      "all_occurrences": [
+        "lib/screens/patient/lab_booking_details_page.dart:176"
+      ]
+    },
+    {
+      "text": "Unable to load laboratories: $e",
+      "key": "unableToLoadLaboratoriesE",
+      "file": "lib/screens/patient/lab_cart_page.dart",
+      "line": 96,
+      "all_occurrences": [
+        "lib/screens/patient/lab_cart_page.dart:96"
+      ]
+    },
+    {
+      "text": "Selected Lab Tests",
+      "key": "selectedLabTests",
+      "file": "lib/screens/patient/lab_cart_page.dart",
+      "line": 443,
+      "all_occurrences": [
+        "lib/screens/patient/lab_cart_page.dart:443"
+      ]
+    },
+    {
+      "text": "Select Laboratory",
+      "key": "selectLaboratory",
+      "file": "lib/screens/patient/lab_cart_page.dart",
+      "line": 518,
+      "all_occurrences": [
+        "lib/screens/patient/lab_cart_page.dart:518"
+      ]
+    },
+    {
+      "text": "Collection Method",
+      "key": "collectionMethod",
+      "file": "lib/screens/patient/lab_cart_page.dart",
+      "line": 626,
+      "all_occurrences": [
+        "lib/screens/patient/lab_cart_page.dart:626"
+      ]
+    },
+    {
+      "text": "Collection Address",
+      "key": "collectionAddress",
+      "file": "lib/screens/patient/lab_cart_page.dart",
+      "line": 744,
+      "all_occurrences": [
+        "lib/screens/patient/lab_cart_page.dart:744"
+      ]
+    },
+    {
+      "text": "Additional Notes",
+      "key": "additionalNotes",
+      "file": "lib/screens/patient/lab_cart_page.dart",
+      "line": 770,
+      "all_occurrences": [
+        "lib/screens/patient/lab_cart_page.dart:770"
+      ]
+    },
+    {
+      "text": "Optional notes",
+      "key": "optionalNotes",
+      "file": "lib/screens/patient/lab_cart_page.dart",
+      "line": 776,
+      "all_occurrences": [
+        "lib/screens/patient/lab_cart_page.dart:776"
+      ]
+    },
+    {
+      "text": "Unable to load lab orders: $e",
+      "key": "unableToLoadLabOrdersE",
+      "file": "lib/screens/patient/lab_orders_page.dart",
+      "line": 108,
+      "all_occurrences": [
+        "lib/screens/patient/lab_orders_page.dart:108"
+      ]
+    },
+    {
+      "text": "Lab Order ID not found.",
+      "key": "labOrderIdNotFound",
+      "file": "lib/screens/patient/lab_orders_page.dart",
+      "line": 140,
+      "all_occurrences": [
+        "lib/screens/patient/lab_orders_page.dart:140"
+      ]
+    },
+    {
+      "text": "Unable to load lab order: $e",
+      "key": "unableToLoadLabOrderE",
+      "file": "lib/screens/patient/lab_order_tracking_page.dart",
+      "line": 56,
+      "all_occurrences": [
+        "lib/screens/patient/lab_order_tracking_page.dart:56"
+      ]
+    },
+    {
+      "text": "Unable to load medicines: $e",
+      "key": "unableToLoadMedicinesE",
+      "file": "lib/screens/patient/order_medicines_page.dart",
+      "line": 107,
+      "all_occurrences": [
+        "lib/screens/patient/order_medicines_page.dart:107"
+      ]
+    },
+    {
+      "text": "Unable to load order: $e",
+      "key": "unableToLoadOrderE",
+      "file": "lib/screens/patient/order_medicines_page.dart",
+      "line": 4214,
+      "all_occurrences": [
+        "lib/screens/patient/order_medicines_page.dart:4214"
+      ]
+    },
+    {
+      "text": "Medicine Delivery",
+      "key": "medicineDelivery",
+      "file": "lib/screens/patient/pharmacy_page.dart",
+      "line": 80,
+      "all_occurrences": [
+        "lib/screens/patient/pharmacy_page.dart:80"
+      ]
+    },
+    {
+      "text": "Order Medicines",
+      "key": "orderMedicines",
+      "file": "lib/screens/patient/pharmacy_page.dart",
+      "line": 81,
+      "all_occurrences": [
+        "lib/screens/patient/pharmacy_page.dart:81"
+      ]
+    },
+    {
+      "text": "Upload Prescription",
+      "key": "uploadPrescription",
+      "file": "lib/screens/patient/pharmacy_page.dart",
+      "line": 105,
+      "all_occurrences": [
+        "lib/screens/patient/pharmacy_page.dart:105"
+      ]
+    },
+    {
+      "text": "Upload Rx",
+      "key": "uploadRx",
+      "file": "lib/screens/patient/pharmacy_page.dart",
+      "line": 106,
+      "all_occurrences": [
+        "lib/screens/patient/pharmacy_page.dart:106"
+      ]
+    },
+    {
+      "text": "A+",
+      "key": "a",
+      "file": "lib/screens/patient/profile_setup_page.dart",
+      "line": 299,
+      "all_occurrences": [
+        "lib/screens/patient/profile_setup_page.dart:299"
+      ]
+    },
+    {
+      "text": "B+",
+      "key": "b",
+      "file": "lib/screens/patient/profile_setup_page.dart",
+      "line": 309,
+      "all_occurrences": [
+        "lib/screens/patient/profile_setup_page.dart:309"
+      ]
+    },
+    {
+      "text": "O+",
+      "key": "o",
+      "file": "lib/screens/patient/profile_setup_page.dart",
+      "line": 319,
+      "all_occurrences": [
+        "lib/screens/patient/profile_setup_page.dart:319"
+      ]
+    },
+    {
+      "text": "AB+",
+      "key": "ab",
+      "file": "lib/screens/patient/profile_setup_page.dart",
+      "line": 329,
+      "all_occurrences": [
+        "lib/screens/patient/profile_setup_page.dart:329"
+      ]
+    },
+    {
+      "text": "Unable to open PDF: $e",
+      "key": "unableToOpenPdfE",
+      "file": "lib/screens/patient/reports_page.dart",
+      "line": 1033,
+      "all_occurrences": [
+        "lib/screens/patient/reports_page.dart:1033"
+      ]
+    }
+  ]
+}
