@@ -1,0 +1,17 @@
+backend/node_modules/
+backend/.env
+frontend/build/
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/.pub-cache/
+frontend/android/.gradle/
+frontend/android/local.properties
+
+.vscode/
+.idea/
+
+*.log
+.DS_Store
+Thumbs.db
