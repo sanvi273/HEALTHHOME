@@ -8,21 +8,15 @@ import 'package:intl/intl.dart';
 
 import 'dart:async';
 
-
-
 import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
 
 import '../../services/telegram/AgoraVideoCallPage.dart';
 
-
-
 class AppointmentsPage extends StatefulWidget {
 
   const AppointmentsPage({super.key});
-
-
 
   @override
 
@@ -30,20 +24,13 @@ class AppointmentsPage extends StatefulWidget {
 
 }
 
-
-
 class _AppointmentsPageState extends State<AppointmentsPage> {
 
   List<dynamic> appointments = [];
 
-
-
   bool loading = true;
 
   int selectedTab = 0;
-
-
-
 
 // ============================================================
 
@@ -51,15 +38,11 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
 
 // ============================================================
 
-
-
 Map<String, dynamic>? readyConsultation;
 
 Timer? consultationTimer;
 
 bool checkingConsultation = false;
-
-
 
   final List<String> tabs = [
 
@@ -71,25 +54,17 @@ bool checkingConsultation = false;
 
   ];
 
-
-
   @override
 
 void initState() {
 
   super.initState();
 
-
-
   loadAppointments();
-
-
 
   // Check whether doctor has started a video consultation.
 
   checkReadyConsultation();
-
-
 
   // Keep checking while patient remains on this page.
 
@@ -107,15 +82,11 @@ void initState() {
 
 }
 
-
-
   // ============================================================
 
   // LOAD PATIENT APPOINTMENTS
 
   // ============================================================
-
-
 
   Future<void> loadAppointments() async {
 
@@ -129,19 +100,13 @@ void initState() {
 
     }
 
-
-
     try {
 
       final prefs = await SharedPreferences.getInstance();
 
-
-
       final String phone =
 
           prefs.getString("patientPhone") ?? "";
-
-
 
       print("================================");
 
@@ -151,13 +116,9 @@ void initState() {
 
       print("================================");
 
-
-
       if (phone.isEmpty) {
 
         print("❌ Patient phone not found");
-
-
 
         if (mounted) {
 
@@ -171,23 +132,15 @@ void initState() {
 
         }
 
-
-
         return;
 
       }
-
-
 
       final result =
 
           await ApiService.getPatientAppointments(phone);
 
-
-
       print("APPOINTMENTS API RESULT = $result");
-
-
 
       if (mounted) {
 
@@ -205,8 +158,6 @@ void initState() {
 
       print("❌ APPOINTMENT ERROR = $e");
 
-
-
       if (mounted) {
 
         setState(() {
@@ -223,37 +174,25 @@ void initState() {
 
   }
 
-
-
 // ============================================================
 
 // CHECK READY AGORA CONSULTATION
 
 // ============================================================
 
-
-
 Future<void> checkReadyConsultation() async {
 
   if (checkingConsultation) return;
 
-
-
   checkingConsultation = true;
-
-
 
   try {
 
     final prefs = await SharedPreferences.getInstance();
 
-
-
     final String phone =
 
         prefs.getString("patientPhone") ?? "";
-
-
 
     if (phone.isEmpty) {
 
@@ -261,17 +200,11 @@ Future<void> checkReadyConsultation() async {
 
     }
 
-
-
     final result =
 
         await ApiService.checkReadyConsultation(phone);
 
-
-
     if (!mounted) return;
-
-
 
     if (result != null) {
 
@@ -282,8 +215,6 @@ Future<void> checkReadyConsultation() async {
             Map<String, dynamic>.from(result);
 
       });
-
-
 
       print("================================");
 
@@ -331,8 +262,6 @@ Future<void> checkReadyConsultation() async {
 
   // ============================================================
 
-
-
   List<dynamic> get filteredAppointments {
 
     return appointments.where((appointment) {
@@ -347,19 +276,19 @@ Future<void> checkReadyConsultation() async {
 
               .toLowerCase();
 
-
-
       // UPCOMING
 
       // Pending + Accepted
 
       if (selectedTab == 0) {
+
         return status == "pending" ||
+
             status == "accepted" ||
+
             status == "upcoming";
+
       }
-
-
 
       // COMPLETED
 
@@ -368,8 +297,6 @@ Future<void> checkReadyConsultation() async {
         return status == "completed";
 
       }
-
-
 
       // CANCELLED
 
@@ -383,23 +310,17 @@ Future<void> checkReadyConsultation() async {
 
       }
 
-
-
       return false;
 
     }).toList();
 
   }
 
-
-
   // ============================================================
 
   // STATUS COLOR
 
   // ============================================================
-
-
 
   Color getStatusColor(String status) {
 
@@ -409,21 +330,15 @@ Future<void> checkReadyConsultation() async {
 
         return const Color(0xff4CAF50);
 
-
-
       case "completed":
 
         return const Color(0xffF0A000);
-
-
 
       case "rejected":
 
       case "cancelled":
 
         return const Color(0xffE53935);
-
-
 
       case "pending":
 
@@ -435,15 +350,11 @@ Future<void> checkReadyConsultation() async {
 
   }
 
-
-
   // ============================================================
 
   // STATUS BACKGROUND
 
   // ============================================================
-
-
 
   Color getStatusBackground(String status) {
 
@@ -451,15 +362,11 @@ Future<void> checkReadyConsultation() async {
 
   }
 
-
-
   // ============================================================
 
   // TRANSLATE STATUS
 
   // ============================================================
-
-
 
   String translateStatus(String status) {
 
@@ -469,31 +376,21 @@ Future<void> checkReadyConsultation() async {
 
         return "accepted".tr();
 
-
-
       case "completed":
 
         return "completed".tr();
-
-
 
       case "rejected":
 
         return "rejected".tr();
 
-
-
       case "cancelled":
 
         return "cancelled".tr();
 
-
-
       case "pending":
 
         return "pending".tr();
-
-
 
       default:
 
@@ -503,15 +400,11 @@ Future<void> checkReadyConsultation() async {
 
   }
 
-
-
   // ============================================================
 
   // FORMAT DATE
 
   // ============================================================
-
-
 
   String formatDate(dynamic date) {
 
@@ -521,11 +414,7 @@ Future<void> checkReadyConsultation() async {
 
     }
 
-
-
     final value = date.toString().trim();
-
-
 
     if (value.isEmpty) {
 
@@ -533,13 +422,9 @@ Future<void> checkReadyConsultation() async {
 
     }
 
-
-
     try {
 
       final parsedDate = DateTime.parse(value);
-
-
 
       return DateFormat(
 
@@ -555,15 +440,11 @@ Future<void> checkReadyConsultation() async {
 
   }
 
-
-
   // ============================================================
 
   // GET APPOINTMENT DATE
 
   // ============================================================
-
-
 
   String getAppointmentDate(
 
@@ -575,21 +456,15 @@ Future<void> checkReadyConsultation() async {
 
         appointment["appointmentDate"];
 
-
-
     return formatDate(date);
 
   }
-
-
 
   // ============================================================
 
   // GET APPOINTMENT TIME
 
   // ============================================================
-
-
 
   String getAppointmentTime(
 
@@ -601,29 +476,21 @@ Future<void> checkReadyConsultation() async {
 
         appointment["appointmentTime"];
 
-
-
     if (time == null) {
 
       return "";
 
     }
 
-
-
     return time.toString();
 
   }
-
-
 
   // ============================================================
 
   // OPEN APPOINTMENT DETAILS
 
   // ============================================================
-
-
 
   Future<void> openAppointmentDetails(
 
@@ -649,23 +516,17 @@ Future<void> checkReadyConsultation() async {
 
     );
 
-
-
     // Refresh after coming back.
 
     await loadAppointments();
 
   }
 
-
-
   // ============================================================
 
   // TAB BUTTON
 
   // ============================================================
-
-
 
   Widget buildTab(
 
@@ -678,8 +539,6 @@ Future<void> checkReadyConsultation() async {
     final bool selected =
 
         selectedTab == index;
-
-
 
     return Expanded(
 
@@ -811,472 +670,341 @@ Future<void> checkReadyConsultation() async {
 
   }
 
-
-
   // ============================================================
 
   // APPOINTMENT CARD
 
   // ============================================================
 
+Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
+  final String doctorName =
 
-  Widget buildAppointmentCard(
+      (appointment["doctorName"] ?? "Doctor").toString();
 
-    Map<String, dynamic> appointment,
+  final String specialization =
 
-  ) {
+      (appointment["specialization"] ??
 
-    final String doctorName =
+              appointment["speciality"] ??
 
-        (appointment["doctorName"] ??
+              "Specialist")
 
-                "Doctor")
+          .toString();
 
-            .toString();
+  final String status =
 
+      (appointment["status"] ?? "Pending").toString();
 
+  final String date = getAppointmentDate(appointment);
 
-    final String specialization =
+  final String time = getAppointmentTime(appointment);
 
-        (appointment["specialization"] ??
+  final Color statusColor = getStatusColor(status);
 
-                appointment["speciality"] ??
+  final String consultationType =
 
-                "Specialist")
+      (appointment["consultationType"] ?? "").toString().trim();
 
-            .toString();
+  final String consultationStatus =
 
+      (appointment["consultationStatus"] ?? "").toString().trim();
 
+  final String appointmentId =
 
-    final String status =
+      (appointment["_id"] ?? "").toString();
 
-        (appointment["status"] ??
+  final bool isReadyForVideo =
 
-                "Pending")
+      consultationType == "Video Consultation" &&
 
-            .toString();
+      (consultationStatus == "Ready" ||
 
+          consultationStatus == "Joined") &&
 
+      readyConsultation != null &&
 
-    final String date =
+      readyConsultation!["_id"].toString() == appointmentId;
 
-        getAppointmentDate(appointment);
+  return Container(
 
+    margin: const EdgeInsets.only(bottom: 14),
 
+    child: Material(
 
-    final String time =
+      color: Colors.white,
 
-        getAppointmentTime(appointment);
+      borderRadius: BorderRadius.circular(20),
 
+      elevation: 2,
 
+      shadowColor: Colors.black.withValues(alpha: 0.07),
 
-    final Color statusColor =
+      child: InkWell(
 
-        getStatusColor(status);
+        borderRadius: BorderRadius.circular(20),
 
+        onTap: () => openAppointmentDetails(appointment),
 
+        child: Padding(
 
-final String consultationType =
-    (appointment["consultationType"] ?? "").toString().trim();
+          padding: const EdgeInsets.all(16),
 
-final String consultationStatus =
-    (appointment["consultationStatus"] ?? "").toString().trim();
+          child: Column(
 
-final String appointmentId =
-    (appointment["_id"] ?? "").toString();
+            crossAxisAlignment: CrossAxisAlignment.start,
 
-final bool isReadyForVideo =
-    consultationType == "Video Consultation" &&
-    (consultationStatus == "Ready" ||
-        consultationStatus == "Joined") &&
-    readyConsultation != null &&
-    readyConsultation!["_id"].toString() == appointmentId;
+            children: [
 
+              // DOCTOR INFORMATION AND STATUS
 
+              Row(
 
-    return Container(
+                crossAxisAlignment: CrossAxisAlignment.start,
 
-      margin: const EdgeInsets.only(
+                children: [
 
-        bottom: 14,
+                  Container(
 
-      ),
+                    width: 60,
 
-      child: Material(
+                    height: 60,
 
-        color: Colors.white,
+                    decoration: const BoxDecoration(
 
-        borderRadius:
+                      color: Color(0xffCFF8F5),
 
-            BorderRadius.circular(18),
+                      shape: BoxShape.circle,
 
-        elevation: 3,
+                    ),
 
-        shadowColor:
+                    child: const Icon(
 
-            Colors.black.withValues(alpha: 0.10),
+                      Icons.person,
 
-        child: InkWell(
+                      size: 34,
 
-          borderRadius:
+                      color: Color(0xff007F7A),
 
-              BorderRadius.circular(18),
-
-          onTap: () {
-
-            openAppointmentDetails(
-
-              appointment,
-
-            );
-
-          },
-
-          child: Padding(
-
-            padding:
-
-                const EdgeInsets.all(18),
-
-            child: Row(
-
-              crossAxisAlignment:
-
-                  CrossAxisAlignment.center,
-
-              children: [
-
-
-
-                // DOCTOR ICON
-
-
-
-                Container(
-
-                  width: 68,
-
-                  height: 68,
-
-                  decoration:
-
-                      const BoxDecoration(
-
-                    color:
-
-                        Color(0xffCFF8F5),
-
-                    shape: BoxShape.circle,
+                    ),
 
                   ),
 
-                  child: const Icon(
+                  const SizedBox(width: 12),
 
-                    Icons.person,
+                  Expanded(
 
-                    size: 38,
+                    child: Column(
 
-                    color:
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
-                        Color(0xff007F7A),
-
-                  ),
-
-                ),
-
-
-
-                const SizedBox(width: 16),
-
-
-
-                // DOCTOR INFORMATION
-
-
-
-                Expanded(
-
-                  child: Column(
-
-                    crossAxisAlignment:
-
-                        CrossAxisAlignment.start,
-
-                    children: [
-
-                      Text(
-
-                        doctorName,
-
-                        maxLines: 1,
-
-                        overflow:
-
-                            TextOverflow.ellipsis,
-
-                        style:
-
-                            const TextStyle(
-
-                          fontSize: 20,
-
-                          fontWeight:
-
-                              FontWeight.w500,
-
-                          color:
-
-                              Color(0xff222222),
-
-                        ),
-
-                      ),
-
-
-
-                      const SizedBox(
-
-                        height: 4,
-
-                      ),
-
-
-
-                      Text(
-
-                        specialization,
-
-                        maxLines: 1,
-
-                        overflow:
-
-                            TextOverflow.ellipsis,
-
-                        style:
-
-                            const TextStyle(
-
-                          fontSize: 17,
-
-                          color:
-
-                              Color(0xff555555),
-
-                        ),
-
-                      ),
-
-
-
-                      const SizedBox(
-
-                        height: 5,
-
-                      ),
-
-
-
-                      if (date.isNotEmpty ||
-
-                          time.isNotEmpty)
+                      children: [
 
                         Text(
 
-                          "$date${date.isNotEmpty && time.isNotEmpty ? " • " : ""}$time",
+                          doctorName,
 
-                          maxLines: 1,
+                          maxLines: 2,
 
-                          overflow:
+                          overflow: TextOverflow.ellipsis,
 
-                              TextOverflow.ellipsis,
+                          style: const TextStyle(
 
-                          style:
+                            fontSize: 18,
 
-                              const TextStyle(
+                            fontWeight: FontWeight.w700,
 
-                            fontSize: 16,
-
-                            color:
-
-                                Color(0xff555555),
+                            color: Color(0xff222222),
 
                           ),
 
                         ),
 
+                        const SizedBox(height: 4),
 
+                        Text(
 
-                        if (
-  consultationType == "Video Consultation" &&
-  (consultationStatus == "Ready" ||
-      consultationStatus == "Joined") &&
-  readyConsultation != null &&
-  readyConsultation!["_id"].toString() ==
-      (appointment["_id"] ?? "").toString()
-) ...[
+                          specialization,
 
-  const SizedBox(height: 12),
+                          maxLines: 2,
 
+                          overflow: TextOverflow.ellipsis,
 
+                          style: const TextStyle(
 
-  SizedBox(
+                            fontSize: 14,
 
-    width: double.infinity,
+                            color: Color(0xff626B70),
 
-    child: ElevatedButton.icon(
+                          ),
 
-      onPressed: () async {
+                        ),
 
-        final result = await Navigator.push(
+                        if (date.isNotEmpty || time.isNotEmpty) ...[
 
-          context,
+                          const SizedBox(height: 7),
 
-          MaterialPageRoute(
+                          Text(
 
-            builder: (_) => AgoraVideoCallPage(
-  doctorName: doctorName,
-  patientName: "Patient",
- appointmentId: (appointment["_id"] ?? "").toString(),
-  meetingId: (
-  readyConsultation?["meetingId"] ??
-  appointment["meetingId"] ??
-  ""
-).toString(),
-  isDoctor: false,
-),
+                            [
 
-          ),
+                              date,
 
-        );
+                              time,
 
+                            ].where((value) => value.isNotEmpty).join(" • "),
 
+                            style: const TextStyle(
 
-        if (result == true && mounted) {
+                              fontSize: 13,
 
-          await loadAppointments();
+                              color: Color(0xff555555),
 
-          await checkReadyConsultation();
+                            ),
 
-        }
+                          ),
 
-      },
+                        ],
 
-      icon: const Icon(
-
-        Icons.videocam,
-
-        color: Colors.white,
-
-      ),
-
-      label: const Text(
-
-        "Join Video Consultation",
-
-        style: TextStyle(
-
-          color: Colors.white,
-
-          fontWeight: FontWeight.bold,
-
-        ),
-
-      ),
-
-      style: ElevatedButton.styleFrom(
-
-        backgroundColor:
-
-            const Color(0xff00C2CB),
-
-        padding:
-
-            const EdgeInsets.symmetric(
-
-          vertical: 13,
-
-        ),
-
-        shape: RoundedRectangleBorder(
-
-          borderRadius:
-
-              BorderRadius.circular(12),
-
-        ),
-
-      ),
-
-    ),
-
-  ),
-
-],
-
-                    ],
-
-                  ),
-
-                ),
-
-
-
-                const SizedBox(width: 8),
-
-
-
-                // STATUS
-
-
-
-                Container(
-
-                  padding:
-
-                      const EdgeInsets.symmetric(
-
-                    horizontal: 12,
-
-                    vertical: 9,
-
-                  ),
-
-                  decoration:
-
-                      BoxDecoration(
-
-                    color:
-
-                        getStatusBackground(
-
-                      status,
-
-                    ),
-
-                    borderRadius:
-
-                        BorderRadius.circular(
-
-                      14,
+                      ],
 
                     ),
 
                   ),
 
-                  child: Text(
+                  const SizedBox(width: 8),
 
-                    translateStatus(status),
+                  // STATUS BADGE
 
-                    style: TextStyle(
+                  Flexible(
 
-                      color: statusColor,
+                    child: Container(
 
-                      fontSize: 14,
+                      padding: const EdgeInsets.symmetric(
 
-                      fontWeight:
+                        horizontal: 10,
 
-                          FontWeight.bold,
+                        vertical: 8,
+
+                      ),
+
+                      decoration: BoxDecoration(
+
+                        color: getStatusBackground(status),
+
+                        borderRadius: BorderRadius.circular(12),
+
+                      ),
+
+                      child: Text(
+
+                        translateStatus(status),
+
+                        textAlign: TextAlign.center,
+
+                        softWrap: true,
+
+                        style: TextStyle(
+
+                          color: statusColor,
+
+                          fontSize: 12,
+
+                          fontWeight: FontWeight.w700,
+
+                        ),
+
+                      ),
+
+                    ),
+
+                  ),
+
+                ],
+
+              ),
+
+              // FULL-WIDTH RESCHEDULE PROPOSAL
+
+              if (_hasDoctorRescheduleProposal(appointment))
+
+                _buildRescheduleProposal(appointment),
+
+              // VIDEO CONSULTATION BUTTON
+
+              if (isReadyForVideo) ...[
+
+                const SizedBox(height: 14),
+
+                SizedBox(
+
+                  width: double.infinity,
+
+                  child: ElevatedButton.icon(
+
+                    onPressed: () async {
+
+                      final result = await Navigator.push(
+
+                        context,
+
+                        MaterialPageRoute(
+
+                          builder: (_) => AgoraVideoCallPage(
+
+                            doctorName: doctorName,
+
+                            patientName: "Patient",
+
+                            appointmentId: appointmentId,
+
+                            meetingId: (
+
+                              readyConsultation?["meetingId"] ??
+
+                              appointment["meetingId"] ??
+
+                              ""
+
+                            ).toString(),
+
+                            isDoctor: false,
+
+                          ),
+
+                        ),
+
+                      );
+
+                      if (result == true && mounted) {
+
+                        await loadAppointments();
+
+                        await checkReadyConsultation();
+
+                      }
+
+                    },
+
+                    icon: const Icon(Icons.videocam),
+
+                    label: const Text("Join Video Consultation"),
+
+                    style: ElevatedButton.styleFrom(
+
+                      backgroundColor: const Color(0xff00A99D),
+
+                      foregroundColor: Colors.white,
+
+                      minimumSize: const Size.fromHeight(48),
+
+                      elevation: 0,
+
+                      shape: RoundedRectangleBorder(
+
+                        borderRadius: BorderRadius.circular(12),
+
+                      ),
 
                     ),
 
@@ -1286,7 +1014,7 @@ final bool isReadyForVideo =
 
               ],
 
-            ),
+            ],
 
           ),
 
@@ -1294,19 +1022,416 @@ final bool isReadyForVideo =
 
       ),
 
+    ),
+
+  );
+
+}
+
+  // ============================================================
+
+  // ============================================================
+
+  // DOCTOR RESCHEDULE PROPOSAL
+
+  // ============================================================
+
+  bool _hasDoctorRescheduleProposal(Map<String, dynamic> appointment) {
+
+    final proposedDate =
+
+        (appointment["proposedAppointmentDate"] ?? "").toString().trim();
+
+    final proposedTime =
+
+        (appointment["proposedAppointmentTime"] ?? "").toString().trim();
+
+    final requestedBy =
+
+        (appointment["rescheduleRequestedBy"] ?? "").toString().trim();
+
+    final response =
+
+        (appointment["patientResponse"] ?? "").toString().trim();
+
+    return proposedDate.isNotEmpty &&
+
+        proposedTime.isNotEmpty &&
+
+        requestedBy.toLowerCase() == "doctor" &&
+
+        response.toLowerCase() != "accepted";
+
+  }
+
+  Widget _buildRescheduleProposal(Map<String, dynamic> appointment) {
+  final proposedDate =
+      (appointment["proposedAppointmentDate"] ?? "").toString().trim();
+  final proposedTime =
+      (appointment["proposedAppointmentTime"] ?? "").toString().trim();
+  final reason =
+      (appointment["rescheduleReason"] ?? "").toString().trim();
+  final response =
+      (appointment["patientResponse"] ?? "Pending").toString().trim();
+
+  final isWaiting =
+      response.isEmpty || response.toLowerCase() == "pending";
+  final isRequestingAnother =
+      response.toLowerCase() == "requested another time";
+
+  const teal = Color(0xff008F89);
+  const darkTeal = Color(0xff006F69);
+
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(top: 14),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: const Color(0xffEAF8F6),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: const Color(0xffB8E6E0)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xffD2F2ED),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: const Icon(
+                Icons.event_repeat,
+                color: teal,
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                "Doctor suggested a new time",
+                softWrap: true,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.25,
+                  fontWeight: FontWeight.w700,
+                  color: darkTeal,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // Proposed date and time displayed side by side.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _proposalDetailRow(
+                Icons.calendar_month_outlined,
+                "Proposed date",
+                formatDate(proposedDate),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _proposalDetailRow(
+                Icons.schedule,
+                "Proposed time",
+                proposedTime,
+              ),
+            ),
+          ],
+        ),
+
+        if (reason.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              "Reason: $reason",
+              softWrap: true,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.35,
+                color: Color(0xff465B59),
+              ),
+            ),
+          ),
+        ],
+
+        if (isWaiting) ...[
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final acceptButton = ElevatedButton.icon(
+                onPressed: () =>
+                    _respondToReschedule(appointment, "Accepted"),
+                icon: const Icon(
+                  Icons.check_circle_outline,
+                  size: 18,
+                ),
+                label: const Text(
+                  "Accept new time",
+                  textAlign: TextAlign.center,
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff0F9D91),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  minimumSize: const Size(0, 46),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              );
+
+              final requestButton = OutlinedButton.icon(
+                onPressed: () => _respondToReschedule(
+                  appointment,
+                  "Requested Another Time",
+                ),
+                icon: const Icon(
+                  Icons.edit_calendar_outlined,
+                  size: 18,
+                ),
+                label: const Text(
+                  "Request another time",
+                  textAlign: TextAlign.center,
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: teal,
+                  minimumSize: const Size(0, 46),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  side: const BorderSide(
+                    color: Color(0xff8ACFC7),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              );
+
+              if (constraints.maxWidth < 340) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    acceptButton,
+                    const SizedBox(height: 10),
+                    requestButton,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: acceptButton),
+                  const SizedBox(width: 10),
+                  Expanded(child: requestButton),
+                ],
+              );
+            },
+          ),
+        ] else ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  isRequestingAnother
+                      ? Icons.hourglass_top_rounded
+                      : Icons.check_circle_outline,
+                  color: teal,
+                  size: 19,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isRequestingAnother
+                        ? "You requested another time. Please wait for the doctor to suggest a new slot."
+                        : "Your response: $response",
+                    softWrap: true,
+                    style: const TextStyle(
+                      color: darkTeal,
+                      fontSize: 13,
+                      height: 1.35,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
+Widget _proposalDetailRow(IconData icon, String label, String value) {
+
+    return Row(
+
+      crossAxisAlignment: CrossAxisAlignment.start,
+
+      children: [
+
+        Icon(icon, size: 18, color: const Color(0xff008F89)),
+
+        const SizedBox(width: 8),
+
+        Expanded(
+
+          child: Column(
+
+            crossAxisAlignment: CrossAxisAlignment.start,
+
+            children: [
+
+              Text(
+
+                label,
+
+                style: const TextStyle(
+
+                  color: Color(0xff617573),
+
+                  fontSize: 12,
+
+                  fontWeight: FontWeight.w500,
+
+                ),
+
+              ),
+
+              const SizedBox(height: 2),
+
+              Text(
+
+                value.isEmpty ? "Not provided" : value,
+
+                softWrap: true,
+
+                style: const TextStyle(
+
+                  color: Color(0xff183D3A),
+
+                  fontSize: 14,
+
+                  fontWeight: FontWeight.w700,
+
+                ),
+
+              ),
+
+            ],
+
+          ),
+
+        ),
+
+      ],
+
     );
 
   }
 
+  Future<void> _respondToReschedule(
 
+    Map<String, dynamic> appointment,
+
+    String response,
+
+  ) async {
+
+    final appointmentId = (appointment["_id"] ?? "").toString().trim();
+
+    if (appointmentId.isEmpty) {
+
+      ScaffoldMessenger.of(context).showSnackBar(
+
+        const SnackBar(content: Text("Appointment ID is missing.")),
+
+      );
+
+      return;
+
+    }
+
+    try {
+
+      final result = await ApiService.respondToAppointmentReschedule(
+
+        appointmentId: appointmentId,
+
+        response: response,
+
+      );
+
+      if (result["success"] == false) {
+
+        throw Exception(result["message"] ?? "Could not update response.");
+
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+
+        SnackBar(
+
+          content: Text(
+
+            response == "Accepted"
+
+                ? "New appointment time accepted."
+
+                : "Request sent to the doctor.",
+
+          ),
+
+        ),
+
+      );
+
+      await loadAppointments();
+
+    } catch (e) {
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+
+        SnackBar(content: Text("Unable to respond to proposal: $e")),
+
+      );
+
+    }
+
+  }
+
+// EMPTY TAB
 
   // ============================================================
-
-  // EMPTY TAB
-
-  // ============================================================
-
-
 
   Widget buildEmptyState() {
 
@@ -1315,8 +1440,6 @@ final bool isReadyForVideo =
     String subtitle;
 
     IconData icon;
-
-
 
     if (selectedTab == 0) {
 
@@ -1349,8 +1472,6 @@ final bool isReadyForVideo =
       icon = Icons.event_busy;
 
     }
-
-
 
     return Center(
 
@@ -1402,11 +1523,7 @@ final bool isReadyForVideo =
 
             ),
 
-
-
             const SizedBox(height: 20),
-
-
 
             Text(
 
@@ -1428,11 +1545,7 @@ final bool isReadyForVideo =
 
             ),
 
-
-
             const SizedBox(height: 8),
-
-
 
             Text(
 
@@ -1464,20 +1577,20 @@ final bool isReadyForVideo =
 
   }
 
-
-
   // ============================================================
 
   // BUILD
 
   // ============================================================
 
-
-
   @override
+
   void dispose() {
+
     consultationTimer?.cancel();
+
     super.dispose();
+
   }
 
   @override
@@ -1494,15 +1607,11 @@ final bool isReadyForVideo =
 
         filteredAppointments;
 
-
-
     return Scaffold(
 
       backgroundColor:
 
           const Color(0xffF7F8FA),
-
-
 
       appBar: AppBar(
 
@@ -1515,8 +1624,6 @@ final bool isReadyForVideo =
         foregroundColor:
 
             Colors.black,
-
-
 
         leading: IconButton(
 
@@ -1536,8 +1643,6 @@ final bool isReadyForVideo =
 
         ),
 
-
-
         title: Text(
 
           "myAppointments".tr(),
@@ -1556,19 +1661,13 @@ final bool isReadyForVideo =
 
         ),
 
-
-
         centerTitle: true,
 
       ),
 
-
-
       body: RefreshIndicator(
 
         onRefresh: loadAppointments,
-
-
 
         child: Column(
 
@@ -1576,11 +1675,7 @@ final bool isReadyForVideo =
 
             const SizedBox(height: 12),
 
-
-
             // TABS
-
-
 
             Padding(
 
@@ -1604,8 +1699,6 @@ final bool isReadyForVideo =
 
                   ),
 
-
-
                   buildTab(
 
                     1,
@@ -1613,8 +1706,6 @@ final bool isReadyForVideo =
                     "completed".tr(),
 
                   ),
-
-
 
                   buildTab(
 
@@ -1630,15 +1721,9 @@ final bool isReadyForVideo =
 
             ),
 
-
-
             const SizedBox(height: 18),
 
-
-
             // APPOINTMENTS
-
-
 
             Expanded(
 
@@ -1736,8 +1821,6 @@ final bool isReadyForVideo =
 
                             );
 
-
-
                             return buildAppointmentCard(
 
                               appointment,
@@ -1762,21 +1845,15 @@ final bool isReadyForVideo =
 
 }
 
-
-
 // ==================================================================
 
 // APPOINTMENT DETAILS PAGE
 
 // ==================================================================
 
-
-
 class AppointmentDetailsPage extends StatelessWidget {
 
   final Map<String, dynamic> appointment;
-
-
 
   const AppointmentDetailsPage({
 
@@ -1785,8 +1862,6 @@ class AppointmentDetailsPage extends StatelessWidget {
     required this.appointment,
 
   });
-
-
 
   String translateStatus(
 
@@ -1802,31 +1877,21 @@ class AppointmentDetailsPage extends StatelessWidget {
 
         return "accepted".tr();
 
-
-
       case "completed":
 
         return "completed".tr();
-
-
 
       case "rejected":
 
         return "rejected".tr();
 
-
-
       case "cancelled":
 
         return "cancelled".tr();
 
-
-
       case "pending":
 
         return "pending".tr();
-
-
 
       default:
 
@@ -1835,8 +1900,6 @@ class AppointmentDetailsPage extends StatelessWidget {
     }
 
   }
-
-
 
   @override
 
@@ -1850,8 +1913,6 @@ class AppointmentDetailsPage extends StatelessWidget {
 
             .toString();
 
-
-
     final String specialization =
 
         (appointment["specialization"] ??
@@ -1862,8 +1923,6 @@ class AppointmentDetailsPage extends StatelessWidget {
 
             .toString();
 
-
-
     final String status =
 
         (appointment["status"] ??
@@ -1871,8 +1930,6 @@ class AppointmentDetailsPage extends StatelessWidget {
                 "Pending")
 
             .toString();
-
-
 
     final String date =
 
@@ -1882,8 +1939,6 @@ class AppointmentDetailsPage extends StatelessWidget {
 
             .toString();
 
-
-
     final String time =
 
         (appointment["appointmentTime"] ??
@@ -1892,15 +1947,11 @@ class AppointmentDetailsPage extends StatelessWidget {
 
             .toString();
 
-
-
     return Scaffold(
 
       backgroundColor:
 
           const Color(0xffF7F8FA),
-
-
 
       appBar: AppBar(
 
@@ -1918,21 +1969,15 @@ class AppointmentDetailsPage extends StatelessWidget {
 
       ),
 
-
-
       body: SingleChildScrollView(
 
         padding: const EdgeInsets.all(20),
-
-
 
         child: Column(
 
           crossAxisAlignment:
 
               CrossAxisAlignment.start,
-
-
 
           children: [
 
@@ -1952,11 +1997,7 @@ class AppointmentDetailsPage extends StatelessWidget {
 
             ),
 
-
-
             const SizedBox(height: 8),
-
-
 
             Text(
 
@@ -1974,11 +2015,7 @@ class AppointmentDetailsPage extends StatelessWidget {
 
             ),
 
-
-
             const SizedBox(height: 22),
-
-
 
             _detailRow(
 
@@ -1994,8 +2031,6 @@ class AppointmentDetailsPage extends StatelessWidget {
 
             ),
 
-
-
             _detailRow(
 
               "date".tr(),
@@ -2003,8 +2038,6 @@ class AppointmentDetailsPage extends StatelessWidget {
               date,
 
             ),
-
-
 
             _detailRow(
 
@@ -2023,8 +2056,6 @@ class AppointmentDetailsPage extends StatelessWidget {
     );
 
   }
-
-
 
   Widget _detailRow(
 
@@ -2046,8 +2077,6 @@ class AppointmentDetailsPage extends StatelessWidget {
 
           const EdgeInsets.all(16),
 
-
-
       decoration: BoxDecoration(
 
         color: Colors.white,
@@ -2058,15 +2087,11 @@ class AppointmentDetailsPage extends StatelessWidget {
 
       ),
 
-
-
       child: Row(
 
         crossAxisAlignment:
 
             CrossAxisAlignment.start,
-
-
 
         children: [
 
@@ -2089,8 +2114,6 @@ class AppointmentDetailsPage extends StatelessWidget {
             ),
 
           ),
-
-
 
           Expanded(
 

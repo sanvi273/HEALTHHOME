@@ -141,8 +141,10 @@ Future<void> loadLabOrders() async {
         List<Map<String, dynamic>>.from(data)
             .where((order) {
 
-      final orderLabId =
-          order["labId"]?.toString() ?? "";
+      final rawLabId = order["labId"];
+      final orderLabId = rawLabId is Map
+          ? (rawLabId["_id"] ?? rawLabId["id"] ?? "").toString()
+          : (rawLabId?.toString() ?? "");
 
       return currentLabId.isEmpty ||
           orderLabId == currentLabId;
@@ -173,8 +175,12 @@ labOrders.sort((a, b) {
               .trim()
               .toLowerCase() ??
           "";
+      final rescheduleStatus =
+          order["rescheduleStatus"]?.toString().trim().toLowerCase() ?? "";
 
-      return status == "pending";
+      // Requests waiting for the laboratory's decision are handled in the
+      // Reschedule Requests section, not in the normal booking action row.
+      return status == "pending" && rescheduleStatus != "pending";
 
     }).toList();
 
@@ -270,6 +276,35 @@ final rejectedOrders =
 }).toList();
 
     // ========================================================
+    // PATIENT RESCHEDULE REQUESTS
+    // ========================================================
+
+    final patientRescheduleRequests = labOrders.where((order) {
+      final rescheduleStatus =
+          order["rescheduleStatus"]?.toString().trim().toLowerCase() ?? "";
+      final proposedBy =
+          order["rescheduleProposedBy"]?.toString().trim().toLowerCase() ?? "";
+
+      // Older records / responses may not include rescheduleProposedBy.
+      // Treat an unspecified proposer as a patient request, but never show
+      // requests explicitly proposed by the laboratory.
+      final isPatientRequest =
+          proposedBy.isEmpty || proposedBy == "patient";
+
+      final isPending = rescheduleStatus == "pending";
+      if (isPending) {
+        debugPrint(
+          "RESCHEDULE REQUEST: id=${order["_id"]}, "
+          "status=${order["rescheduleStatus"]}, "
+          "proposedBy=${order["rescheduleProposedBy"]}, "
+          "labId=${order["labId"]}",
+        );
+      }
+
+      return isPending && isPatientRequest;
+    }).toList();
+
+    // ========================================================
     // UPDATE UI
     // ========================================================
 
@@ -279,6 +314,9 @@ final rejectedOrders =
 
   bookings =
       newBookings;
+
+  rescheduleRequests =
+      patientRescheduleRequests;
 
   collectionOrders =
       collection;
@@ -325,6 +363,77 @@ final rejectedOrders =
 
 
 List<Map<String, dynamic>> bookings = [];
+List<Map<String, dynamic>> rescheduleRequests = [];
+final Set<String> processingRescheduleIds = <String>{};
+
+String _formatSchedule(dynamic value) {
+  if (value == null || value.toString().trim().isEmpty) {
+    return "Not specified";
+  }
+
+  final parsed = DateTime.tryParse(value.toString());
+  if (parsed == null) return value.toString();
+
+  final local = parsed.toLocal();
+  final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+  final minute = local.minute.toString().padLeft(2, "0");
+  final period = local.hour >= 12 ? "PM" : "AM";
+  final day = local.day.toString().padLeft(2, "0");
+  final month = local.month.toString().padLeft(2, "0");
+
+  return "$day/$month/${local.year} • $hour:$minute $period";
+}
+
+Future<void> _decidePatientReschedule(
+  Map<String, dynamic> order,
+  String decision,
+) async {
+  final orderId = order["_id"]?.toString() ?? "";
+  final labId = labData?["_id"]?.toString() ?? "";
+
+  if (orderId.isEmpty || labId.isEmpty) {
+    _showMessage("Booking ID or laboratory ID is missing.");
+    return;
+  }
+
+  if (processingRescheduleIds.contains(orderId)) return;
+
+  setState(() {
+    processingRescheduleIds.add(orderId);
+  });
+
+  try {
+    final result = await ApiService.decideLabReschedule(
+      orderId: orderId,
+      labId: labId,
+      decision: decision,
+    );
+
+    if (result["success"] == false) {
+      throw Exception(
+        result["message"]?.toString() ?? "Unable to process request.",
+      );
+    }
+
+    await loadLabOrders();
+
+    if (!mounted) return;
+    _showMessage(
+      decision == "Approved"
+          ? "Reschedule request approved. The requested date is confirmed."
+          : "Reschedule request cancelled. The original booking time is unchanged.",
+    );
+  } catch (e) {
+    if (!mounted) return;
+    _showMessage(e.toString().replaceFirst("Exception: ", ""));
+  } finally {
+    if (mounted) {
+      setState(() {
+        processingRescheduleIds.remove(orderId);
+      });
+    }
+  }
+}
 
 Future<void> loadSampleCollectors() async {
   try {
@@ -773,6 +882,10 @@ Container(
 
 const SizedBox(height: 25),
 
+_buildRescheduleRequestsSection(),
+
+const SizedBox(height: 24),
+
 const Text(
   "New Lab Bookings",
 
@@ -804,6 +917,270 @@ const SizedBox(height: 20),
       ),
     );
   }
+
+// ============================================================
+// PATIENT RESCHEDULE REQUESTS
+// ============================================================
+
+Widget _buildRescheduleRequestsSection() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          const Expanded(
+            child: Text(
+              "Reschedule Requests",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          if (rescheduleRequests.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 11,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                "${rescheduleRequests.length} pending",
+                style: const TextStyle(
+                  color: Color(0xFFB76E00),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      if (rescheduleRequests.isEmpty)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: const Row(
+            children: [
+              Icon(
+                Icons.event_available_outlined,
+                color: Color(0xFF20C6D3),
+                size: 25,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "No pending patient reschedule requests.",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+        )
+      else
+        ...rescheduleRequests.map((item) {
+          final orderId = item["_id"]?.toString() ?? "";
+          final isProcessing =
+              processingRescheduleIds.contains(orderId);
+          final tests = item["tests"] is List
+              ? (item["tests"] as List).map((e) => e.toString()).join(", ")
+              : item["tests"]?.toString() ?? "Lab test";
+          final reason =
+              item["rescheduleReason"]?.toString().trim() ?? "";
+
+          return Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFD7F3F2)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 5,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: Color(0xFFE6FAF8),
+                      child: Icon(
+                        Icons.person_outline,
+                        color: Color(0xFF20C6D3),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        item["patientName"]?.toString() ?? "Patient",
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.schedule,
+                      color: Color(0xFF20C6D3),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (item["patientPhone"] != null &&
+                    item["patientPhone"].toString().isNotEmpty)
+                  _rescheduleInfoRow(
+                    Icons.phone_outlined,
+                    item["patientPhone"].toString(),
+                  ),
+                _rescheduleInfoRow(Icons.science_outlined, tests),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(13),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F7FB),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Current booking",
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatSchedule(item["scheduledAt"]),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Requested new time",
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatSchedule(item["requestedScheduledAt"]),
+                        style: const TextStyle(
+                          color: Color(0xFF078B91),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (reason.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        const Text(
+                          "Reason",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(reason),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (isProcessing)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF20C6D3),
+                      ),
+                    ),
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: isProcessing
+                              ? null
+                              : () => _decidePatientReschedule(item, "Rejected"),
+                          icon: const Icon(Icons.close),
+                          label: const Text("Cancel Request"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            minimumSize: const Size(double.infinity, 46),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: isProcessing
+                              ? null
+                              : () => _decidePatientReschedule(item, "Approved"),
+                          icon: const Icon(Icons.check),
+                          label: const Text("Accept New Time"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF20C6D3),
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 46),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          );
+        }),
+    ],
+  );
+}
+
+Widget _rescheduleInfoRow(IconData icon, String text) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 7),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF20C6D3)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(color: Colors.black87),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 // ============================================================
 // COLLECTION PAGE
@@ -1938,6 +2315,121 @@ return SafeArea(
     );
   }
 
+Future<void> _proposeNewLabSchedule(Map<String, dynamic> item) async {
+  final orderId = item["_id"]?.toString() ?? "";
+  if (orderId.isEmpty) {
+    _showMessage("Cannot reschedule: booking ID is missing.");
+    return;
+  }
+
+  final status = item["status"]?.toString().trim().toLowerCase() ?? "";
+  if (! ["pending", "accepted"].contains(status)) {
+    _showMessage("Only pending or accepted bookings can be rescheduled.");
+    return;
+  }
+
+  DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+  TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
+  final reasonController = TextEditingController();
+  bool submitting = false;
+
+  final result = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text("Propose New Date & Time"),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Patient: ${item["patientName"] ?? "Patient"}"),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text("Date: ${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year}"),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate.isAfter(DateTime.now()) ? selectedDate : DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) setDialogState(() => selectedDate = picked);
+                    },
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.access_time),
+                    label: Text("Time: ${selectedTime.format(context)}"),
+                    onPressed: () async {
+                      final picked = await showTimePicker(context: context, initialTime: selectedTime);
+                      if (picked != null) setDialogState(() => selectedTime = picked);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: reasonController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: "Reason for changing schedule",
+                      hintText: "e.g. Sample collector unavailable",
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting ? null : () => Navigator.pop(dialogContext, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: submitting ? null : () async {
+                  final proposedAt = DateTime(
+                    selectedDate.year, selectedDate.month, selectedDate.day,
+                    selectedTime.hour, selectedTime.minute,
+                  );
+                  if (!proposedAt.isAfter(DateTime.now())) {
+                    _showMessage("Choose a date and time in the future.");
+                    return;
+                  }
+                  setDialogState(() => submitting = true);
+                  try {
+                    final labId = labData?["_id"]?.toString() ?? "";
+                    if (labId.isEmpty) throw Exception("Laboratory ID not found. Please log in again.");
+                    await ApiService.proposeLabReschedule(
+                      orderId: orderId,
+                      labId: labId,
+                      scheduledAt: proposedAt,
+                      reason: reasonController.text.trim(),
+                    );
+                    if (dialogContext.mounted) Navigator.pop(dialogContext, true);
+                  } catch (e) {
+                    setDialogState(() => submitting = false);
+                    _showMessage(e.toString().replaceFirst("Exception: ", ""));
+                  }
+                },
+                child: submitting
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text("Send Proposal"),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+  reasonController.dispose();
+  if (result == true) {
+    await loadLabOrders();
+    _showMessage("New date/time proposed. Waiting for patient response.");
+  }
+}
+
 Widget bookingCard({
   required int index,
   required Map<String, dynamic> item,
@@ -2151,6 +2643,8 @@ const SizedBox(height: 15),
 
           const SizedBox(height: 18),
 
+          const SizedBox(height: 18),
+
           Row(
             children: [
 
@@ -2230,37 +2724,21 @@ debugPrint(
 
               const SizedBox(width: 10),
 
-           IconButton(
-  onPressed: () async {
-
-  try {
-
-    await ApiService.updateLabOrderStatus(
-      orderId: item["_id"],
-      status: "Rejected",
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          "Order Rejected",
-        ),
-      ),
-    );
-
-    await loadLabOrders();
-
-    setState(() {});
-
-  } catch (e) {
-    print(e);
-  }
-},
-
-  icon: const Icon(
-    Icons.close,
-  ),
-),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _proposeNewLabSchedule(item),
+                  icon: const Icon(Icons.event_repeat),
+                  label: const Text("Reschedule"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF168D96),
+                    side: const BorderSide(color: Color(0xFF20C6D3)),
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ],

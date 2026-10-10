@@ -284,6 +284,64 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  
+static Future<Map<String, dynamic>> updateDoctorAvailability({
+  required String doctorId,
+  required bool isAvailable,
+}) async {
+  final response = await http.put(
+    Uri.parse('$baseUrl/api/doctors/availability/$doctorId'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'isAvailable': isAvailable}),
+  );
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    return Map<String, dynamic>.from(data);
+  }
+
+  throw Exception(
+    data['message'] ?? 'Failed to update doctor availability',
+  );
+}
+
+static Future<Map<String, dynamic>> updateDoctorSchedule({
+  required String doctorId,
+  required List<String> workingDays,
+  required String startTime,
+  required String endTime,
+  required String breakStart,
+  required String breakEnd,
+  required int slotDurationMinutes,
+  required int maxAppointmentsPerDay,
+}) async {
+  final response = await http.put(
+    Uri.parse('$baseUrl/api/doctors/schedule/$doctorId'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'workingDays': workingDays,
+      'startTime': startTime,
+      'endTime': endTime,
+      'breakStart': breakStart,
+      'breakEnd': breakEnd,
+      'slotDurationMinutes': slotDurationMinutes,
+      'maxAppointmentsPerDay': maxAppointmentsPerDay,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    return Map<String, dynamic>.from(data);
+  }
+
+  throw Exception(
+    data['message'] ?? 'Failed to update doctor schedule',
+  );
+}
+
+
   static Future<Map<String, dynamic>> addDoctor({
     required String name,
     required String phone,
@@ -804,6 +862,70 @@ class ApiService {
 
     return Map<String, dynamic>.from(
       jsonDecode(response.body),
+    );
+  }
+
+  // ============================================================
+  // APPOINTMENT RESCHEDULING
+  // ============================================================
+
+  /// Doctor proposes a new date/time for an existing appointment.
+  static Future<Map<String, dynamic>> proposeAppointmentReschedule({
+    required String appointmentId,
+    required String proposedAppointmentDate,
+    required String proposedAppointmentTime,
+    required String rescheduleReason,
+  }) async {
+    final response = await http.put(
+      Uri.parse(
+        "$baseUrl/api/appointments/"
+        "${Uri.encodeComponent(appointmentId)}/propose-reschedule",
+      ),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "proposedAppointmentDate": proposedAppointmentDate,
+        "proposedAppointmentTime": proposedAppointmentTime,
+        "rescheduleReason": rescheduleReason,
+      }),
+    );
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    throw Exception(
+      decoded is Map
+          ? (decoded["message"] ?? "Failed to propose rescheduling")
+          : "Failed to propose rescheduling (${response.statusCode})",
+    );
+  }
+
+  /// Patient responds to a doctor's reschedule proposal.
+  /// Supported values depend on the backend schema: "Accepted"
+  /// or "Requested Another Time".
+  static Future<Map<String, dynamic>> respondToAppointmentReschedule({
+    required String appointmentId,
+    required String response,
+  }) async {
+    final result = await http.put(
+      Uri.parse(
+        "$baseUrl/api/appointments/"
+        "${Uri.encodeComponent(appointmentId)}/respond-reschedule",
+      ),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"response": response}),
+    );
+
+    final decoded = jsonDecode(result.body);
+    if (result.statusCode >= 200 && result.statusCode < 300) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    throw Exception(
+      decoded is Map
+          ? (decoded["message"] ?? "Failed to respond to reschedule")
+          : "Failed to respond to reschedule (${result.statusCode})",
     );
   }
 
@@ -1526,6 +1648,111 @@ class ApiService {
     );
   }
 
+  
+  // ============================================================
+  // CANCEL LAB BOOKING
+  // ============================================================
+
+  static Future<Map<String, dynamic>> cancelLabOrder({
+    required String orderId,
+    required String patientId,
+    String reason = "",
+  }) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/api/lab-orders/cancel/$orderId"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "patientId": patientId,
+        "cancelledBy": "Patient",
+        "reason": reason,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    throw Exception(
+      data["message"] ?? "Failed to cancel lab booking",
+    );
+  }
+
+  // ============================================================
+  // REQUEST LAB BOOKING RESCHEDULE
+  // ============================================================
+
+  static Future<Map<String, dynamic>> requestLabReschedule({
+    required String orderId,
+    required String patientId,
+    required DateTime scheduledAt,
+    String reason = "",
+  }) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/api/lab-orders/reschedule/$orderId"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "patientId": patientId,
+        "scheduledAt": scheduledAt.toIso8601String(),
+        "reason": reason,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    throw Exception(
+      data["message"] ?? "Failed to request rescheduling",
+    );
+  }
+
+  // ============================================================
+  // LAB APPROVES OR REJECTS RESCHEDULE REQUEST
+  // ============================================================
+
+  static Future<Map<String, dynamic>> decideLabReschedule({
+    required String orderId,
+    required String labId,
+    required String decision,
+  }) async {
+    // The lab can confirm the patient's requested date or cancel
+    // that reschedule request without cancelling the whole booking.
+    if (!["Approved", "Cancelled", "Rejected"].contains(decision)) {
+      throw ArgumentError(
+        'Decision must be "Approved", "Cancelled", or "Rejected".',
+      );
+    }
+
+    final response = await http.put(
+      Uri.parse(
+        "$baseUrl/api/lab-orders/reschedule/$orderId/decision",
+      ),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "labId": labId,
+        "decision": decision,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    throw Exception(
+      data["message"] ?? "Failed to process reschedule request",
+    );
+  }
+
+
   static Future<Map<String, dynamic>>
       assignSampleCollector({
     required String orderId,
@@ -1858,198 +2085,141 @@ class ApiService {
     }
   }
 
-  // ============================================================
-  // PAYMENTS
-  // ============================================================
+// ============================================================
+// PAYMENTS
+// NORMAL RAZORPAY CHECKOUT
+// ============================================================
 
-  // ============================================================
-  // CREATE UPI QR PAYMENT
-  //
-  // POST /api/payment/create-order
-  //
-  // IMPORTANT:
-  // - Backend gets the real amount from MongoDB using serviceId.
-  // - Flutter does NOT send or control the amount.
-  // - The response contains the Razorpay UPI QR information.
-  // ============================================================
+static Future<Map<String, dynamic>> createPaymentOrder({
+  required String userId,
+  required String userName,
+  required String userPhone,
+  required String serviceType,
+  required String serviceId,
+}) async {
+  try {
+    debugPrint("================================");
+    debugPrint("CREATE RAZORPAY ORDER");
+    debugPrint("SERVICE TYPE = $serviceType");
+    debugPrint("SERVICE ID = $serviceId");
+    debugPrint("================================");
 
-  static Future<Map<String, dynamic>>
-      createPaymentOrder({
-    required String userId,
-    required String userName,
-    required String userPhone,
-    required String serviceType,
-    required String serviceId,
-  }) async {
-    try {
-      debugPrint("================================");
-      debugPrint("CREATE UPI QR PAYMENT");
-      debugPrint("SERVICE TYPE = $serviceType");
-      debugPrint("SERVICE ID = $serviceId");
-      debugPrint("================================");
-
-      final response = await http.post(
-        Uri.parse(
-          "$baseUrl/api/payment/create-order",
-        ),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "userId": userId,
-          "userName": userName,
-          "userPhone": userPhone,
-          "serviceType": serviceType,
-          "serviceId": serviceId,
-        }),
-      );
-
-      debugPrint(
-        "CREATE QR STATUS = ${response.statusCode}",
-      );
-      debugPrint(
-        "CREATE QR BODY = ${response.body}",
-      );
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
-        return Map<String, dynamic>.from(data);
-      }
-
-      throw Exception(
-        data["message"] ??
-            "Failed to create UPI QR payment.",
-      );
-    } catch (e) {
-      debugPrint("CREATE QR PAYMENT ERROR = $e");
-      rethrow;
-    }
-  }
-
-  // Explicit QR alias.
-  // This calls the same backend endpoint as createPaymentOrder().
-  static Future<Map<String, dynamic>>
-      createPaymentQr({
-    required String userId,
-    required String userName,
-    required String userPhone,
-    required String serviceType,
-    required String serviceId,
-  }) async {
-    return createPaymentOrder(
-      userId: userId,
-      userName: userName,
-      userPhone: userPhone,
-      serviceType: serviceType,
-      serviceId: serviceId,
-    );
-  }
-
-  // ============================================================
-  // VERIFY UPI QR PAYMENT
-  //
-  // POST /api/payment/verify-payment
-  //
-  // IMPORTANT:
-  // The backend checks Razorpay directly and verifies the exact
-  // amount stored in MongoDB. Flutter never marks an order paid.
-  //
-  // New QR parameters:
-  //   razorpayQrId
-  //   paymentRecordId
-  //
-  // Old Razorpay Checkout parameters are kept optional so that
-  // existing Flutter screens do not immediately fail to compile.
-  // The current backend QR flow uses the QR parameters.
-  // ============================================================
-
-  static Future<Map<String, dynamic>>
-      verifyPayment({
-    String? razorpayQrId,
-    String? paymentRecordId,
-    String? razorpayOrderId,
-    String? razorpayPaymentId,
-    String? razorpaySignature,
-    required String serviceType,
-    required String serviceId,
-  }) async {
-    try {
-      debugPrint("================================");
-      debugPrint("VERIFY UPI QR PAYMENT");
-      debugPrint("QR ID = $razorpayQrId");
-      debugPrint("PAYMENT RECORD ID = $paymentRecordId");
-      debugPrint("SERVICE TYPE = $serviceType");
-      debugPrint("SERVICE ID = $serviceId");
-      debugPrint("================================");
-
-      final Map<String, dynamic> body = {
+    final response = await http.post(
+      Uri.parse(
+        "$baseUrl/api/payment/create-order",
+      ),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "userId": userId,
+        "userName": userName,
+        "userPhone": userPhone,
         "serviceType": serviceType,
         "serviceId": serviceId,
-      };
+      }),
+    );
 
-      if (razorpayQrId != null &&
-          razorpayQrId.trim().isNotEmpty) {
-        body["razorpayQrId"] = razorpayQrId.trim();
-      }
+    debugPrint(
+      "CREATE RAZORPAY ORDER STATUS = ${response.statusCode}",
+    );
 
-      if (paymentRecordId != null &&
-          paymentRecordId.trim().isNotEmpty) {
-        body["paymentRecordId"] = paymentRecordId.trim();
-      }
+    debugPrint(
+      "CREATE RAZORPAY ORDER BODY = ${response.body}",
+    );
 
-      // Backward-compatible fields. The current QR controller
-      // does not require these for UPI QR verification.
-      if (razorpayOrderId != null &&
-          razorpayOrderId.trim().isNotEmpty) {
-        body["razorpay_order_id"] = razorpayOrderId.trim();
-      }
+    final data = jsonDecode(response.body);
 
-      if (razorpayPaymentId != null &&
-          razorpayPaymentId.trim().isNotEmpty) {
-        body["razorpay_payment_id"] = razorpayPaymentId.trim();
-      }
-
-      if (razorpaySignature != null &&
-          razorpaySignature.trim().isNotEmpty) {
-        body["razorpay_signature"] =
-            razorpaySignature.trim();
-      }
-
-      final response = await http.post(
-        Uri.parse(
-          "$baseUrl/api/payment/verify-payment",
-        ),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode(body),
-      );
-
-      debugPrint(
-        "VERIFY QR STATUS = ${response.statusCode}",
-      );
-      debugPrint(
-        "VERIFY QR BODY = ${response.body}",
-      );
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
-        return Map<String, dynamic>.from(data);
-      }
-
-      throw Exception(
-        data["message"] ??
-            "UPI QR payment verification failed.",
-      );
-    } catch (e) {
-      debugPrint("VERIFY QR PAYMENT ERROR = $e");
-      rethrow;
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
     }
+
+    throw Exception(
+      data["message"] ??
+          "Failed to create Razorpay order.",
+    );
+  } catch (e) {
+    debugPrint(
+      "CREATE RAZORPAY ORDER ERROR = $e",
+    );
+
+    rethrow;
   }
+}
+
+
+// ============================================================
+// VERIFY NORMAL RAZORPAY CHECKOUT PAYMENT
+// ============================================================
+
+static Future<Map<String, dynamic>> verifyPayment({
+  required String razorpayOrderId,
+  required String razorpayPaymentId,
+  required String razorpaySignature,
+  required String serviceType,
+  required String serviceId,
+}) async {
+  try {
+    debugPrint("================================");
+    debugPrint("VERIFY RAZORPAY PAYMENT");
+    debugPrint(
+      "ORDER ID = $razorpayOrderId",
+    );
+    debugPrint(
+      "PAYMENT ID = $razorpayPaymentId",
+    );
+    debugPrint(
+      "SERVICE TYPE = $serviceType",
+    );
+    debugPrint(
+      "SERVICE ID = $serviceId",
+    );
+    debugPrint("================================");
+
+    final response = await http.post(
+      Uri.parse(
+        "$baseUrl/api/payment/verify-payment",
+      ),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "razorpayOrderId": razorpayOrderId,
+        "razorpayPaymentId": razorpayPaymentId,
+        "razorpaySignature": razorpaySignature,
+        "serviceType": serviceType,
+        "serviceId": serviceId,
+      }),
+    );
+
+    debugPrint(
+      "VERIFY PAYMENT STATUS = ${response.statusCode}",
+    );
+
+    debugPrint(
+      "VERIFY PAYMENT BODY = ${response.body}",
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    throw Exception(
+      data["message"] ??
+          "Payment verification failed.",
+    );
+  } catch (e) {
+    debugPrint(
+      "VERIFY RAZORPAY PAYMENT ERROR = $e",
+    );
+
+    rethrow;
+  }
+} 
 
   // ============================================================
   // GET UPI QR PAYMENT STATUS
@@ -2837,4 +3007,332 @@ class ApiService {
       };
     }
   }
+
+static Future<Map<String, dynamic>> createDoctorPaymentOrder({
+  required String patientName,
+  required String patientPhone,
+  required String doctorId,
+  required String doctorName,
+  required String specialization,
+  required String hospital,
+  required String consultationType,
+  required String appointmentDate,
+  required String appointmentTime,
+  required List<File> reports,
+}) async {
+  try {
+    // Create Dio instance
+    final dio = Dio();
+
+    final formData = FormData.fromMap({
+      "patientName": patientName,
+      "patientPhone": patientPhone,
+      "doctorId": doctorId,
+      "doctorName": doctorName,
+      "specialization": specialization,
+      "hospital": hospital,
+      "consultationType": consultationType,
+      "appointmentDate": appointmentDate,
+      "appointmentTime": appointmentTime,
+    });
+
+    // Attach reports
+    for (final file in reports) {
+      formData.files.add(
+        MapEntry(
+          "reports",
+          await MultipartFile.fromFile(
+            file.path,
+            filename: file.path.split(RegExp(r'[\\/]')).last,
+          ),
+        ),
+      );
+    }
+
+    print("========================================");
+    print("CREATE DOCTOR PAYMENT REQUEST");
+    print("PATIENT: $patientName");
+    print("PHONE: $patientPhone");
+    print("DOCTOR ID: $doctorId");
+    print("DOCTOR: $doctorName");
+    print("DATE: $appointmentDate");
+    print("TIME: $appointmentTime");
+    print("REPORTS: ${reports.length}");
+    print("========================================");
+
+    final response = await dio.post(
+      "$baseUrl/api/payment/create-doctor-order",
+      data: formData,
+    );
+
+    print("========================================");
+    print("CREATE DOCTOR PAYMENT STATUS");
+    print(response.statusCode);
+    print("CREATE DOCTOR PAYMENT BODY");
+    print(response.data);
+    print("========================================");
+
+    return Map<String, dynamic>.from(response.data);
+  } on DioException catch (e) {
+    print("========================================");
+    print("DOCTOR PAYMENT DIO ERROR");
+    print("STATUS: ${e.response?.statusCode}");
+    print("DATA: ${e.response?.data}");
+    print("MESSAGE: ${e.message}");
+    print("URL: ${e.requestOptions.uri}");
+    print("========================================");
+
+    final data = e.response?.data;
+
+    if (data is Map) {
+      throw Exception(
+        data["message"] ??
+            data["error"] ??
+            "Server returned ${e.response?.statusCode}",
+      );
+    }
+
+    throw Exception(
+      "Server returned ${e.response?.statusCode}: "
+      "${e.message ?? "Unknown error"}",
+    );
+  } catch (e) {
+    print("CREATE DOCTOR PAYMENT ERROR: $e");
+    rethrow;
+  }
+}
+
+
+
+/// Verifies Razorpay payment on the BACKEND.
+///
+/// The backend checks:
+/// 1. Razorpay signature
+/// 2. Razorpay order
+/// 3. Payment ID
+/// 4. Amount
+/// 5. Currency
+/// 6. Payment status = captured
+/// 7. UPI method
+/// 8. Exact appointment/order mapping
+///
+/// Only after successful verification is the appointment marked Paid.
+static Future<Map<String, dynamic>> verifyDoctorPayment({
+  required String appointmentId,
+  required String razorpayOrderId,
+  required String razorpayPaymentId,
+  required String razorpaySignature,
+  required String patientPhone,
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/payment/verify-doctor-payment"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "appointmentId": appointmentId,
+        "razorpayOrderId": razorpayOrderId,
+        "razorpayPaymentId": razorpayPaymentId,
+        "razorpaySignature": razorpaySignature,
+        "userPhone": patientPhone,
+      }),
+    );
+
+    print("VERIFY DOCTOR PAYMENT STATUS: ${response.statusCode}");
+    print("VERIFY DOCTOR PAYMENT BODY: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    throw Exception(
+      decoded["message"] ??
+          decoded["error"] ??
+          "Doctor payment verification failed",
+    );
+  } catch (e) {
+    print("VERIFY DOCTOR PAYMENT ERROR: $e");
+    rethrow;
+  }
+}
+
+
+/// Cancels the pending doctor appointment/payment reservation
+/// when the user closes Razorpay or payment fails.
+///
+/// This prevents an unpaid appointment from unnecessarily blocking
+/// the doctor's time slot.
+static Future<Map<String, dynamic>> cancelDoctorPayment({
+  required String appointmentId,
+  required String razorpayOrderId,
+  required String patientPhone,
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/payment/cancel-doctor-order"),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "appointmentId": appointmentId,
+        "razorpayOrderId": razorpayOrderId,
+        "userPhone": patientPhone,
+      }),
+    );
+
+    print("CANCEL DOCTOR PAYMENT STATUS: ${response.statusCode}");
+    print("CANCEL DOCTOR PAYMENT BODY: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    throw Exception(
+      decoded["message"] ??
+          decoded["error"] ??
+          "Failed to cancel doctor payment",
+    );
+  } catch (e) {
+    print("CANCEL DOCTOR PAYMENT ERROR: $e");
+    rethrow;
+  }
+}
+
+// Add this method inside ApiService in api_service.dart.
+// It uses the existing baseUrl, http, and jsonEncode members.
+
+static Future<Map<String, dynamic>> proposeLabReschedule({
+  required String orderId,
+  required String labId,
+  required DateTime scheduledAt,
+  required String reason,
+}) async {
+  final response = await http.put(
+    Uri.parse(
+      "$baseUrl/api/lab-orders/reschedule/$orderId/propose",
+    ),
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode({
+      "labId": labId,
+      "scheduledAt": scheduledAt.toUtc().toIso8601String(),
+      "reason": reason,
+    }),
+  );
+
+  final dynamic decoded = jsonDecode(response.body);
+  final data = decoded is Map
+      ? Map<String, dynamic>.from(decoded)
+      : <String, dynamic>{};
+
+  if (response.statusCode >= 200 &&
+      response.statusCode < 300 &&
+      data["success"] != false) {
+    return data;
+  }
+
+  throw Exception(
+    data["message"]?.toString() ??
+        "Failed to propose a new date/time",
+  );
+}
+
+/// Patient responds to a date/time proposed by the laboratory.
+///
+/// Endpoint: PUT /api/lab-orders/reschedule/:id/respond
+/// decision: "Accepted", "Declined", or "Requested Another Time".
+/// Requesting another time keeps the original booking unchanged and asks
+/// the laboratory to send a different proposal.
+static Future<Map<String, dynamic>> respondToLabReschedule({
+  required String orderId,
+  required String patientId,
+  required String decision,
+  String reason = "",
+}) async {
+  if (orderId.trim().isEmpty) {
+    throw ArgumentError("Lab order ID is required.");
+  }
+  if (patientId.trim().isEmpty) {
+    throw ArgumentError("Patient ID is required.");
+  }
+  const allowedDecisions = [
+    "Accepted",
+    "Declined",
+    "Requested Another Time",
+  ];
+  if (!allowedDecisions.contains(decision)) {
+    throw ArgumentError(
+      'Decision must be "Accepted", "Declined", or "Requested Another Time".',
+    );
+  }
+
+  final response = await http.put(
+    Uri.parse(
+      "$baseUrl/api/lab-orders/reschedule/"
+      "${Uri.encodeComponent(orderId)}/respond",
+    ),
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode({
+      "patientId": patientId,
+      "decision": decision,
+      "reason": reason,
+    }),
+  );
+
+  final dynamic decoded = jsonDecode(response.body);
+  final data = decoded is Map
+      ? Map<String, dynamic>.from(decoded)
+      : <String, dynamic>{};
+
+  if (response.statusCode >= 200 &&
+      response.statusCode < 300 &&
+      data["success"] != false) {
+    return data;
+  }
+
+  throw Exception(
+    data["message"]?.toString() ??
+        "Failed to respond to lab reschedule proposal "
+            "(${response.statusCode})",
+  );
+}
+
+/// Fetches the latest lab booking details after a reschedule action.
+static Future<Map<String, dynamic>> refreshLabOrder(
+  String orderId,
+) async {
+  if (orderId.trim().isEmpty) {
+    throw ArgumentError("Lab order ID is required.");
+  }
+
+  final response = await http.get(
+    Uri.parse(
+      "$baseUrl/api/lab-orders/"
+      "${Uri.encodeComponent(orderId)}",
+    ),
+  );
+
+  final dynamic decoded = jsonDecode(response.body);
+  final data = decoded is Map
+      ? Map<String, dynamic>.from(decoded)
+      : <String, dynamic>{};
+
+  if (response.statusCode >= 200 &&
+      response.statusCode < 300) {
+    return data;
+  }
+
+  throw Exception(
+    data["message"]?.toString() ??
+        "Failed to refresh lab booking (${response.statusCode})",
+  );
+}
+
+
+
+
 }

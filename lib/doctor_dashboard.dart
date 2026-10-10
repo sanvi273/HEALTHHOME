@@ -31,6 +31,28 @@ class _DoctorDashboardState
   bool isLoading = true;
   bool isOnline = true;
 
+  
+bool isUpdatingAvailability = false;
+bool isSavingSchedule = false;
+
+List<String> workingDays = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+String startTime = '10:00';
+String endTime = '19:30';
+String breakStart = '13:00';
+String breakEnd = '14:00';
+
+int slotDurationMinutes = 30;
+int maxAppointmentsPerDay = 10;
+
+
   //==========================================
   // Doctor Details
   //==========================================
@@ -183,6 +205,34 @@ Future<void> loadDoctor() async {
       doctorAbout =
           doctor["about"]?.toString() ??
           "";
+
+      // Load availability and schedule settings saved in MongoDB.
+      isOnline = doctor["isAvailable"] is bool
+          ? doctor["isAvailable"] as bool
+          : true;
+
+      final dynamic scheduleData = doctor["schedule"] is Map
+          ? doctor["schedule"]
+          : doctor;
+
+      if (scheduleData is Map) {
+        final days = scheduleData["workingDays"];
+        if (days is List && days.isNotEmpty) {
+          workingDays = days.map((day) => day.toString()).toList();
+        }
+        startTime = scheduleData["startTime"]?.toString() ?? startTime;
+        endTime = scheduleData["endTime"]?.toString() ?? endTime;
+        breakStart = scheduleData["breakStart"]?.toString() ?? breakStart;
+        breakEnd = scheduleData["breakEnd"]?.toString() ?? breakEnd;
+        slotDurationMinutes = int.tryParse(
+              scheduleData["slotDurationMinutes"]?.toString() ?? "",
+            ) ??
+            slotDurationMinutes;
+        maxAppointmentsPerDay = int.tryParse(
+              scheduleData["maxAppointmentsPerDay"]?.toString() ?? "",
+            ) ??
+            maxAppointmentsPerDay;
+      }
 
 
       // =================================================
@@ -444,6 +494,148 @@ Future<void> loadAppointments() async {
     );
   }
 }
+
+  //==================================================
+  // DOCTOR PROPOSES A NEW APPOINTMENT DATE/TIME
+  //==================================================
+  Future<void> proposeReschedule(dynamic appointment) async {
+    final appointmentId = appointment["_id"]?.toString() ?? "";
+    if (appointmentId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Appointment ID is missing.")),
+      );
+      return;
+    }
+
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
+    final reasonController = TextEditingController(
+      text: "Doctor is unavailable at the original time",
+    );
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: const Text("Propose Reschedule"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Choose a new date and time for this patient."),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_month),
+                      label: Text(
+                        "${selectedDate.day.toString().padLeft(2, '0')}/"
+                        "${selectedDate.month.toString().padLeft(2, '0')}/"
+                        "${selectedDate.year}",
+                      ),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: dialogContext,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => selectedDate = picked);
+                        }
+                      },
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.access_time),
+                      label: Text(selectedTime.format(dialogContext)),
+                      onPressed: () async {
+                        final picked = await showTimePicker(
+                          context: dialogContext,
+                          initialTime: selectedTime,
+                        );
+                        if (picked != null) {
+                          setDialogState(() => selectedTime = picked);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: reasonController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: "Reason for rescheduling",
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (reasonController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(content: Text("Please enter a reason.")),
+                      );
+                      return;
+                    }
+                    Navigator.pop(dialogContext, true);
+                  },
+                  child: const Text("Send Proposal"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != true) {
+      reasonController.dispose();
+      return;
+    }
+
+    final dateApi =
+        "${selectedDate.year.toString().padLeft(4, '0')}-"
+        "${selectedDate.month.toString().padLeft(2, '0')}-"
+        "${selectedDate.day.toString().padLeft(2, '0')}";
+    final timeApi = selectedTime.format(context);
+
+    try {
+      final response = await ApiService.proposeAppointmentReschedule(
+        appointmentId: appointmentId,
+        proposedAppointmentDate: dateApi,
+        proposedAppointmentTime: timeApi,
+        rescheduleReason: reasonController.text.trim(),
+      );
+
+      if (!mounted) return;
+      if (response["success"] == false) {
+        throw Exception(response["message"] ?? "Proposal could not be sent.");
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Reschedule proposal sent to the patient."),
+        ),
+      );
+      await loadAppointments();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Unable to propose reschedule: $e")),
+      );
+    } finally {
+      reasonController.dispose();
+    }
+  }
+
   //==========================================
   // ACCEPT
   //==========================================
@@ -628,6 +820,17 @@ Widget casesPage() {
           ? cleanName
           : "Dr. $cleanName";
 
+  // Patient requests to choose another appointment time.
+  final patientRescheduleRequests = appointments.where((item) {
+    if (item is! Map) return false;
+    final requestedBy =
+        item["rescheduleRequestedBy"]?.toString().trim().toLowerCase() ?? "";
+    final response =
+        item["patientResponse"]?.toString().trim().toLowerCase() ?? "";
+    return requestedBy == "patient" &&
+        response == "requested another time";
+  }).toList();
+
   return SafeArea(
     child: RefreshIndicator(
       onRefresh: loadAppointments,
@@ -709,6 +912,61 @@ Widget casesPage() {
             ],
           ),
 
+          const SizedBox(height: 24),
+
+          // PATIENT RESCHEDULE REQUESTS
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  "Patient Reschedule Requests",
+                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (patientRescheduleRequests.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    patientRescheduleRequests.length.toString(),
+                    style: TextStyle(
+                      color: Colors.orange.shade800,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (patientRescheduleRequests.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.event_available, color: Colors.grey, size: 28),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "No patient reschedule requests",
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...patientRescheduleRequests.map(
+              (appointment) => patientRescheduleRequestCard(appointment),
+            ),
+
           const SizedBox(height: 30),
 
           // ======================================================
@@ -789,6 +1047,83 @@ Widget casesPage() {
     //==================================================
   // APPOINTMENT CARD
   //==================================================
+
+ Widget patientRescheduleRequestCard(dynamic appointment) {
+  final patientName =
+      appointment["patientName"]?.toString().trim().isNotEmpty == true
+          ? appointment["patientName"].toString().trim()
+          : "Unknown Patient";
+  final phone = appointment["patientPhone"]?.toString() ?? "";
+  final date = appointment["appointmentDate"]?.toString() ?? "-";
+  final time = appointment["appointmentTime"]?.toString() ?? "-";
+  final reason = appointment["rescheduleReason"]?.toString().trim() ?? "";
+  final appointmentId = appointment["_id"]?.toString() ?? "";
+
+  return Card(
+    margin: const EdgeInsets.only(bottom: 12),
+    elevation: 2,
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: Colors.orange.shade200),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.orange.shade50,
+                child: const Icon(Icons.person, color: Colors.deepOrange),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(patientName, style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold,
+                    )),
+                    if (phone.isNotEmpty)
+                      Text(phone, style: const TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.notifications_active, color: Colors.deepOrange),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text("Original appointment: $date at $time"),
+          if (reason.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text("Patient note: $reason"),
+          ],
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              onPressed: appointmentId.isEmpty
+                  ? null
+                  : () => proposeReschedule(appointment),
+              icon: const Icon(Icons.edit_calendar),
+              label: const Text("Propose a New Date & Time"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff14B8A6),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(11),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
  Widget appointmentCard(
   dynamic appointment,
@@ -1076,6 +1411,27 @@ Widget casesPage() {
           const SizedBox(height: 15),
 
           // ====================================================
+          // PROPOSE RESCHEDULE
+          // ====================================================
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: () => proposeReschedule(appointment),
+              icon: const Icon(Icons.edit_calendar),
+              label: const Text("Propose Reschedule"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xff0F9D91),
+                side: const BorderSide(color: Color(0xff14B8A6)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ====================================================
           // ACCEPT / REJECT
           // ====================================================
 
@@ -1179,103 +1535,250 @@ Widget casesPage() {
   // SCHEDULE PAGE
   //==================================================
 
-  Widget schedulePage() {
+  Future<void> _pickScheduleTime(String field) async {
+    String current;
+    switch (field) {
+      case 'start':
+        current = startTime;
+        break;
+      case 'end':
+        current = endTime;
+        break;
+      case 'breakStart':
+        current = breakStart;
+        break;
+      default:
+        current = breakEnd;
+    }
 
-    return SafeArea(
-
-      child: RefreshIndicator(
-
-        onRefresh: loadAppointments,
-
-        child: ListView(
-
-          padding: const EdgeInsets.all(16),
-
-          children: [
-
-            const Text(
-
-              "Today's Schedule",
-
-              style: TextStyle(
-
-                fontSize: 28,
-
-                fontWeight: FontWeight.bold,
-
-              ),
-
-            ),
-
-            const SizedBox(height: 8),
-
-            Text(
-
-              "${acceptedAppointments.length} Accepted Appointments",
-
-              style: const TextStyle(
-
-                color: Colors.grey,
-
-                fontSize: 16,
-
-              ),
-
-            ),
-
-            const SizedBox(height: 25),
-
-            if (acceptedAppointments.isEmpty)
-
-              const Center(
-
-                child: Padding(
-
-                  padding: EdgeInsets.all(40),
-
-                  child: Text(
-
-                    "No Accepted Appointments",
-
-                    style: TextStyle(
-
-                      color: Colors.grey,
-
-                      fontSize: 18,
-
-                    ),
-
-                  ),
-
-                ),
-
-              )
-
-            else
-
-              ...acceptedAppointments.map(
-
-                (appointment) =>
-
-                    scheduleCard(
-
-                  appointment,
-
-                ),
-
-              ),
-
-          ],
-
-        ),
-
-      ),
-
+    final parts = current.split(':');
+    final initial = TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 10,
+      minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0,
     );
 
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked == null || !mounted) return;
+
+    final formatted =
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+
+    setState(() {
+      switch (field) {
+        case 'start':
+          startTime = formatted;
+          break;
+        case 'end':
+          endTime = formatted;
+          break;
+        case 'breakStart':
+          breakStart = formatted;
+          break;
+        case 'breakEnd':
+          breakEnd = formatted;
+          break;
+      }
+    });
   }
 
-//==================================================
+  Future<void> _saveDoctorSchedule() async {
+    if (doctorId.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Doctor ID is missing. Please log in again.')),
+      );
+      return;
+    }
+    if (workingDays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one working day.')),
+      );
+      return;
+    }
+
+    setState(() => isSavingSchedule = true);
+    try {
+      final response = await ApiService.updateDoctorSchedule(
+        doctorId: doctorId,
+        workingDays: workingDays,
+        startTime: startTime,
+        endTime: endTime,
+        breakStart: breakStart,
+        breakEnd: breakEnd,
+        slotDurationMinutes: slotDurationMinutes,
+        maxAppointmentsPerDay: maxAppointmentsPerDay,
+      );
+
+      if (!mounted) return;
+      if (response['success'] == false) {
+        throw Exception(response['message'] ?? 'Schedule could not be saved');
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Doctor schedule saved successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to save schedule: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => isSavingSchedule = false);
+    }
+  }
+
+  Widget _timeSettingTile(String title, String value, String field) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(title),
+      subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.access_time, color: Color(0xff14B8A6)),
+      onTap: () => _pickScheduleTime(field),
+    );
+  }
+
+  Widget schedulePage() {
+    return SafeArea(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await loadDoctor();
+          await loadAppointments();
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              "Doctor Schedule",
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "${acceptedAppointments.length} Accepted Appointments",
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+            const SizedBox(height: 20),
+            Card(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Working Days', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        for (final day in [
+                          'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+                          'Friday', 'Saturday', 'Sunday',
+                        ])
+                          FilterChip(
+                            label: Text(day.substring(0, 3)),
+                            selected: workingDays.contains(day),
+                            selectedColor: const Color(0xffD9F7F3),
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  if (!workingDays.contains(day)) workingDays.add(day);
+                                } else {
+                                  workingDays.remove(day);
+                                }
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                    const Divider(height: 28),
+                    const Text('Consultation Hours', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    _timeSettingTile('Start time', startTime, 'start'),
+                    _timeSettingTile('End time', endTime, 'end'),
+                    const Divider(height: 24),
+                    const Text('Break Time', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    _timeSettingTile('Break starts', breakStart, 'breakStart'),
+                    _timeSettingTile('Break ends', breakEnd, 'breakEnd'),
+                    const Divider(height: 24),
+                    DropdownButtonFormField<int>(
+                      value: slotDurationMinutes,
+                      decoration: const InputDecoration(
+                        labelText: 'Appointment slot duration',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [15, 20, 30, 45, 60]
+                          .map((minutes) => DropdownMenuItem<int>(
+                                value: minutes,
+                                child: Text('$minutes minutes'),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) setState(() => slotDurationMinutes = value);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<int>(
+                      value: maxAppointmentsPerDay,
+                      decoration: const InputDecoration(
+                        labelText: 'Maximum appointments per day',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: List<int>.generate(30, (i) => i + 1)
+                          .map((count) => DropdownMenuItem<int>(
+                                value: count,
+                                child: Text('$count appointments'),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) setState(() => maxAppointmentsPerDay = value);
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: isSavingSchedule ? null : _saveDoctorSchedule,
+                        icon: isSavingSchedule
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.save),
+                        label: Text(isSavingSchedule ? 'Saving...' : 'Save Schedule'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xff14B8A6),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text("Accepted Appointments", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            if (acceptedAppointments.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(28),
+                child: Center(
+                  child: Text("No Accepted Appointments", style: TextStyle(color: Colors.grey, fontSize: 16)),
+                ),
+              )
+            else
+              ...acceptedAppointments.map((appointment) => scheduleCard(appointment)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  //==================================================
 // PATIENT REPORTS
 //==================================================
 
@@ -1813,6 +2316,25 @@ debugPrint("================================");
             appointment,
           ),
 
+          const SizedBox(height: 12),
+
+          // ================= RESCHEDULE PROPOSAL =================
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: () => proposeReschedule(appointment),
+              icon: const Icon(Icons.edit_calendar),
+              label: const Text("Propose Reschedule"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xff0F9D91),
+                side: const BorderSide(color: Color(0xff14B8A6)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
           const SizedBox(height: 12),
 
           // ================= ACTION =================
@@ -2590,15 +3112,59 @@ if (isVideo) {
 
               value: isOnline,
 
-              onChanged: (value) {
+              
+onChanged: isUpdatingAvailability
+    ? null
+    : (value) async {
+        if (doctorId.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Doctor ID is missing.'),
+            ),
+          );
+          return;
+        }
 
-                setState(() {
+        setState(() {
+          isUpdatingAvailability = true;
+        });
 
-                  isOnline = value;
+        try {
+          await ApiService.updateDoctorAvailability(
+            doctorId: doctorId,
+            isAvailable: value,
+          );
 
-                });
+          if (!mounted) return;
 
-              },
+          setState(() {
+            isOnline = value;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                value ? 'You are now online.' : 'You are now offline.',
+              ),
+            ),
+          );
+        } catch (e) {
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Unable to update availability: $e'),
+            ),
+          );
+        } finally {
+          if (mounted) {
+            setState(() {
+              isUpdatingAvailability = false;
+            });
+          }
+        }
+      },
+
 
             ),
 
