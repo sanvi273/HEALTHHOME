@@ -995,6 +995,9 @@ Widget _buildRescheduleRequestsSection() {
               : item["tests"]?.toString() ?? "Lab test";
           final reason =
               item["rescheduleReason"]?.toString().trim() ?? "";
+          final requestedAt = item["requestedScheduledAt"];
+          final isCounterRequest = requestedAt == null ||
+              requestedAt.toString().trim().isEmpty;
 
           return Container(
             width: double.infinity,
@@ -1074,20 +1077,26 @@ Widget _buildRescheduleRequestsSection() {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        "Requested new time",
-                        style: TextStyle(
+                      Text(
+                        isCounterRequest
+                            ? "Patient's response"
+                            : "Requested new time",
+                        style: const TextStyle(
                           color: Colors.grey,
                           fontSize: 12,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _formatSchedule(item["requestedScheduledAt"]),
-                        style: const TextStyle(
-                          color: Color(0xFF078B91),
+                        isCounterRequest
+                            ? "Patient requested another available date/time."
+                            : _formatSchedule(requestedAt),
+                        style: TextStyle(
+                          color: isCounterRequest
+                              ? const Color(0xFFB76E00)
+                              : const Color(0xFF078B91),
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: isCounterRequest ? 14 : 16,
                         ),
                       ),
                       if (reason.isNotEmpty) ...[
@@ -1115,6 +1124,25 @@ Widget _buildRescheduleRequestsSection() {
                       ),
                     ),
                   )
+                else if (isCounterRequest)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: isProcessing
+                          ? null
+                          : () => _proposeNewLabSchedule(item),
+                      icon: const Icon(Icons.calendar_month),
+                      label: const Text("Propose New Time"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF20C6D3),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 46),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  )
                 else
                   Row(
                     children: [
@@ -1124,7 +1152,7 @@ Widget _buildRescheduleRequestsSection() {
                               ? null
                               : () => _decidePatientReschedule(item, "Rejected"),
                           icon: const Icon(Icons.close),
-                          label: const Text("Cancel Request"),
+                          label: const Text("Reject Request"),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: const BorderSide(color: Colors.red),
@@ -1142,7 +1170,7 @@ Widget _buildRescheduleRequestsSection() {
                               ? null
                               : () => _decidePatientReschedule(item, "Approved"),
                           icon: const Icon(Icons.check),
-                          label: const Text("Accept New Time"),
+                          label: const Text("Approve New Time"),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF20C6D3),
                             foregroundColor: Colors.white,
