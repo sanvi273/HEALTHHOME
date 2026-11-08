@@ -201,6 +201,7 @@ class ApiService {
     required String documentUrl,
     String businessName = "",
     String registrationNumber = "",
+    List<Map<String, dynamic>> documents = const [],
   }) async {
     try {
       final response = await http.post(
@@ -216,6 +217,7 @@ class ApiService {
           "documentUrl": documentUrl,
           "businessName": businessName,
           "registrationNumber": registrationNumber,
+          "documents": documents,
         }),
       );
 
@@ -237,6 +239,20 @@ class ApiService {
     required String documentType,
   }) async {
     try {
+      final extension = filename.split('.').last.toLowerCase();
+      if (!["pdf", "jpg", "jpeg", "png"].contains(extension)) {
+        return {
+          "success": false,
+          "message": "Upload a PDF, JPG, JPEG, or PNG document",
+        };
+      }
+      if (bytes.length > 10 * 1024 * 1024) {
+        return {
+          "success": false,
+          "message": "Document must be 10 MB or smaller",
+        };
+      }
+
       final request = http.MultipartRequest(
         "POST",
         Uri.parse("$baseUrl/api/verification/documents"),
@@ -254,13 +270,8 @@ class ApiService {
       final response = await http.Response.fromStream(streamed);
       final contentType = response.headers["content-type"] ?? "";
       if (!contentType.toLowerCase().contains("application/json")) {
-        if (response.statusCode == 404) {
-          throw Exception(
-            "The document upload endpoint is not deployed on the HealthHome backend yet. Deploy the latest backend to Render, then try again.",
-          );
-        }
         throw Exception(
-          "The backend returned an unexpected response (HTTP ${response.statusCode}).",
+          "The verification upload server returned HTTP ${response.statusCode}. Check the backend deployment and try again.",
         );
       }
       final data = Map<String, dynamic>.from(jsonDecode(response.body));

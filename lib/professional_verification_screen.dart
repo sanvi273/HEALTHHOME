@@ -39,8 +39,6 @@ class _ProfessionalVerificationScreenState
       TextEditingController();
   final TextEditingController _licenseTypeController =
       TextEditingController();
-  final TextEditingController _documentUrlController =
-      TextEditingController();
   final TextEditingController _organizationController =
       TextEditingController();
   final TextEditingController _registrationNumberController =
@@ -51,7 +49,61 @@ class _ProfessionalVerificationScreenState
   @override
   void initState() {
     super.initState();
+    _licenseTypeController.text = _defaultDocumentType;
     loadVerification();
+  }
+
+  String get _roleKey => widget.role.trim().toLowerCase();
+
+  String get _defaultDocumentType {
+    switch (_roleKey) {
+      case "pharmacy":
+        return "Pharmacy License";
+      case "laboratory":
+      case "lab":
+        return "Laboratory License";
+      default:
+        return "Medical License";
+    }
+  }
+
+  List<String> get _documentTypeOptions {
+    switch (_roleKey) {
+      case "pharmacy":
+        return const [
+          "Pharmacy License",
+          "Business Registration",
+          "Government ID",
+          "Additional Document",
+        ];
+      case "laboratory":
+      case "lab":
+        return const [
+          "Laboratory License",
+          "Laboratory Registration",
+          "Government ID",
+          "Additional Document",
+        ];
+      default:
+        return const [
+          "Medical License",
+          "Medical Registration",
+          "Government ID",
+          "Additional Document",
+        ];
+    }
+  }
+
+  String get _licenseNumberLabel {
+    switch (_roleKey) {
+      case "pharmacy":
+        return "Pharmacy license number";
+      case "laboratory":
+      case "lab":
+        return "Laboratory license number";
+      default:
+        return "Medical registration/license number";
+    }
   }
 
   // =========================================================
@@ -124,6 +176,9 @@ class _ProfessionalVerificationScreenState
           _organizationController.text = organizationName;
           _registrationNumberController.text =
               verification["registrationNumber"]?.toString() ?? "";
+          if (_licenseTypeController.text.trim().isEmpty) {
+            _licenseTypeController.text = _defaultDocumentType;
+          }
 
           address =
               verification["address"]
@@ -209,10 +264,10 @@ class _ProfessionalVerificationScreenState
   Future<void> _submitDocuments() async {
     if (_licenseNumberController.text.trim().isEmpty ||
         _licenseTypeController.text.trim().isEmpty ||
-        _documentUrlController.text.trim().isEmpty) {
+        documents.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Enter your license details and a document link."),
+          content: Text("Enter your license number and upload at least one document."),
         ),
       );
       return;
@@ -225,9 +280,13 @@ class _ProfessionalVerificationScreenState
         role: widget.role,
         licenseNumber: _licenseNumberController.text.trim(),
         licenseType: _licenseTypeController.text.trim(),
-        documentUrl: _documentUrlController.text.trim(),
+        documentUrl: "",
         businessName: _organizationController.text.trim(),
         registrationNumber: _registrationNumberController.text.trim(),
+        documents: documents
+            .whereType<Map>()
+            .map((document) => Map<String, dynamic>.from(document))
+            .toList(),
       );
       if (response["success"] != true) {
         throw Exception(response["message"] ?? "Unable to submit documents.");
@@ -259,6 +318,13 @@ class _ProfessionalVerificationScreenState
       if (file.bytes == null) {
         throw Exception("Unable to read the selected document.");
       }
+      final extension = file.extension?.toLowerCase() ?? "";
+      if (!["pdf", "jpg", "jpeg", "png"].contains(extension)) {
+        throw Exception("Choose a PDF, JPG, JPEG, or PNG document.");
+      }
+      if (file.bytes!.length > 10 * 1024 * 1024) {
+        throw Exception("Document must be 10 MB or smaller.");
+      }
 
       setState(() => _isUploading = true);
       final prefs = await SharedPreferences.getInstance();
@@ -267,22 +333,24 @@ class _ProfessionalVerificationScreenState
         bytes: file.bytes!,
         filename: file.name,
         documentType: _licenseTypeController.text.trim().isEmpty
-            ? "Professional license"
+            ? _defaultDocumentType
             : _licenseTypeController.text.trim(),
       );
       if (result["success"] != true || result["document"] is! Map) {
         throw Exception(result["message"] ?? "Document upload failed.");
       }
-      final document = Map<String, dynamic>.from(result["document"]);
+      final duplicate = result["duplicate"] == true;
       if (!mounted) return;
-      setState(() {
-        _documentUrlController.text = document["url"]?.toString() ?? "";
-        if (_licenseTypeController.text.trim().isEmpty) {
-          _licenseTypeController.text = document["type"]?.toString() ?? "";
-        }
-      });
+      await loadVerification();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Uploaded ${file.name}")),
+        SnackBar(
+          content: Text(
+            duplicate
+                ? "This document is already attached to your application."
+                : "Uploaded ${file.name} to your verification application.",
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -298,7 +366,6 @@ class _ProfessionalVerificationScreenState
   void dispose() {
     _licenseNumberController.dispose();
     _licenseTypeController.dispose();
-    _documentUrlController.dispose();
     _organizationController.dispose();
     _registrationNumberController.dispose();
     super.dispose();
@@ -598,18 +665,35 @@ class _ProfessionalVerificationScreenState
                             const SizedBox(height: 12),
                             TextField(
                               controller: _licenseNumberController,
-                              decoration: const InputDecoration(
-                                labelText: "License number",
+                              decoration: InputDecoration(
+                                labelText: _licenseNumberLabel,
                                 border: OutlineInputBorder(),
                               ),
                             ),
                             const SizedBox(height: 10),
-                            TextField(
-                              controller: _licenseTypeController,
+                            DropdownButtonFormField<String>(
+                              value: _documentTypeOptions.contains(
+                                _licenseTypeController.text,
+                              )
+                                  ? _licenseTypeController.text
+                                  : _defaultDocumentType,
                               decoration: const InputDecoration(
-                                labelText: "License / document type",
+                                labelText: "Document type for the next upload",
                                 border: OutlineInputBorder(),
                               ),
+                              items: _documentTypeOptions
+                                  .map(
+                                    (type) => DropdownMenuItem<String>(
+                                      value: type,
+                                      child: Text(type),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  _licenseTypeController.text = value;
+                                }
+                              },
                             ),
                             const SizedBox(height: 10),
                             TextField(
@@ -628,15 +712,10 @@ class _ProfessionalVerificationScreenState
                               ),
                             ),
                             const SizedBox(height: 10),
-                            TextField(
-                              controller: _documentUrlController,
-                              keyboardType: TextInputType.url,
-                              decoration: const InputDecoration(
-                                labelText: "Secure document URL",
-                                helperText:
-                                    "Upload the file to your approved storage and paste its secure link.",
-                                border: OutlineInputBorder(),
-                              ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Upload PDF, JPG, JPEG, or PNG files up to 10 MB. Upload additional documents one at a time.",
+                              style: TextStyle(color: Colors.blueGrey),
                             ),
                             const SizedBox(height: 8),
                             OutlinedButton.icon(
@@ -653,7 +732,18 @@ class _ProfessionalVerificationScreenState
                                     )
                                   : const Icon(Icons.upload_file),
                               label: Text(
-                                _isUploading ? "Uploading…" : "Choose and upload file",
+                                _isUploading
+                                    ? "Uploading…"
+                                    : "Choose and upload document",
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              documents.isEmpty
+                                  ? "No documents uploaded yet."
+                                  : "${documents.length} document(s) attached to this application.",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -820,17 +910,27 @@ class _ProfessionalVerificationScreenState
                                       ),
 
                                       Expanded(
-                                        child: Text(
-                                          doc["type"]
-                                                  ?.toString() ??
-                                              "Document",
-
-                                          style:
-                                              const TextStyle(
-                                            fontWeight:
-                                                FontWeight
-                                                    .w600,
-                                          ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              doc["fileName"]?.toString().isNotEmpty == true
+                                                  ? doc["fileName"].toString()
+                                                  : doc["type"]?.toString() ?? "Document",
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            if ((doc["fileName"]?.toString() ?? "").isNotEmpty)
+                                              Text(
+                                                doc["type"]?.toString() ?? "Verification document",
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.blueGrey,
+                                                ),
+                                              ),
+                                          ],
                                         ),
                                       ),
 

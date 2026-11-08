@@ -519,7 +519,7 @@ Future<void> _reject(dynamic item) async {
     if (document is Map) {
       return _value(
         document,
-        ['type', 'name', 'fileName', 'documentType', 'title'],
+        ['fileName', 'name', 'type', 'documentType', 'title'],
         fallback: 'Submitted document',
       );
     }
@@ -644,6 +644,11 @@ Future<void> _reject(dynamic item) async {
               else
                 ...docs.map((doc) {
                   final url = _documentUrl(doc);
+                  final documentType = _value(
+                    doc,
+                    ['type'],
+                    fallback: 'Verification document',
+                  );
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const CircleAvatar(
@@ -652,8 +657,8 @@ Future<void> _reject(dynamic item) async {
                     ),
                     title: Text(_documentLabel(doc)),
                     subtitle: Text(
-                      url.isEmpty ? 'Document link unavailable' : url,
-                      maxLines: 1,
+                      '$documentType\n${url.isEmpty ? 'Document link unavailable' : url}',
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     trailing: IconButton(
