@@ -1,24 +1,56 @@
+
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Notification Permission -->
+    <!-- ============================================ -->
+    <!-- INTERNET PERMISSION -->
+    <!-- ============================================ -->
+    <uses-permission
+        android:name="android.permission.INTERNET"/>
+
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <!-- ============================================ -->
+    <!-- AGORA VIDEO CALLING PERMISSIONS -->
+    <!-- ============================================ -->
+    <uses-permission
+        android:name="android.permission.CAMERA"/>
+
+    <uses-permission
+        android:name="android.permission.RECORD_AUDIO"/>
+
+    <uses-permission
+        android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+
+    <!-- ============================================ -->
+    <!-- NOTIFICATION PERMISSION -->
+    <!-- ============================================ -->
     <uses-permission
         android:name="android.permission.POST_NOTIFICATIONS"/>
 
-    <!-- Location Permissions -->
+    <!-- ============================================ -->
+    <!-- LOCATION PERMISSIONS -->
+    <!-- ============================================ -->
     <uses-permission
         android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
     <uses-permission
         android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
+    <!-- ============================================ -->
+    <!-- APPLICATION -->
+    <!-- ============================================ -->
     <application
         android:label="healthhome"
         android:name="${applicationName}"
         tools:replace="android:label"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- ======================================== -->
+        <!-- MAIN ACTIVITY -->
+        <!-- ======================================== -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -29,10 +61,6 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!--
-                 Specifies an Android theme to apply to this Activity
-                 as soon as the Android process has started.
-            -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme"/>
@@ -44,19 +72,18 @@
 
         </activity>
 
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate
-             GeneratedPluginRegistrant.java -->
+        <!-- ======================================== -->
+        <!-- FLUTTER EMBEDDING -->
+        <!-- ======================================== -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
 
     </application>
 
-    <!--
-         Required to query activities that can process text.
-         This is used by the Flutter engine's ProcessTextPlugin.
-    -->
+    <!-- ============================================ -->
+    <!-- QUERIES -->
+    <!-- ============================================ -->
     <queries>
         <intent>
             <action

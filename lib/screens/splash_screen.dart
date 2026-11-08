@@ -5,7 +5,7 @@ import 'onboarding_screen.dart';
 
 import '../pharmacy_dashboard.dart';
 import '../lab_dashboard.dart';
-import '../doctor_dashboard.dart';
+import 'doctor_dashboard.dart';
 
 import 'patient/patient_main.dart';
 

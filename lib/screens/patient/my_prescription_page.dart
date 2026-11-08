@@ -609,7 +609,7 @@ class _MyPrescriptionPageState
 
         if (realId.isEmpty) {
           throw Exception(
-            "invalidMedicineId".tr() + " $medicineName.",
+            "${"invalidMedicineId".tr()} $medicineName.",
           );
         }
 
@@ -774,7 +774,7 @@ class _MyPrescriptionPageState
       );
 
       showMessage(
-        "unableToAddMedicines".tr() + " $e",
+        "${"unableToAddMedicines".tr()} $e",
         Colors.red,
       );
     }
@@ -1742,19 +1742,19 @@ class _MyPrescriptionPageState
             children: [
               if (dose.isNotEmpty)
                 Text(
-                  "doseLabel".tr() + ": $dose",
+                  "${"doseLabel".tr()}: $dose",
                 ),
               if (duration.isNotEmpty)
                 Text(
-                  "durationLabel".tr() + ": $duration",
+                  "${"durationLabel".tr()}: $duration",
                 ),
               if (food.isNotEmpty)
                 Text(
-                  "foodLabel".tr() + ": $food",
+                  "${"foodLabel".tr()}: $food",
                 ),
               if (instruction.isNotEmpty)
                 Text(
-                  "instructionsLabel".tr() + ": $instruction",
+                  "${"instructionsLabel".tr()}: $instruction",
                 ),
             ],
           ),
@@ -1918,11 +1918,11 @@ class _MyPrescriptionPageState
                 CrossAxisAlignment.start,
             children: [
               Text(
-                "priorityLabel".tr() + ": $priority",
+                "${"priorityLabel".tr()}: $priority",
               ),
               if (note.isNotEmpty)
                 Text(
-                  "noteLabel".tr() + ": $note",
+                  "${"noteLabel".tr()}: $note",
                 ),
             ],
           ),
@@ -2412,16 +2412,16 @@ class PrescriptionDetailsPage
                           height: 5,
                         ),
                         Text(
-                          "doseLabel".tr() + ": ${medicine["dose"] ?? "-"}",
+                          "${"doseLabel".tr()}: ${medicine["dose"] ?? "-"}",
                         ),
                         Text(
-                          "durationLabel".tr() + ": ${medicine["duration"] ?? "-"}",
+                          "${"durationLabel".tr()}: ${medicine["duration"] ?? "-"}",
                         ),
                         Text(
-                          "foodLabel".tr() + ": ${medicine["food"] ?? "-"}",
+                          "${"foodLabel".tr()}: ${medicine["food"] ?? "-"}",
                         ),
                         Text(
-                          "instructionsLabel".tr() + ": ${medicine["instruction"] ?? "-"}",
+                          "${"instructionsLabel".tr()}: ${medicine["instruction"] ?? "-"}",
                         ),
                       ],
                     ),
@@ -2472,8 +2472,7 @@ class PrescriptionDetailsPage
                         ),
                         subtitle:
                             Text(
-                          "priorityLabel".tr() + ": ${test["priority"] ?? "Normal"}"
-                          "${(test["note"] ?? "").toString().isNotEmpty ? "\n${test["note"]}" : ""}",
+                          "${"priorityLabel".tr()}: ${test["priority"] ?? "Normal"}${(test["note"] ?? "").toString().isNotEmpty ? "\n${test["note"]}" : ""}",
                         ),
                       );
                     }

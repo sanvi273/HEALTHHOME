@@ -3909,7 +3909,7 @@ class MedicineOrderSuccessPage
               ),
 
               Text(
-                "${"orderFromPharmacyPlaced".tr(namedArgs: {"pharmacy": pharmacyName})}",
+                "orderFromPharmacyPlaced".tr(namedArgs: {"pharmacy": pharmacyName}),
                 textAlign:
                     TextAlign.center,
                 style:

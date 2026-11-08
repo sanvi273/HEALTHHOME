@@ -8,7 +8,7 @@ import '../payment/payment_page.dart';
 class BookLabTestPage extends StatefulWidget {
   final List<String> selectedTests;
 
-  BookLabTestPage({
+  const BookLabTestPage({
     super.key,
     required this.selectedTests,
   });

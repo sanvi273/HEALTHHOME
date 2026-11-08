@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../login_screen.dart';
 import '../../services/api_service.dart';
+import '../payment/payment_history_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -361,70 +362,55 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             // =========================================
-            // LANGUAGE
+            // PAYMENT HISTORY
             // =========================================
 
-            Card(
-              margin:
-                  const EdgeInsets.only(
-                bottom: 10,
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
               ),
-
               child: ListTile(
-                leading: const Icon(
-                  Icons.language,
-
-                  color:
-                      Color(0xff14B8A6),
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xff14B8A6).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long_rounded,
+                    color: Color(0xff14B8A6),
+                  ),
                 ),
-
-                title: Text(
-                  'language'.tr(),
+                title: const Text(
+                  "Payment History",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-
-                subtitle: Text(
-                  _currentLanguageName(),
+                subtitle: const Text(
+                  "View past transactions and receipts",
+                  style: TextStyle(fontSize: 12),
                 ),
-
-                trailing: const Icon(
-                  Icons.arrow_forward_ios,
-
-                  size: 16,
-                ),
-
-                onTap:
-                    _showLanguageDialog,
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PaymentHistoryPage(),
+                    ),
+                  );
+                },
               ),
             ),
 
-            // =========================================
-            // OTHER OPTIONS
-            // =========================================
-
-            buildTile(
-              Icons.notifications,
-              'notifications'.tr(),
-            ),
-
-            buildTile(
-              Icons.lock_outline,
-              'privacySecurity'.tr(),
-            ),
-
-            buildTile(
-              Icons.help_outline,
-              'helpSupport'.tr(),
-            ),
-
-            buildTile(
-              Icons.info_outline,
-              'aboutHealthHome'.tr(),
-            ),
-
-            const SizedBox(height: 25),
+            const SizedBox(height: 30),
 
             // =========================================
             // LOGOUT

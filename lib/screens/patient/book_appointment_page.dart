@@ -1269,61 +1269,7 @@ final Map<String, dynamic> options = {
 
     // ------------------------------------------------------
 
-    // UPI-FIRST CHECKOUT CONFIGURATION
 
-    //
-
-    // Razorpay controls actual available methods.
-
-    // Backend still verifies that the successful payment
-
-    // method is UPI.
-
-    // ------------------------------------------------------
-
-
-
-    "config": {
-
-     "display": {
-
-      "blocks": {
-
-       "upi": {
-
-        "name": "Pay using UPI",
-
-        "instruments": [
-
-         {
-
-          "method": "upi",
-
-         },
-
-        ],
-
-       },
-
-      },
-
-      "sequence": [
-
-       "block.upi",
-
-      ],
-
-      "preferences": {
-
-       "show_default_blocks":
-
-         false,
-
-      },
-
-     },
-
-    },
 
    };
 
@@ -2196,16 +2142,11 @@ Future<void> _handlePaymentError(
 
     .showSnackBar(
 
-   const SnackBar(
-
-    backgroundColor: Colors.orange,
-
+   SnackBar(
+    backgroundColor: Colors.blueGrey,
     content: Text(
-
-     "Please use UPI for doctor appointment payment.",
-
+     "Please complete your payment via UPI or Net Banking.",
     ),
-
    ),
 
   );

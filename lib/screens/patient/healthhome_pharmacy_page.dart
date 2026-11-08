@@ -68,7 +68,7 @@ class _HealthHomePharmacyPageState
   elevation: 0,
   centerTitle: true,
   title: Text(
-    "totalMedicines".tr() + " (${filteredMedicines.length})",
+    "${"totalMedicines".tr()} (${filteredMedicines.length})",
     style: const TextStyle(
       color: Color(0xff0A1B5E),
       fontWeight: FontWeight.bold,

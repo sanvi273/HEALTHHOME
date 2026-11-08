@@ -8,7 +8,7 @@ import '../payment/payment_page.dart';
 class LabCartPage extends StatefulWidget {
   final List<String> selectedTests;
 
-  LabCartPage({
+  const LabCartPage({
     super.key,
     required this.selectedTests,
   });

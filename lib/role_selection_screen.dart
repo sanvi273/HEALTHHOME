@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
@@ -8,450 +9,302 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    final horizontalPadding = screenWidth < 600
+        ? 18.0
+        : screenWidth < 1100
+            ? 32.0
+            : 48.0;
+
+    final cardSpacing = screenWidth < 600 ? 12.0 : 16.0;
+
     return Scaffold(
       backgroundColor: const Color(0xffF4F7FB),
-
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 14,
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: 14,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 1100,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 4),
 
-          child: Column(
-            children: [
+                      // LOGO
+                      Container(
+                        height: 72,
+                        width: 72,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withOpacity(0.10),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            "assets/images/app_icon.png",
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
 
-              const SizedBox(height: 4),
+                      const SizedBox(height: 16),
 
-              // ==================================================
-              // LOGO
-              // ==================================================
+                      // TITLE
+                      Text(
+                        'welcome'.tr(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xff111827),
+                        ),
+                      ),
 
-              Container(
-                height: 72,
-                width: 72,
+                      const SizedBox(height: 6),
 
-                decoration: BoxDecoration(
-                  borderRadius:
-                      BorderRadius.circular(20),
+                      // SUBTITLE
+                      Text(
+                        'chooseYourRole'.tr(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
 
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          Colors.blue.withOpacity(0.10),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 22),
 
-                child: ClipRRect(
-                  borderRadius:
-                      BorderRadius.circular(20),
+                      // PATIENT
+                      _roleCard(
+                        context,
+                        icon: Icons.person,
+                        iconColor: Colors.blue,
+                        iconBg: const Color(0xffEAF4FF),
+                        title: 'patient'.tr(),
+                        subtitle: 'doctorsAndMedicines'.tr(),
+                        role: 'Patient',
+                        spacing: cardSpacing,
+                      ),
 
-                  child: Image.asset(
-                    "assets/images/logo.png",
-                    fit: BoxFit.cover,
+                      // DOCTOR
+                      _roleCard(
+                        context,
+                        icon: Icons.medical_services,
+                        iconColor: Colors.green,
+                        iconBg: const Color(0xffEAFBF1),
+                        title: 'doctor'.tr(),
+                        subtitle: 'managePatients'.tr(),
+                        role: 'Doctor',
+                        spacing: cardSpacing,
+                      ),
+
+                      // LABORATORY
+                      _roleCard(
+                        context,
+                        icon: Icons.science,
+                        iconColor: Colors.orange,
+                        iconBg: const Color(0xffFFF5E6),
+                        title: 'laboratory'.tr(),
+                        subtitle: 'uploadReports'.tr(),
+                        role: 'Laboratory',
+                        spacing: cardSpacing,
+                      ),
+
+                      // PHARMACY
+                      _roleCard(
+                        context,
+                        icon: Icons.local_pharmacy,
+                        iconColor: Colors.purple,
+                        iconBg: const Color(0xffF5EEFF),
+                        title: 'pharmacy'.tr(),
+                        subtitle: 'medicineOrders'.tr(),
+                        role: 'Pharmacy',
+                        spacing: cardSpacing,
+                      ),
+
+                      // ADMIN
+                      _roleCard(
+                        context,
+                        icon: Icons.admin_panel_settings,
+                        iconColor: const Color(0xff00A6B2),
+                        iconBg: const Color(0xffE6FAFB),
+                        title: 'Admin',
+                        subtitle: 'Manage professional verifications',
+                        role: 'Admin',
+                        spacing: cardSpacing,
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // LANGUAGE BUTTONS
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 12,
+                        runSpacing: 10,
+                        children: [
+                          _languageButton(
+                            context,
+                            "English",
+                            const Locale('en'),
+                          ),
+                          _languageButton(
+                            context,
+                            "हिंदी",
+                            const Locale('hi'),
+                          ),
+                          _languageButton(
+                            context,
+                            "ગુજરાતી",
+                            const Locale('gu'),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+                    ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // ==================================================
-              // TITLE
-              // ==================================================
-
-              Text(
-                'welcome'.tr(),
-
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xff111827),
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              // ==================================================
-              // SUBTITLE
-              // ==================================================
-
-              Text(
-                'chooseYourRole'.tr(),
-
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              // ==================================================
-              // PATIENT
-              // ==================================================
-
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const LoginScreen(
-                        role: "Patient",
-                      ),
-                    ),
-                  );
-                },
-
-                child: buildCard(
-                  icon: Icons.person,
-                  iconColor: Colors.blue,
-
-                  iconBg:
-                      const Color(0xffEAF4FF),
-
-                  title:
-                      'patient'.tr(),
-
-                  subtitle:
-                      'doctorsAndMedicines'.tr(),
-                ),
-              ),
-
-              // ==================================================
-              // DOCTOR
-              // ==================================================
-
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const LoginScreen(
-                        role: "Doctor",
-                      ),
-                    ),
-                  );
-                },
-
-                child: buildCard(
-                  icon:
-                      Icons.medical_services,
-
-                  iconColor:
-                      Colors.green,
-
-                  iconBg:
-                      const Color(0xffEAFBF1),
-
-                  title:
-                      'doctor'.tr(),
-
-                  subtitle:
-                      'managePatients'.tr(),
-                ),
-              ),
-
-              // ==================================================
-              // LABORATORY
-              // ==================================================
-
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const LoginScreen(
-                        role: "Laboratory",
-                      ),
-                    ),
-                  );
-                },
-
-                child: buildCard(
-                  icon:
-                      Icons.science,
-
-                  iconColor:
-                      Colors.orange,
-
-                  iconBg:
-                      const Color(0xffFFF5E6),
-
-                  title:
-                      'laboratory'.tr(),
-
-                  subtitle:
-                      'uploadReports'.tr(),
-                ),
-              ),
-
-              // ==================================================
-              // PHARMACY
-              // ==================================================
-
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const LoginScreen(
-                        role: "Pharmacy",
-                      ),
-                    ),
-                  );
-                },
-
-                child: buildCard(
-                  icon:
-                      Icons.local_pharmacy,
-
-                  iconColor:
-                      Colors.purple,
-
-                  iconBg:
-                      const Color(0xffF5EEFF),
-
-                  title:
-                      'pharmacy'.tr(),
-
-                  subtitle:
-                      'medicineOrders'.tr(),
-                ),
-              ),
-
-              const Spacer(),
-
-              // ==================================================
-              // LANGUAGE BUTTONS
-              // ==================================================
-
-              Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceEvenly,
-
-                children: [
-
-                  // =================================================
-                  // ENGLISH
-                  // =================================================
-
-                  languageButton(
-                    title: "English",
-
-                    onTap: () async {
-                      await context.setLocale(
-                        const Locale('en'),
-                      );
-                    },
-                  ),
-
-                  // =================================================
-                  // HINDI
-                  // =================================================
-
-                  languageButton(
-                    title: "हिंदी",
-
-                    onTap: () async {
-                      await context.setLocale(
-                        const Locale('hi'),
-                      );
-                    },
-                  ),
-
-                  // =================================================
-                  // GUJARATI
-                  // =================================================
-
-                  languageButton(
-                    title: "ગુજરાતી",
-
-                    onTap: () async {
-                      await context.setLocale(
-                        const Locale('gu'),
-                      );
-                    },
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  // ============================================================
   // ROLE CARD
-  // ============================================================
-
-  Widget buildCard({
+  Widget _roleCard(
+    BuildContext context, {
     required IconData icon,
     required Color iconColor,
     required Color iconBg,
     required String title,
     required String subtitle,
+    required String role,
+    required double spacing,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(
-        bottom: 14,
-      ),
+    final width = MediaQuery.sizeOf(context).width;
 
-      padding:
-          const EdgeInsets.all(14),
-
-      decoration:
-          BoxDecoration(
+    return Padding(
+      padding: EdgeInsets.only(bottom: spacing),
+      child: Material(
         color: Colors.white,
-
-        borderRadius:
-            BorderRadius.circular(20),
-
-        boxShadow: [
-          BoxShadow(
-            color:
-                Colors.black.withOpacity(0.04),
-
-            blurRadius: 8,
-
-            offset:
-                const Offset(0, 3),
-          ),
-        ],
-      ),
-
-      child: Row(
-        children: [
-
-          // ==================================================
-          // ICON
-          // ==================================================
-
-          Container(
-            height: 58,
-            width: 58,
-
-            decoration:
-                BoxDecoration(
-              color: iconBg,
-
-              borderRadius:
-                  BorderRadius.circular(18),
-            ),
-
-            child: Icon(
-              icon,
-              size: 28,
-              color: iconColor,
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          // ==================================================
-          // TEXT
-          // ==================================================
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => LoginScreen(role: role),
+              ),
+            );
+          },
+          child: Padding(
+            padding: EdgeInsets.all(width < 600 ? 14 : 18),
+            child: Row(
               children: [
-
-                Text(
-                  title,
-
-                  style:
-                      const TextStyle(
-                    fontSize: 19,
-                    fontWeight:
-                        FontWeight.bold,
-                    color:
-                        Color(0xff111827),
+                Container(
+                  height: 58,
+                  width: 58,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 28,
+                    color: iconColor,
                   ),
                 ),
 
-                const SizedBox(height: 3),
+                const SizedBox(width: 14),
 
-                Text(
-                  subtitle,
-
-                  style:
-                      const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 13,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xff111827),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        softWrap: true,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+
+                const SizedBox(width: 8),
+
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
                 ),
               ],
             ),
           ),
-
-          // ==================================================
-          // ARROW
-          // ==================================================
-
-          const Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: Colors.grey,
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // ============================================================
   // LANGUAGE BUTTON
-  // ============================================================
-
-  Widget languageButton({
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _languageButton(
+    BuildContext context,
+    String title,
+    Locale locale,
+  ) {
     return GestureDetector(
-      onTap: onTap,
-
+      onTap: () async {
+        await context.setLocale(locale);
+      },
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 10,
         ),
-
-        decoration:
-            BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
-
-          borderRadius:
-              BorderRadius.circular(24),
-
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color:
-                  Colors.black.withOpacity(0.03),
-
+              color: Colors.black.withOpacity(0.03),
               blurRadius: 5,
             ),
           ],
         ),
-
         child: Text(
           title,
-
-          style:
-              const TextStyle(
+          style: const TextStyle(
             fontSize: 15,
-            fontWeight:
-                FontWeight.w600,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),

@@ -2108,9 +2108,7 @@ static Future<Map<String, dynamic>> createPaymentOrder({
       Uri.parse(
         "$baseUrl/api/payment/create-order",
       ),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "userId": userId,
         "userName": userName,
@@ -2181,13 +2179,14 @@ static Future<Map<String, dynamic>> verifyPayment({
       Uri.parse(
         "$baseUrl/api/payment/verify-payment",
       ),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "razorpayOrderId": razorpayOrderId,
         "razorpayPaymentId": razorpayPaymentId,
         "razorpaySignature": razorpaySignature,
+        "razorpay_order_id": razorpayOrderId,
+        "razorpay_payment_id": razorpayPaymentId,
+        "razorpay_signature": razorpaySignature,
         "serviceType": serviceType,
         "serviceId": serviceId,
       }),
@@ -2351,6 +2350,58 @@ static Future<Map<String, dynamic>> verifyPayment({
     return closeQrPayment(
       paymentRecordId: paymentRecordId,
     );
+  }
+
+  // ============================================================
+  // GET PAYMENT HISTORY (Patient Module)
+  // ============================================================
+
+  static Future<Map<String, dynamic>> getPaymentHistory() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/api/payment/history"),
+        headers: await _getAuthHeaders(),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception(
+        data["message"] ?? "Failed to fetch payment history.",
+      );
+    } catch (e) {
+      debugPrint("GET PAYMENT HISTORY ERROR = $e");
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // GET PAYMENT DETAILS BY ID
+  // ============================================================
+
+  static Future<Map<String, dynamic>> getPaymentDetails(String paymentId) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/api/payment/detail/$paymentId"),
+        headers: await _getAuthHeaders(),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception(
+        data["message"] ?? "Failed to fetch payment details.",
+      );
+    } catch (e) {
+      debugPrint("GET PAYMENT DETAILS ERROR = $e");
+      rethrow;
+    }
   }
 
   // ============================================================

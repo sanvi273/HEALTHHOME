@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'services/api_service.dart';
-import 'services/telegram/AgoraVideoCallPage.dart';
-import 'screens/onboarding_screen.dart';
-import 'prescription_screen.dart';
+import '../services/api_service.dart';
+import '../services/telegram/AgoraVideoCallPage.dart';
+import 'onboarding_screen.dart';
+import '../prescription_screen.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class DoctorDashboard extends StatefulWidget {
@@ -1703,7 +1703,7 @@ Widget casesPage() {
                     _timeSettingTile('Break ends', breakEnd, 'breakEnd'),
                     const Divider(height: 24),
                     DropdownButtonFormField<int>(
-                      value: slotDurationMinutes,
+                      initialValue: slotDurationMinutes,
                       decoration: const InputDecoration(
                         labelText: 'Appointment slot duration',
                         border: OutlineInputBorder(),
@@ -1720,7 +1720,7 @@ Widget casesPage() {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
-                      value: maxAppointmentsPerDay,
+                      initialValue: maxAppointmentsPerDay,
                       decoration: const InputDecoration(
                         labelText: 'Maximum appointments per day',
                         border: OutlineInputBorder(),

@@ -44,40 +44,40 @@ class _LabProfileSetupState
         prefs.getString("userName") ?? "";
   }
 
-Future<void> saveLabProfile() async {
 
+Future<void> saveLabProfile() async {
   setState(() {
     isLoading = true;
   });
 
   try {
+    final prefs = await SharedPreferences.getInstance();
 
-    final prefs =
-        await SharedPreferences.getInstance();
+    // Get the JWT token saved during login
+    final token = prefs.getString("token") ?? "";
 
-    final result =
-        await ApiService.addLab(
+    if (token.isEmpty) {
+      throw Exception("Login session expired. Please login again.");
+    }
 
-      name:
-          nameController.text,
+    final phone = prefs.getString("userPhone") ?? "";
 
-      labType:
-          labTypeController.text,
+    if (phone.isEmpty) {
+      throw Exception("User phone number not found. Please login again.");
+    }
 
-      experience:
-          experienceController.text,
-
-      address:
-          addressController.text,
-
-      phone:
-          prefs.getString("userPhone") ?? "",
+    final result = await ApiService.addLab(
+      token: token,
+      name: nameController.text,
+      labType: labTypeController.text,
+      experience: experienceController.text,
+      address: addressController.text,
+      phone: phone,
     );
 
     if (result["success"] == true) {
-
       await prefs.setBool(
-        "labProfileCompleted_${prefs.getString("userPhone")}",
+        "labProfileCompleted_$phone",
         true,
       );
 
@@ -90,35 +90,43 @@ Future<void> saveLabProfile() async {
         "labAddress",
         addressController.text,
       );
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-  const SnackBar(
-    content: Text("Lab Profile Saved"),
-  ),
-);
+        const SnackBar(
+          content: Text("Lab Profile Saved"),
+        ),
+      );
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) =>
-              const  LaboratoryDashboard(),
+          builder: (_) => const LaboratoryDashboard(),
         ),
       );
+    } else {
+      throw Exception(
+        result["message"] ?? "Unable to save Lab profile.",
+      );
     }
-
   } catch (e) {
+    if (!mounted) return;
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(e.toString()),
       ),
     );
+  } finally {
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
-
-  setState(() {
-    isLoading = false;
-  });
 }
+
 
   @override
   Widget build(BuildContext context) {

@@ -1488,7 +1488,7 @@ class _MyCartPageState extends State<MyCartPage> {
                 patientPhone,
 
             serviceType:
-                "medicine".tr(),
+                "Medicine",
 
             // IMPORTANT:
             // This is the HealthHome

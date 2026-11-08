@@ -10,9 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/onboarding_screen.dart';
 import 'screens/patient/patient_main.dart';
-import 'doctor_dashboard.dart';
+
+import 'screens/doctor_dashboard.dart';
+import 'doctor_profile_setup.dart';
 import 'lab_dashboard.dart';
 import 'pharmacy_dashboard.dart';
+import 'responsive/responsive_wrapper.dart';
+import 'screens/admin/admin_dashboard.dart';
 
 // ======================================================
 // MAIN
@@ -120,6 +124,11 @@ class HealthHomeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      builder: (context, child) {
+  return ResponsiveWrapper(
+    child: child ?? const SizedBox.shrink(),
+  );
+},
       debugShowCheckedModeBanner: false,
 
       // ==================================================
@@ -479,6 +488,22 @@ class _CheckLoginScreenState
       return;
     }
 
+// ==================================================
+// ADMIN
+// ==================================================
+
+if (normalizedRole == "admin") {
+
+  debugPrint(
+    "🛡️ RESTORING ADMIN DASHBOARD",
+  );
+
+  _openPage(
+    const AdminDashboard(),
+  );
+
+  return;
+}
     // ==================================================
     // UNKNOWN ROLE
     // ==================================================

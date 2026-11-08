@@ -10,7 +10,7 @@ import 'screens/onboarding_screen.dart';
 
 import 'pharmacy_dashboard.dart';
 import 'lab_dashboard.dart';
-import 'doctor_dashboard.dart';
+import 'screens/doctor_dashboard.dart';
 
 import 'screens/patient/patient_main.dart';
 import 'screens/patient/profile_setup_page.dart';
@@ -19,6 +19,7 @@ import 'doctor_profile_setup.dart';
 import 'lab_profile_setup.dart';
 import 'pharmacy_profile_setup.dart';
 import 'professional_verification_screen.dart';
+import 'screens/admin/admin_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -200,44 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // ================= SIGN UP =================
 
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          isLogin = false;
-                        });
-                      },
-                      child: Column(
-                        children: [
-                          Text(
-                            "signUp".tr(),
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: !isLogin
-                                  ? const Color(
-                                      0xff00C2CB,
-                                    )
-                                  : Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            height: 3,
-                            width: 70,
-                            decoration: BoxDecoration(
-                              color: !isLogin
-                                  ? const Color(
-                                      0xff00C2CB,
-                                    )
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(
-                                20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    
                   ],
                 ),
 
@@ -447,8 +411,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ================= BOTTOM SWITCH =================
                 // =================================================
 
-                Center(
-                  child: GestureDetector(
+               if (widget.role.toLowerCase() != "admin")
+  Center(
+    child: GestureDetector(
                     onTap: () {
                       setState(() {
                         isLogin = !isLogin;
@@ -861,6 +826,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final cleanPhone = phone.trim();
 
+if (role == "admin") {
+  if (!mounted) return;
+
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const AdminDashboard(),
+    ),
+    (route) => false,
+  );
+
+  return;
+}
     debugPrint("================================");
     debugPrint("PROFILE NAVIGATION");
     debugPrint("ROLE  = $role");
@@ -1049,7 +1027,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (_) => const DoctorDashboard(),
+              builder: (_) => DoctorDashboard(),
             ),
             (route) => false,
           );
@@ -1061,7 +1039,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => const DoctorProfileSetup(),
+              builder: (_) => DoctorProfileSetup(),
             ),
           );
         }
@@ -1255,6 +1233,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String password,
   ) async {
     final name = nameController.text.trim();
+
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

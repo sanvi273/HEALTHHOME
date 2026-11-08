@@ -2074,13 +2074,15 @@ class _LabOrdersPageState
 
                     final picked = await showTimePicker(context: dialogContext, initialTime: selectedTime);
 
-                    if (picked != null) setDialogState(() {
+                    if (picked != null) {
+                      setDialogState(() {
 
                       selectedTime = picked;
 
                       selectedDate = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, picked.hour, picked.minute);
 
                     });
+                    }
 
                   },
 
