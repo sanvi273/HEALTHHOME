@@ -601,7 +601,11 @@ Future<void> _reject(dynamic item) async {
               _detailLine('Email', email),
               _detailLine(
                 'License number',
-                _value(item, ['licenseNumber', 'registrationNumber']),
+                _value(item, ['licenseNumber']),
+              ),
+              _detailLine(
+                'Registration number',
+                _value(item, ['registrationNumber']),
               ),
               _detailLine(
                 'Organization',

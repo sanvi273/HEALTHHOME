@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'doctor_profile_setup.dart';
+import 'lab_profile_setup.dart';
+import 'lab_dashboard.dart';
+import 'pharmacy_profile_setup.dart';
+import 'pharmacy_dashboard.dart';
+import 'screens/doctor_dashboard.dart';
 import 'services/api_service.dart';
 
 class ProfessionalVerificationScreen extends StatefulWidget {
@@ -21,14 +28,25 @@ class _ProfessionalVerificationScreenState
   bool isLoading = true;
 
   String status = "PENDING";
-  String verificationId = "";
-  String professionalName = "";
   String licenseNumber = "";
   String organizationName = "";
   String address = "";
   String rejectionReason = "";
 
   List<dynamic> documents = [];
+
+  final TextEditingController _licenseNumberController =
+      TextEditingController();
+  final TextEditingController _licenseTypeController =
+      TextEditingController();
+  final TextEditingController _documentUrlController =
+      TextEditingController();
+  final TextEditingController _organizationController =
+      TextEditingController();
+  final TextEditingController _registrationNumberController =
+      TextEditingController();
+  bool _isSubmitting = false;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -93,25 +111,19 @@ class _ProfessionalVerificationScreenState
                       .toUpperCase() ??
                   "PENDING";
 
-          verificationId =
-              verification["verificationId"]
-                      ?.toString() ??
-                  "";
-
-          professionalName =
-              verification["professionalName"]
-                      ?.toString() ??
-                  "";
-
           licenseNumber =
               verification["licenseNumber"]
                       ?.toString() ??
                   "";
+          _licenseNumberController.text = licenseNumber;
 
           organizationName =
               verification["organizationName"]
                       ?.toString() ??
                   "";
+          _organizationController.text = organizationName;
+          _registrationNumberController.text =
+              verification["registrationNumber"]?.toString() ?? "";
 
           address =
               verification["address"]
@@ -130,6 +142,10 @@ class _ProfessionalVerificationScreenState
 
           isLoading = false;
         });
+
+        if (status == "APPROVED") {
+          await _continueAfterApproval();
+        }
       } else {
         throw Exception(
           response["message"]?.toString() ??
@@ -155,6 +171,137 @@ class _ProfessionalVerificationScreenState
         ),
       );
     }
+  }
+
+  Future<void> _continueAfterApproval() async {
+    final prefs = await SharedPreferences.getInstance();
+    final phone = prefs.getString("userPhone") ?? "";
+    final role = widget.role.toLowerCase();
+    Widget destination;
+
+    if (role == "doctor") {
+      final profile = await ApiService.getDoctorProfile(phone);
+      destination = profile["success"] == true && profile["doctor"] != null
+          ? const DoctorDashboard()
+          : const DoctorProfileSetup();
+    } else if (role == "laboratory" || role == "lab") {
+      final profile = await ApiService.getLabProfile(phone);
+      destination = profile["success"] == true && profile["lab"] != null
+          ? const LaboratoryDashboard()
+          : const LabProfileSetup();
+    } else if (role == "pharmacy") {
+      final profile = await ApiService.getPharmacyProfile(phone);
+      destination = profile["success"] == true && profile["pharmacy"] != null
+          ? const PharmacyDashboard()
+          : const PharmacyProfileSetup();
+    } else {
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => destination),
+      (route) => false,
+    );
+  }
+
+  Future<void> _submitDocuments() async {
+    if (_licenseNumberController.text.trim().isEmpty ||
+        _licenseTypeController.text.trim().isEmpty ||
+        _documentUrlController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Enter your license details and a document link."),
+        ),
+      );
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final response = await ApiService.submitVerification(
+        token: prefs.getString("token") ?? "",
+        role: widget.role,
+        licenseNumber: _licenseNumberController.text.trim(),
+        licenseType: _licenseTypeController.text.trim(),
+        documentUrl: _documentUrlController.text.trim(),
+        businessName: _organizationController.text.trim(),
+        registrationNumber: _registrationNumberController.text.trim(),
+      );
+      if (response["success"] != true) {
+        throw Exception(response["message"] ?? "Unable to submit documents.");
+      }
+      await loadVerification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Verification details submitted.")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Submission failed: $e")),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _pickAndUploadDocument() async {
+    try {
+      final selection = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ["pdf", "jpg", "jpeg", "png"],
+        withData: true,
+      );
+      if (selection == null || selection.files.isEmpty) return;
+      final file = selection.files.single;
+      if (file.bytes == null) {
+        throw Exception("Unable to read the selected document.");
+      }
+
+      setState(() => _isUploading = true);
+      final prefs = await SharedPreferences.getInstance();
+      final result = await ApiService.uploadVerificationDocument(
+        token: prefs.getString("token") ?? "",
+        bytes: file.bytes!,
+        filename: file.name,
+        documentType: _licenseTypeController.text.trim().isEmpty
+            ? "Professional license"
+            : _licenseTypeController.text.trim(),
+      );
+      if (result["success"] != true || result["document"] is! Map) {
+        throw Exception(result["message"] ?? "Document upload failed.");
+      }
+      final document = Map<String, dynamic>.from(result["document"]);
+      if (!mounted) return;
+      setState(() {
+        _documentUrlController.text = document["url"]?.toString() ?? "";
+        if (_licenseTypeController.text.trim().isEmpty) {
+          _licenseTypeController.text = document["type"]?.toString() ?? "";
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Uploaded ${file.name}")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Upload failed: $e")),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _licenseNumberController.dispose();
+    _licenseTypeController.dispose();
+    _documentUrlController.dispose();
+    _organizationController.dispose();
+    _registrationNumberController.dispose();
+    super.dispose();
   }
 
   // =========================================================
@@ -430,43 +577,103 @@ class _ProfessionalVerificationScreenState
                       height: 20,
                     ),
 
-                    // =================================================
-                    // VERIFICATION ID
-                    // =================================================
+                    if (status == "PENDING" || status == "REJECTED")
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Submit verification documents",
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: _licenseNumberController,
+                              decoration: const InputDecoration(
+                                labelText: "License number",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _licenseTypeController,
+                              decoration: const InputDecoration(
+                                labelText: "License / document type",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _organizationController,
+                              decoration: const InputDecoration(
+                                labelText: "Organization name (optional)",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _registrationNumberController,
+                              decoration: const InputDecoration(
+                                labelText: "Registration number (optional)",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _documentUrlController,
+                              keyboardType: TextInputType.url,
+                              decoration: const InputDecoration(
+                                labelText: "Secure document URL",
+                                helperText:
+                                    "Upload the file to your approved storage and paste its secure link.",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: _isUploading
+                                  ? null
+                                  : _pickAndUploadDocument,
+                              icon: _isUploading
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.upload_file),
+                              label: Text(
+                                _isUploading ? "Uploading…" : "Choose and upload file",
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed:
+                                    _isSubmitting ? null : _submitDocuments,
+                                child: Text(
+                                  _isSubmitting
+                                      ? "Submitting…"
+                                      : "Submit for verification",
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                    _buildInfoCard(
-                      icon:
-                          Icons.badge_outlined,
-                      title:
-                          "HealthHome Verification ID",
-                      value:
-                          verificationId.isEmpty
-                              ? "Not available"
-                              : verificationId,
-                    ),
-
-                    const SizedBox(
-                      height: 12,
-                    ),
-
-                    // =================================================
-                    // PROFESSIONAL NAME
-                    // =================================================
-
-                    _buildInfoCard(
-                      icon:
-                          Icons.person_outline,
-                      title:
-                          "Professional Name",
-                      value:
-                          professionalName.isEmpty
-                              ? "Not available"
-                              : professionalName,
-                    ),
-
-                    const SizedBox(
-                      height: 12,
-                    ),
+                    const SizedBox(height: 12),
 
                     // =================================================
                     // LICENSE

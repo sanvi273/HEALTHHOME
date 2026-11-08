@@ -612,6 +612,12 @@ class _LoginScreenState extends State<LoginScreen> {
       true,
     );
 
+    // Persist identity before the pending-professional early return so the
+    // verification page can route to the correct profile/dashboard later.
+    await prefs.setString("userName", userName);
+    await prefs.setString("userPhone", userPhone);
+    await prefs.setString("userRole", userRole);
+
     debugPrint(
       "LOGIN TOKEN SAVED BEFORE VERIFICATION CHECK",
     );
@@ -1312,6 +1318,59 @@ if (role == "admin") {
       );
 
       return;
+    }
+
+    // The verification page needs an authenticated session. Sign professional
+    // users in immediately after registration and show their existing pending
+    // application instead of sending them back to the login form.
+    final registeredRole = widget.role.trim().toLowerCase();
+    if (["doctor", "laboratory", "lab", "pharmacy"]
+        .contains(registeredRole)) {
+      try {
+        final loginResponse = await ApiService.loginUser(
+          phone: phone,
+          password: password,
+        );
+        if (loginResponse["success"] != true) {
+          throw Exception(
+            loginResponse["message"] ?? "Unable to sign in after registration",
+          );
+        }
+        final user = Map<String, dynamic>.from(loginResponse["user"] ?? {});
+        final token = loginResponse["token"]?.toString() ?? "";
+        if (token.isEmpty) throw Exception("Login token was not returned");
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("token", token);
+        await prefs.setBool("isLoggedIn", true);
+        await prefs.setString("userName", user["name"]?.toString() ?? name);
+        await prefs.setString("userPhone", phone);
+        await prefs.setString(
+          "userRole",
+          registeredRole == "lab" ? "laboratory" : registeredRole,
+        );
+
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProfessionalVerificationScreen(
+              role: registeredRole,
+            ),
+          ),
+          (route) => false,
+        );
+        return;
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Account created, but sign-in failed: $e. Please log in to continue.",
+            ),
+          ),
+        );
+      }
     }
 
     // ================= SAVE BASIC STATE =================

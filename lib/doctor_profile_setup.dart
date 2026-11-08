@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/api_service.dart';
 import 'professional_verification_screen.dart';
+import 'screens/doctor_dashboard.dart';
 
 class DoctorProfileSetup extends StatefulWidget {
   const DoctorProfileSetup({super.key});
@@ -50,10 +51,7 @@ class _DoctorProfileSetupState extends State<DoctorProfileSetup> {
         specializationController.text.trim().isEmpty ||
         experienceController.text.trim().isEmpty ||
         feesController.text.trim().isEmpty ||
-        hospitalController.text.trim().isEmpty ||
-        licenseNumberController.text.trim().isEmpty ||
-        licenseTypeController.text.trim().isEmpty ||
-        documentUrlController.text.trim().isEmpty) {
+        hospitalController.text.trim().isEmpty) {
       _showMessage("Please complete all required fields.");
       return;
     }
@@ -97,21 +95,38 @@ final profileResult = await ApiService.addDoctor(
         );
       }
 
-      // STEP 2: Submit the doctor's verification application.
-      final verificationResult = await ApiService.submitVerification(
+      // Verification documents are submitted on the Verification Required
+      // page. Do not submit a second application after admin approval.
+      final verificationResponse = await ApiService.getMyVerification(
         token: token,
-        role: "doctor",
-        licenseNumber: licenseNumberController.text.trim(),
-        licenseType: licenseTypeController.text.trim(),
-        documentUrl: documentUrlController.text.trim(),
-        businessName: hospitalController.text.trim(),
       );
+      final verification = verificationResponse["verification"] is Map
+          ? Map<String, dynamic>.from(verificationResponse["verification"])
+          : <String, dynamic>{};
+      final isApproved = verification["status"]?.toString().toUpperCase() ==
+          "APPROVED";
 
-      if (verificationResult["success"] != true) {
-        throw Exception(
-          verificationResult["message"] ??
-              "Unable to submit verification application.",
+      if (!isApproved) {
+        if (licenseNumberController.text.trim().isEmpty ||
+            licenseTypeController.text.trim().isEmpty ||
+            documentUrlController.text.trim().isEmpty) {
+          throw Exception("Please complete the license and document details.");
+        }
+        final verificationResult = await ApiService.submitVerification(
+          token: token,
+          role: "doctor",
+          licenseNumber: licenseNumberController.text.trim(),
+          licenseType: licenseTypeController.text.trim(),
+          documentUrl: documentUrlController.text.trim(),
+          businessName: hospitalController.text.trim(),
         );
+
+        if (verificationResult["success"] != true) {
+          throw Exception(
+            verificationResult["message"] ??
+                "Unable to submit verification application.",
+          );
+        }
       }
 
       // STEP 3: Save profile information locally.
@@ -147,13 +162,14 @@ final profileResult = await ApiService.addDoctor(
 
       if (!mounted) return;
 
-      // STEP 4: Do NOT open DoctorDashboard before approval.
+      // Approved doctors continue to the dashboard. Any non-approved account
+      // remains on its application status page.
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => const ProfessionalVerificationScreen(
-            role: "doctor",
-          ),
+          builder: (_) => isApproved
+              ? const DoctorDashboard()
+              : const ProfessionalVerificationScreen(role: "doctor"),
         ),
       );
     } catch (e) {

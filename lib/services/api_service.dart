@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // ============================================================
@@ -14,6 +15,23 @@ class ApiService {
 
   static const String baseUrl =
       "https://healthhome-backend.onrender.com";
+
+  // ============================================================
+  // INTERNAL AUTH HELPER
+  // Returns headers with JWT Bearer token for authenticated calls.
+  // ============================================================
+
+  static Future<Map<String, String>> _getAuthHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null || token.trim().isEmpty) {
+      throw Exception("Session expired. Please login again.");
+    }
+    return {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer ${token.trim()}",
+    };
+  }
 
   // ============================================================
   // AUTH
@@ -212,6 +230,50 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> uploadVerificationDocument({
+    required String token,
+    required List<int> bytes,
+    required String filename,
+    required String documentType,
+  }) async {
+    try {
+      final request = http.MultipartRequest(
+        "POST",
+        Uri.parse("$baseUrl/api/verification/documents"),
+      )
+        ..headers["Authorization"] = "Bearer $token"
+        ..fields["type"] = documentType
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            "document",
+            bytes,
+            filename: filename,
+          ),
+        );
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      final contentType = response.headers["content-type"] ?? "";
+      if (!contentType.toLowerCase().contains("application/json")) {
+        if (response.statusCode == 404) {
+          throw Exception(
+            "The document upload endpoint is not deployed on the HealthHome backend yet. Deploy the latest backend to Render, then try again.",
+          );
+        }
+        throw Exception(
+          "The backend returned an unexpected response (HTTP ${response.statusCode}).",
+        );
+      }
+      final data = Map<String, dynamic>.from(jsonDecode(response.body));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return data;
+      }
+      throw Exception(data["message"] ?? "Document upload failed");
+    } catch (e) {
+      debugPrint("UPLOAD VERIFICATION DOCUMENT ERROR: $e");
+      return {"success": false, "message": e.toString()};
+    }
+  }
+
   static Future<Map<String, dynamic>> getMyVerification({
     required String token,
   }) async {
@@ -255,6 +317,109 @@ class ApiService {
         "success": false,
         "message": e.toString(),
       };
+    }
+  }
+
+
+  // ============================================================
+  // ADMIN - GET ALL VERIFICATION APPLICATIONS
+  // ============================================================
+
+  static Future<Map<String, dynamic>> getAllVerifications({
+    required String token,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/api/verification/admin/all"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception(
+        data["message"] ?? "Failed to load verifications",
+      );
+    } catch (e) {
+      debugPrint("GET ALL VERIFICATIONS ERROR: $e");
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // ADMIN - APPROVE VERIFICATION
+  // ============================================================
+
+  static Future<Map<String, dynamic>> approveVerification({
+    required String id,
+    required String token,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse("$baseUrl/api/verification/admin/$id/approve"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception(
+        data["message"] ?? "Failed to approve verification",
+      );
+    } catch (e) {
+      debugPrint("APPROVE VERIFICATION ERROR: $e");
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // ADMIN - REJECT VERIFICATION
+  // ============================================================
+
+  static Future<Map<String, dynamic>> rejectVerification({
+    required String id,
+    required String reason,
+    required String token,
+  }) async {
+    try {
+      final response = await http.put(
+        Uri.parse("$baseUrl/api/verification/admin/$id/reject"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "reason": reason,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception(
+        data["message"] ?? "Failed to reject verification",
+      );
+    } catch (e) {
+      debugPrint("REJECT VERIFICATION ERROR: $e");
+      rethrow;
     }
   }
 
@@ -350,12 +515,17 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     required String fees,
     required String hospital,
     required String about,
+    String? token, // accepted for compatibility; auth sent via header
   }) async {
+    final Map<String, String> headers = {
+      "Content-Type": "application/json",
+    };
+    if (token != null && token.trim().isNotEmpty) {
+      headers["Authorization"] = "Bearer ${token.trim()}";
+    }
     final response = await http.post(
       Uri.parse("$baseUrl/api/doctors/add"),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: headers,
       body: jsonEncode({
         "name": name,
         "phone": phone,
@@ -402,12 +572,17 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     required String experience,
     required String address,
     required String phone,
+    String? token, // accepted for compatibility; auth sent via header
   }) async {
+    final Map<String, String> headers = {
+      "Content-Type": "application/json",
+    };
+    if (token != null && token.trim().isNotEmpty) {
+      headers["Authorization"] = "Bearer ${token.trim()}";
+    }
     final response = await http.post(
       Uri.parse("$baseUrl/api/labs/add"),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: headers,
       body: jsonEncode({
         "name": name,
         "labType": labType,
