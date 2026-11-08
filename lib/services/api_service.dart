@@ -2608,9 +2608,7 @@ static Future<Map<String, dynamic>> verifyPayment({
         Uri.parse(
           "$baseUrl/api/orders/cod/collect/$orderId",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
       );
 
       final data = jsonDecode(response.body);
