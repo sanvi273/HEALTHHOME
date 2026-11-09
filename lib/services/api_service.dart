@@ -13,8 +13,10 @@ class ApiService {
   // BASE URL
   // ============================================================
 
-  static const String baseUrl =
-      "https://healthhome-in-g4xh.onrender.com";
+  static const String baseUrl = String.fromEnvironment(
+    "HEALTHHOME_API_BASE_URL",
+    defaultValue: "https://healthhome-in-g4xh.onrender.com",
+  );
 
   // ============================================================
   // INTERNAL AUTH HELPER
@@ -3298,6 +3300,11 @@ static Future<Map<String, dynamic>> createDoctorPaymentOrder({
     final response = await dio.post(
       "$baseUrl/api/payment/create-doctor-order",
       data: formData,
+      options: Options(
+        headers: {
+          "Authorization": (await _getAuthHeaders())["Authorization"],
+        },
+      ),
     );
 
     print("========================================");
@@ -3362,9 +3369,7 @@ static Future<Map<String, dynamic>> verifyDoctorPayment({
   try {
     final response = await http.post(
       Uri.parse("$baseUrl/api/payment/verify-doctor-payment"),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "appointmentId": appointmentId,
         "razorpayOrderId": razorpayOrderId,
@@ -3408,9 +3413,7 @@ static Future<Map<String, dynamic>> cancelDoctorPayment({
   try {
     final response = await http.post(
       Uri.parse("$baseUrl/api/payment/cancel-doctor-order"),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "appointmentId": appointmentId,
         "razorpayOrderId": razorpayOrderId,
