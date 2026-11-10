@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
 import '../patient/appointments_page.dart';
@@ -190,6 +191,12 @@ class _PaymentPageState extends State<PaymentPage> {
       _razorpayOrderId = razorpayOrderId;
       _serverAmount = serverAmount;
 
+      final preferences = await SharedPreferences.getInstance();
+      final email = (preferences.getString("email") ??
+              preferences.getString("userEmail") ??
+              "")
+          .trim();
+
       if (!mounted) return;
       setState(() {
         _viewStatus = _PaymentViewStatus.idle;
@@ -207,7 +214,11 @@ class _PaymentPageState extends State<PaymentPage> {
         "prefill": {
           "contact": widget.userPhone,
           "name": widget.userName,
+          if (email.isNotEmpty) "email": email,
         },
+        // Razorpay uses this to preselect UPI or Netbanking. Both methods
+        // remain available in Checkout according to the merchant settings.
+        "method": _selectedMethod.toLowerCase(),
         "theme": {
           "color": "#00C2CB",
         },
