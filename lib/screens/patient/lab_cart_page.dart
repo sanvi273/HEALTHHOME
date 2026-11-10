@@ -32,6 +32,7 @@ class _LabCartPageState extends State<LabCartPage> {
   String? selectedLabName;
 
   String collectionMode = "homeCollection".tr();
+  String _paymentMethod = "ONLINE";
 
   final TextEditingController addressController =
       TextEditingController();
@@ -146,9 +147,6 @@ class _LabCartPageState extends State<LabCartPage> {
 
     try {
       final response = await ApiService.placeLabOrder(
-        patientId: patientPhone,
-        patientName: patientName,
-        patientPhone: patientPhone,
         labId: selectedLabId!,
         labName: selectedLabName ?? "laboratory".tr(),
         address: collectionMode == "homeCollection".tr()
@@ -159,6 +157,7 @@ class _LabCartPageState extends State<LabCartPage> {
         tests: widget.selectedTests,
         collectionMode: collectionMode,
         bookingType: "test".tr(),
+        paymentMethod: _paymentMethod,
       );
 
       debugPrint("LAB CART ORDER RESPONSE = $response");
@@ -215,6 +214,11 @@ debugPrint("✅ LAB ORDER ID = $orderId");
         isPlacingOrder = false;
       });
 
+      if (_paymentMethod == "COD") {
+        await showSuccessDialog(orderId, cashDueOnCollection: true);
+        return;
+      }
+
       // ========================================================
       // PAYMENT
       // ========================================================
@@ -260,7 +264,10 @@ debugPrint("✅ LAB ORDER ID = $orderId");
   // SUCCESS
   // ============================================================
 
-  Future<void> showSuccessDialog(String orderId) async {
+  Future<void> showSuccessDialog(
+    String orderId, {
+    bool cashDueOnCollection = false,
+  }) async {
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -300,7 +307,9 @@ debugPrint("✅ LAB ORDER ID = $orderId");
               SizedBox(height: 8),
 
               Text(
-                "labOrderSuccess".tr(),
+                cashDueOnCollection
+                    ? "labCODPayOnCollection".tr()
+                    : "labOrderSuccess".tr(),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.black54,
@@ -424,6 +433,10 @@ debugPrint("✅ LAB ORDER ID = $orderId");
 
                       buildNotesCard(),
 
+                      SizedBox(height: 18),
+
+                      buildPaymentMethodCard(),
+
                       SizedBox(height: 100),
                     ],
                   ),
@@ -432,6 +445,37 @@ debugPrint("✅ LAB ORDER ID = $orderId");
                 buildBottomButton(),
               ],
             ),
+    );
+  }
+
+  Widget buildPaymentMethodCard() {
+    return buildCard(
+      title: "choosePaymentMethod".tr(),
+      icon: Icons.payments_outlined,
+      child: Column(
+        children: [
+          RadioListTile<String>(
+            contentPadding: EdgeInsets.zero,
+            value: "ONLINE",
+            groupValue: _paymentMethod,
+            onChanged: isPlacingOrder
+                ? null
+                : (value) => setState(() => _paymentMethod = value!),
+            title: Text("payOnlineUPINetBanking".tr()),
+            subtitle: Text("securePaymentRazorpay".tr()),
+          ),
+          RadioListTile<String>(
+            contentPadding: EdgeInsets.zero,
+            value: "COD",
+            groupValue: _paymentMethod,
+            onChanged: isPlacingOrder
+                ? null
+                : (value) => setState(() => _paymentMethod = value!),
+            title: Text("cashOnSampleCollection".tr()),
+            subtitle: Text("labCODPayOnCollection".tr()),
+          ),
+        ],
+      ),
     );
   }
 

@@ -497,5 +497,22 @@
   "labCertified": "પ્રમાણિત",
   "labHome": "હોમ",
   "labFast": "ઝડપી",
-  "labSecure": "સુરક્ષિત"
+  "labSecure": "સુરક્ષિત",
+  "bookLabTest": "લેબ ટેસ્ટ બુક કરો",
+  "howGiveSample": "તમે નમૂનો કેવી રીતે આપવા માંગો છો?",
+  "sampleCollectionAddress": "નમૂના સંગ્રહનું સરનામું",
+  "collectorVisitHome": "નમૂનો એકત્રિત કરનાર તમારા ઘરે આવશે",
+  "bookingSummary": "બુકિંગનો સારાંશ",
+  "tests": "ટેસ્ટ",
+  "testAmount": "ટેસ્ટની રકમ",
+  "continueToPayment": "ચુકવણી ચાલુ રાખો",
+  "securePaymentRazorpay": "Razorpay દ્વારા સુરક્ષિત ચુકવણી",
+  "labPaymentPending": "તમારું બુકિંગ સાચવાયું છે. ચુકવણી બાકી છે; મારા લેબ ઓર્ડરમાંથી ફરી પ્રયાસ કરો.",
+  "choosePaymentMethod": "ચુકવણીની રીત પસંદ કરો",
+  "payOnlineUPINetBanking": "UPI અથવા નેટ બેન્કિંગથી ઑનલાઇન ચુકવણી",
+  "cashOnSampleCollection": "નમૂનો લેતી વખતે રોકડ ચુકવણી",
+  "cashDueAtSampleCollection": "નમૂનો લેતી વખતે ₹{amount} રોકડ ચૂકવો.",
+  "confirmCashBooking": "રોકડ બુકિંગની પુષ્ટિ કરો",
+  "cashBookingConfirmedAmount": "બુકિંગની પુષ્ટિ થઈ. નમૂનો લેતી વખતે ₹{amount} રોકડ ચૂકવો.",
+  "labCODPayOnCollection": "નમૂનો લેતી વખતે પ્રયોગશાળાને રોકડ ચૂકવો."
 }

@@ -55,6 +55,7 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
   String? selectedLabId;
   String? selectedLabName;
+  String _labPaymentMethod = "ONLINE";
 
   String patientName = "";
   String patientPhone = "";
@@ -1702,6 +1703,10 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
             SizedBox(height: 30),
 
+            _paymentMethodSelector(),
+
+            SizedBox(height: 24),
+
             // =================================================
             // PAYMENT BUTTON
             // =================================================
@@ -1731,7 +1736,11 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
                         color: Colors.white,
                       ),
                 label: Text(
-                  isBooking ? "Processing..." : "continueToPayment".tr(),
+                  isBooking
+                      ? "Processing..."
+                      : _labPaymentMethod == "COD"
+                          ? "confirmCashBooking".tr()
+                          : "continueToPayment".tr(),
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -1745,7 +1754,13 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
             Center(
               child: Text(
-                "securePaymentRazorpay".tr(),
+                _labPaymentMethod == "COD"
+                    ? "cashDueAtSampleCollection".tr(
+                        namedArgs: {
+                          "amount": totalAmount.toStringAsFixed(0),
+                        },
+                      )
+                    : "securePaymentRazorpay".tr(),
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.black54,
@@ -2122,6 +2137,53 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
   // BOOKING SUMMARY
   // =========================================================
 
+  Widget _paymentMethodSelector() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "choosePaymentMethod".tr(),
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          ),
+          RadioListTile<String>(
+            contentPadding: EdgeInsets.zero,
+            value: "ONLINE",
+            groupValue: _labPaymentMethod,
+            onChanged: isBooking
+                ? null
+                : (value) => setState(() => _labPaymentMethod = value!),
+            title: Text("payOnlineUPINetBanking".tr()),
+            subtitle: Text("securePaymentRazorpay".tr()),
+            activeColor: primaryColor,
+          ),
+          RadioListTile<String>(
+            contentPadding: EdgeInsets.zero,
+            value: "COD",
+            groupValue: _labPaymentMethod,
+            onChanged: isBooking
+                ? null
+                : (value) => setState(() => _labPaymentMethod = value!),
+            title: Text("cashOnSampleCollection".tr()),
+            subtitle: Text(
+              "cashDueAtSampleCollection".tr(
+                namedArgs: {"amount": totalAmount.toStringAsFixed(0)},
+              ),
+            ),
+            activeColor: primaryColor,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _bookingSummary() {
     return Container(
       width: double.infinity,
@@ -2358,9 +2420,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
       // 1. Create the lab booking.
       // Payment is completed immediately after this booking is created.
       final orderResponse = await ApiService.placeLabOrder(
-        patientId: patientPhone,
-        patientName: patientName,
-        patientPhone: patientPhone,
         labId: selectedLabId ?? "",
         labName: selectedLabName ?? "",
         address: collectionMode == "homeCollection".tr()
@@ -2371,6 +2430,7 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
         tests: _selectedTests,
         collectionMode: collectionMode,
         bookingType: "test".tr(),
+        paymentMethod: _labPaymentMethod,
       );
 
       debugPrint("LAB ORDER RESPONSE = $orderResponse");
@@ -2432,6 +2492,14 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
       if (!mounted) return;
 
+      if (_labPaymentMethod == "COD") {
+        setState(() {
+          isBooking = false;
+        });
+        _showSuccessDialog(createdOrderId, cashDueOnCollection: true);
+        return;
+      }
+
       // 4. Open the existing HealthHome Razorpay payment screen.
       final paymentResult = await Navigator.push(
         context,
@@ -2485,66 +2553,54 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
     }
   }
 
+
   // =========================================================
   // SUCCESS DIALOG
   // =========================================================
 
   void _showSuccessDialog(
-    String orderId,
-  ) {
+    String orderId, {
+    bool cashDueOnCollection = false,
+  }) {
     showDialog(
       context: context,
       barrierDismissible: false,
-
       builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.circular(
-            20,
-          ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
-
-        title: Row(children: [
+        title: Row(
+          children: [
             Icon(
               Icons.check_circle,
               color: Colors.green,
             ),
-
             SizedBox(width: 10),
-
             Expanded(
-              child: Text(
-                "bookingSuccessful".tr(),
-              ),
+              child: Text("bookingSuccessful".tr()),
             ),
           ],
         ),
-
         content: Text(
-          collectionMode ==
-                  "homeCollection".tr()
-              ? "Your lab booking has been confirmed with $selectedLabName.\n\nYour payment was successful. A sample collector will be assigned by the laboratory."
-              : "Your lab booking has been confirmed with $selectedLabName.\n\nYour payment was successful. Please visit the laboratory for sample collection as selected.",
+          cashDueOnCollection
+              ? "cashBookingConfirmedAmount".tr(
+                  namedArgs: {
+                    "amount": totalAmount.toStringAsFixed(0),
+                  },
+                )
+              : collectionMode == "homeCollection".tr()
+                  ? "Your lab booking has been confirmed with $selectedLabName.\n\nYour payment was successful. A sample collector will be assigned by the laboratory."
+                  : "Your lab booking has been confirmed with $selectedLabName.\n\nYour payment was successful. Please visit the laboratory for sample collection as selected.",
         ),
-
         actions: [
           ElevatedButton(
-            style:
-                ElevatedButton.styleFrom(
-              backgroundColor:
-                  primaryColor,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
             ),
-
             onPressed: () {
-              // Close the success dialog first.
               Navigator.pop(context);
-
-              // Return TRUE to MyPrescriptionPage so it knows
-              // that the selected lab tests were successfully booked.
               Navigator.pop(context, true);
             },
-
             child: Text(
               "OK",
               style: TextStyle(
@@ -2557,6 +2613,9 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
     );
   }
 
+  // =========================================================
+  // MESSAGE
+  // =========================================================
   // =========================================================
   // MESSAGE
   // =========================================================

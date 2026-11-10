@@ -456,5 +456,22 @@
   "labCertified": "प्रमाणित",
   "labHome": "होम",
   "labFast": "तेज़",
-  "labSecure": "सुरक्षित"
+  "labSecure": "सुरक्षित",
+  "bookLabTest": "लैब टेस्ट बुक करें",
+  "howGiveSample": "आप अपना नमूना कैसे देना चाहेंगे?",
+  "sampleCollectionAddress": "नमूना संग्रह का पता",
+  "collectorVisitHome": "नमूना संग्राहक आपके घर आएगा",
+  "bookingSummary": "बुकिंग सारांश",
+  "tests": "टेस्ट",
+  "testAmount": "टेस्ट की राशि",
+  "continueToPayment": "भुगतान जारी रखें",
+  "securePaymentRazorpay": "Razorpay के माध्यम से सुरक्षित भुगतान",
+  "labPaymentPending": "आपकी बुकिंग सेव हो गई है। भुगतान लंबित है; आप मेरे लैब ऑर्डर से फिर कोशिश कर सकते हैं।",
+  "choosePaymentMethod": "भुगतान का तरीका चुनें",
+  "payOnlineUPINetBanking": "UPI या नेट बैंकिंग से ऑनलाइन भुगतान करें",
+  "cashOnSampleCollection": "नमूना लेते समय नकद भुगतान",
+  "cashDueAtSampleCollection": "नमूना लेते समय ₹{amount} नकद दें।",
+  "confirmCashBooking": "नकद बुकिंग की पुष्टि करें",
+  "cashBookingConfirmedAmount": "बुकिंग की पुष्टि हुई। नमूना लेते समय ₹{amount} नकद दें।",
+  "labCODPayOnCollection": "नमूना लेते समय प्रयोगशाला को नकद भुगतान करें।"
 }

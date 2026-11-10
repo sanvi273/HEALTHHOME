@@ -1839,9 +1839,6 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
   }
 
   static Future<Map<String, dynamic>> placeLabOrder({
-    required String patientId,
-    required String patientName,
-    required String patientPhone,
     required String labId,
     required String labName,
     required String address,
@@ -1850,18 +1847,15 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     required List<String> tests,
     required String collectionMode,
     String bookingType = "TEST",
+    String paymentMethod = "ONLINE",
   }) async {
     final response = await http.post(
       Uri.parse(
         "$baseUrl/api/lab-orders/add",
       ),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
-        "patientId": patientId,
-        "patientName": patientName,
-        "patientPhone": patientPhone,
+        // The backend derives patient identity from this authenticated token.
         "labId": labId,
         "labName": labName,
         "address": address,
@@ -1870,6 +1864,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
         "tests": tests,
         "collectionMode": collectionMode,
         "bookingType": bookingType,
+        "paymentMethod": paymentMethod,
         "status": "Pending",
       }),
     );
@@ -1877,6 +1872,25 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     return Map<String, dynamic>.from(
       jsonDecode(response.body),
     );
+  }
+
+  static Future<Map<String, dynamic>> collectLabCODPayment({
+    required String orderId,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/lab-orders/cod/collect/$orderId"),
+      headers: await _getAuthHeaders(),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception("The server returned an invalid COD collection response.");
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        decoded["message"]?.toString() ?? "Unable to confirm cash collection.",
+      );
+    }
+    return Map<String, dynamic>.from(decoded);
   }
 
   static Future<Map<String, dynamic>> acceptLabOrder(

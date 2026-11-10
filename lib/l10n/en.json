@@ -496,5 +496,22 @@
   "labCertified": "Certified",
   "labHome": "Home",
   "labFast": "Fast",
-  "labSecure": "Secure"
+  "labSecure": "Secure",
+  "bookLabTest": "Book Lab Test",
+  "howGiveSample": "How would you like to give your sample?",
+  "sampleCollectionAddress": "Sample Collection Address",
+  "collectorVisitHome": "The sample collector will visit your home",
+  "bookingSummary": "Booking Summary",
+  "tests": "Tests",
+  "testAmount": "Test Amount",
+  "continueToPayment": "Continue to Payment",
+  "securePaymentRazorpay": "Secure payment through Razorpay",
+  "labPaymentPending": "Your booking is saved. Payment is still pending; you can retry from My Lab Orders.",
+  "choosePaymentMethod": "Choose Payment Method",
+  "payOnlineUPINetBanking": "Pay online with UPI or Net Banking",
+  "cashOnSampleCollection": "Cash when sample is collected",
+  "cashDueAtSampleCollection": "Pay ₹{amount} in cash when the sample is collected.",
+  "confirmCashBooking": "Confirm Cash Booking",
+  "cashBookingConfirmedAmount": "Booking confirmed. Pay ₹{amount} in cash when your sample is collected.",
+  "labCODPayOnCollection": "Pay cash to the laboratory when your sample is collected."
 }

@@ -1551,6 +1551,42 @@ Widget _collectionActionButton(
 ) {
   final status =
       item["status"]?.toString().trim().toLowerCase() ?? "";
+  final isCod = item["paymentMethod"]?.toString().toUpperCase() == "COD";
+  final isCodCollected = item["cashCollected"] == true ||
+      item["paymentStatus"]?.toString().toLowerCase() == "paid";
+
+  Widget codCollectionButton() => SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          icon: const Icon(Icons.payments_outlined),
+          label: const Text("Confirm COD Cash Collected"),
+          onPressed: () async {
+            final orderId = item["_id"]?.toString() ?? "";
+            if (orderId.isEmpty) {
+              _showMessage("Invalid lab order ID");
+              return;
+            }
+            try {
+              final result = await ApiService.collectLabCODPayment(
+                orderId: orderId,
+              );
+              if (result["success"] != true) {
+                throw Exception(result["message"] ?? "Cash collection failed.");
+              }
+              await loadLabOrders();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("COD payment recorded.")),
+              );
+            } catch (error) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Unable to record cash: $error")),
+              );
+            }
+          },
+        ),
+      );
 
   // ==========================================================
   // ACCEPTED → ASSIGN COLLECTOR
@@ -1709,9 +1745,11 @@ if (status == "collector assigned") {
   // ==========================================================
 
   if (status == "sample collected") {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
         icon: const Icon(
           Icons.science_outlined,
         ),
@@ -1754,8 +1792,20 @@ if (status == "collector assigned") {
             );
           }
         },
-      ),
+          ),
+        ),
+        if (isCod && !isCodCollected) ...[
+          const SizedBox(height: 8),
+          codCollectionButton(),
+        ],
+      ],
     );
+  }
+
+  if (isCod &&
+      !isCodCollected &&
+      ["sample received", "in progress", "completed"].contains(status)) {
+    return codCollectionButton();
   }
 
   return const SizedBox.shrink();

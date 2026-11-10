@@ -289,9 +289,6 @@ class _UploadLabPrescriptionPageState
 
     final result =
         await ApiService.placeLabOrder(
-      patientId: patientPhone,
-      patientName: patientName,
-      patientPhone: patientPhone,
       labId: selectedLabId!,
       labName: selectedLab ?? "",
       address: orderAddress,
