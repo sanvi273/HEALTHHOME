@@ -270,10 +270,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
   // =========================================================
 
   Future<void> loadSavedAddresses() async {
-    if (patientPhone.isEmpty) {
-      return;
-    }
-
     if (mounted) {
       setState(() {
         isLoadingAddress = true;
@@ -281,19 +277,11 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
     }
 
     try {
-      /*
-       Your current address API uses userId.
-
-       HealthHome currently stores the patient phone and
-       existing address flow also uses the phone as the
-       patient identifier.
-
-       Therefore patientPhone is used here.
-      */
+      final userId = await ApiService.getAuthenticatedUserId();
 
       final response =
           await ApiService.getAddresses(
-        patientPhone,
+        userId,
       );
 
       debugPrint(
@@ -2428,7 +2416,9 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
         notes: notesController.text.trim(),
         prescriptionImage: "",
         tests: _selectedTests,
-        collectionMode: collectionMode,
+        collectionMode: collectionMode == "visitLaboratory".tr()
+            ? "Visit Laboratory"
+            : "Home Collection",
         bookingType: "test".tr(),
         paymentMethod: _labPaymentMethod,
       );
@@ -2463,6 +2453,18 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
       if (createdOrderId.isEmpty) {
         throw Exception(
           "Lab order was created but order ID was not returned by the server.",
+        );
+      }
+
+      final savedPaymentMethod =
+          (orderData is Map ? orderData["paymentMethod"] : null)
+                  ?.toString()
+                  .toUpperCase() ??
+              "";
+      if (savedPaymentMethod.isNotEmpty &&
+          savedPaymentMethod != _labPaymentMethod) {
+        throw Exception(
+          "The saved lab booking payment method does not match your selection.",
         );
       }
 
@@ -2501,12 +2503,14 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
       }
 
       // 4. Open the existing HealthHome Razorpay payment screen.
+      final patientId = await ApiService.getAuthenticatedUserId();
+      if (!mounted) return;
       final paymentResult = await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => PaymentPage(
             amount: totalAmount,
-            userId: patientPhone,
+            userId: patientId,
             userName: patientName,
             userPhone: patientPhone,
             serviceType: "Lab",

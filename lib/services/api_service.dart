@@ -50,6 +50,35 @@ class ApiService {
     };
   }
 
+  // The signed-in JWT contains the MongoDB User ObjectId. Do not use a phone
+  // number where backend APIs expect a user ID.
+  static Future<String> getAuthenticatedUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = (prefs.getString("token") ?? "").trim();
+    final parts = token.split(".");
+    if (parts.length != 3) {
+      throw Exception("Session is invalid. Please sign in again.");
+    }
+
+    try {
+      final payloadJson = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
+      );
+      final payload = jsonDecode(payloadJson);
+      final userId = (payload is Map ? payload["id"] : null)
+              ?.toString()
+              .trim() ??
+          "";
+      if (!RegExp(r"^[a-fA-F0-9]{24}$").hasMatch(userId)) {
+        throw Exception("Signed-in account has no valid user ID.");
+      }
+      await prefs.setString("userId", userId);
+      return userId;
+    } on FormatException {
+      throw Exception("Session token is invalid. Please sign in again.");
+    }
+  }
+
   // ============================================================
   // AUTH
   // ============================================================
@@ -1849,13 +1878,33 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     String bookingType = "TEST",
     String paymentMethod = "ONLINE",
   }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final patientId = await getAuthenticatedUserId();
+    final patientName = (prefs.getString("patientName") ??
+            prefs.getString("userName") ??
+            "")
+        .trim();
+    final patientPhone = (prefs.getString("patientPhone") ??
+            prefs.getString("userPhone") ??
+            "")
+        .trim();
+    if (patientName.isEmpty || patientPhone.isEmpty) {
+      throw Exception(
+        "Patient name and phone are required. Please update your profile.",
+      );
+    }
+
     final response = await http.post(
       Uri.parse(
         "$baseUrl/api/lab-orders/add",
       ),
       headers: await _getAuthHeaders(),
       body: jsonEncode({
-        // The backend derives patient identity from this authenticated token.
+        // Retain these fields for deployed API compatibility. The backend
+        // uses the authenticated account as the canonical patient identity.
+        "patientId": patientId,
+        "patientName": patientName,
+        "patientPhone": patientPhone,
         "labId": labId,
         "labName": labName,
         "address": address,
