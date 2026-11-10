@@ -14,6 +14,7 @@ class DoctorsListPage extends StatefulWidget {
 class _DoctorsListPageState extends State<DoctorsListPage> {
   List doctors = [];
   bool loading = true;
+  String? _loadError;
 
   String searchText = "";
   String selectedCategory = "All";
@@ -43,16 +44,31 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
   }
 
   Future<void> loadDoctors() async {
-    try {
-      doctors = await ApiService.getDoctors();
-    } catch (e) {
-      print(e);
-    }
-
     if (mounted) {
       setState(() {
-        loading = false;
+        loading = true;
+        _loadError = null;
       });
+    }
+
+    try {
+      final loadedDoctors = await ApiService.getDoctors();
+      if (!mounted) return;
+      setState(() {
+        doctors = loadedDoctors;
+      });
+    } catch (e) {
+      debugPrint("LOAD DOCTORS ERROR: $e");
+      if (!mounted) return;
+      setState(() {
+        _loadError = "Unable to load doctors. Check your connection and retry.";
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 
@@ -124,6 +140,33 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
           ? const Center(
               child: CircularProgressIndicator(),
             )
+          : _loadError != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_outlined,
+                          size: 44,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _loadError!,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: loadDoctors,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text("Retry"),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
           : Column(
               children: [
                 Padding(

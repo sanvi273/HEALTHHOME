@@ -13,10 +13,25 @@ class ApiService {
   // BASE URL
   // ============================================================
 
-  static const String baseUrl = String.fromEnvironment(
-    "HEALTHHOME_API_BASE_URL",
-    defaultValue: "https://healthhome-in-g4xh.onrender.com",
+  static final String baseUrl = _normalizeBaseUrl(
+    const String.fromEnvironment(
+      "HEALTHHOME_API_BASE_URL",
+      defaultValue: "https://healthhome-in-g4xh.onrender.com",
+    ),
   );
+
+  static String _normalizeBaseUrl(String value) {
+    var normalized = value.trim();
+
+    // A duplicated scheme in --dart-define (for example,
+    // https:https://host) otherwise makes every API request fail to parse.
+    normalized = normalized.replaceFirst(
+      RegExp(r'^(?:https?:)+(?=https?://)', caseSensitive: false),
+      "",
+    );
+
+    return normalized.replaceFirst(RegExp(r'/+$'), "");
+  }
 
   // ============================================================
   // INTERNAL AUTH HELPER
@@ -486,9 +501,24 @@ class ApiService {
       Uri.parse("$baseUrl/api/doctors/all"),
     );
 
-    final data = jsonDecode(response.body);
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception("The server returned an invalid doctors response.");
+    }
 
-    return data["doctors"] ?? [];
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        decoded["message"]?.toString() ?? "Unable to load doctors.",
+      );
+    }
+
+    if (decoded["success"] != true || decoded["doctors"] is! List) {
+      throw Exception(
+        decoded["message"]?.toString() ?? "Unable to load doctors.",
+      );
+    }
+
+    return List<dynamic>.from(decoded["doctors"] as List);
   }
 
   static Future<Map<String, dynamic>> getDoctorProfile(
