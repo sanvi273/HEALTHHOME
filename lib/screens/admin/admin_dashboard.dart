@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/api_service.dart';
 import '../../role_selection_screen.dart';
+import 'admin_analytics_page.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -1009,8 +1010,25 @@ IconButton(
               tooltip: 'Admin menu',
               onSelected: (value) {
                 if (value == 'logout') _logout();
+                if (value == 'analytics') {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AdminAnalyticsPage(),
+                    ),
+                  );
+                }
               },
               itemBuilder: (_) => const [
+                PopupMenuItem<String>(
+                  value: 'analytics',
+                  child: Row(
+                    children: [
+                      Icon(Icons.analytics_outlined, color: primary, size: 19),
+                      SizedBox(width: 10),
+                      Text('Business analytics'),
+                    ],
+                  ),
+                ),
                 PopupMenuItem<String>(
                   value: 'logout',
                   child: Row(

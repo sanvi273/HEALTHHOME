@@ -335,8 +335,29 @@ class ApiService {
 
 
   // ============================================================
-  // ADMIN - GET ALL VERIFICATION APPLICATIONS
+  // ADMIN - BUSINESS ANALYTICS
   // ============================================================
+
+  static Future<Map<String, dynamic>> getAdminAnalytics({
+    required String token,
+    String period = "today",
+  }) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/admin/analytics")
+          .replace(queryParameters: {"period": period}),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
+    }
+    throw Exception(data["message"] ?? "Failed to load admin analytics.");
+  }
+
+  // ADMIN - GET ALL VERIFICATION APPLICATIONS
 
   static Future<Map<String, dynamic>> getAllVerifications({
     required String token,
