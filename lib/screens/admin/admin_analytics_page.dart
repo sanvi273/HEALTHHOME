@@ -204,7 +204,7 @@ class _AdminAnalyticsPageState extends State<AdminAnalyticsPage> {
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 1.35,
+                childAspectRatio: 1.20,
                 children: [
                   _metric('Bookings and orders', totals['totalServiceRecords'] ?? 0, Icons.dashboard_outlined, const Color(0xFF2878B8)),
                   _metric('Paid/collected', totals['paidServiceRecords'] ?? 0, Icons.verified_outlined, const Color(0xFF168653)),

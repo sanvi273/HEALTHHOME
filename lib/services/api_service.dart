@@ -342,17 +342,37 @@ class ApiService {
     required String token,
     String period = "today",
   }) async {
+    final uri = Uri.parse("$baseUrl/api/admin/analytics")
+        .replace(queryParameters: {"period": period});
     final response = await http.get(
-      Uri.parse("$baseUrl/api/admin/analytics")
-          .replace(queryParameters: {"period": period}),
+      uri,
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
       },
     );
-    final data = jsonDecode(response.body);
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } on FormatException {
+      final body = response.body.trimLeft();
+      if (body.startsWith("<")) {
+        throw Exception(
+          "The analytics server returned an HTML page (HTTP ${response.statusCode}) instead of JSON. "
+          "Deploy the backend containing /api/admin/analytics and rebuild this app with that backend URL.",
+        );
+      }
+      throw Exception(
+        "The analytics server returned an unreadable response (HTTP ${response.statusCode}).",
+      );
+    }
+
+    if (decoded is! Map) {
+      throw Exception("The analytics server returned an invalid response.");
+    }
+    final data = Map<String, dynamic>.from(decoded);
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return Map<String, dynamic>.from(data);
+      return data;
     }
     throw Exception(data["message"] ?? "Failed to load admin analytics.");
   }
