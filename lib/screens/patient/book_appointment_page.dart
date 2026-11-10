@@ -100,6 +100,8 @@ class _BookAppointmentPageState
 
  bool loadingSlots = false;
 
+ String _doctorPaymentMethod = "upi";
+
 
 
  String consultationType = "Video Consultation";
@@ -1130,21 +1132,13 @@ if (selectedDateApi.isEmpty ||
 
 
 
-   final int amountInPaise =
+   final dynamic serverAmount =
+     orderResponse["amount"] ??
+     orderResponse["order"]?["amount"];
 
-     int.tryParse(
-
-        orderResponse["amount"]
-
-            ?.toString() ??
-
-          "",
-
-       ) ??
-
-       (consultationFee * 100)
-
-         .round();
+   final int amountInPaise = serverAmount is num
+       ? serverAmount.toInt()
+       : int.tryParse(serverAmount?.toString() ?? "") ?? 0;
 
 
 
@@ -1212,6 +1206,10 @@ if (selectedDateApi.isEmpty ||
 
    }
 
+   if (amountInPaise <= 0) {
+    throw Exception("The backend returned an invalid payment amount.");
+   }
+
 
 
    // ========================================================
@@ -1250,10 +1248,16 @@ final Map<String, dynamic> options = {
   "name": "HealthHome",
   "description": "Doctor Consultation",
   "order_id": _pendingRazorpayOrderId,
+  "method": _doctorPaymentMethod,
 
   "prefill": {
     "name": patientName,
     "contact": patientPhone,
+    if ((prefs.getString("email") ?? prefs.getString("userEmail") ?? "")
+        .trim()
+        .isNotEmpty)
+      "email": (prefs.getString("email") ?? prefs.getString("userEmail"))!
+          .trim(),
   },
 
   "notes": {
@@ -3743,9 +3747,32 @@ Future<void> _handlePaymentError(
 
 
 
+            Wrap(
+             spacing: 10,
+             runSpacing: 8,
+             children: [
+              ChoiceChip(
+               label: const Text("UPI"),
+               selected: _doctorPaymentMethod == "upi",
+               onSelected: loading
+                   ? null
+                   : (_) => setState(() => _doctorPaymentMethod = "upi"),
+              ),
+              ChoiceChip(
+               label: const Text("Net Banking"),
+               selected: _doctorPaymentMethod == "netbanking",
+               onSelected: loading
+                   ? null
+                   : (_) => setState(() => _doctorPaymentMethod = "netbanking"),
+              ),
+             ],
+            ),
+
+            const SizedBox(height: 4),
+
             Text(
 
-             "UPI • ₹$fees",
+             "${_doctorPaymentMethod == "upi" ? "UPI" : "Net Banking"} • ₹$fees",
 
              style:
 
