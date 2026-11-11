@@ -500,6 +500,8 @@
   "bookLabTest": "Book Lab Test",
   "howGiveSample": "How would you like to give your sample?",
   "sampleCollectionAddress": "Sample Collection Address",
+  "enterCompleteHomeAddress": "Enter your complete sample collection address",
+  "enterHomeAddress": "Enter a sample collection address to continue.",
   "collectorVisitHome": "The sample collector will visit your home",
   "bookingSummary": "Booking Summary",
   "tests": "Tests",

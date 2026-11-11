@@ -501,6 +501,8 @@
   "bookLabTest": "લેબ ટેસ્ટ બુક કરો",
   "howGiveSample": "તમે નમૂનો કેવી રીતે આપવા માંગો છો?",
   "sampleCollectionAddress": "નમૂના સંગ્રહનું સરનામું",
+  "enterCompleteHomeAddress": "નમૂનો એકત્ર કરવા માટે તમારું સંપૂર્ણ સરનામું દાખલ કરો",
+  "enterHomeAddress": "આગળ વધવા માટે નમૂના સંગ્રહનું સરનામું દાખલ કરો.",
   "collectorVisitHome": "નમૂનો એકત્રિત કરનાર તમારા ઘરે આવશે",
   "bookingSummary": "બુકિંગનો સારાંશ",
   "tests": "ટેસ્ટ",

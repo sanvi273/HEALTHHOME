@@ -460,6 +460,8 @@
   "bookLabTest": "लैब टेस्ट बुक करें",
   "howGiveSample": "आप अपना नमूना कैसे देना चाहेंगे?",
   "sampleCollectionAddress": "नमूना संग्रह का पता",
+  "enterCompleteHomeAddress": "नमूना संग्रह के लिए पूरा पता दर्ज करें",
+  "enterHomeAddress": "आगे बढ़ने के लिए नमूना संग्रह का पता दर्ज करें।",
   "collectorVisitHome": "नमूना संग्राहक आपके घर आएगा",
   "bookingSummary": "बुकिंग सारांश",
   "tests": "टेस्ट",

@@ -30,7 +30,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
   bool isLoading = true;
   bool isBooking = false;
-  bool isLoadingAddress = false;
   bool isLoadingTests = false;
   bool isLoadingAvailableTests = false;
 
@@ -43,7 +42,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
   List<String> _selectedTests = [];
   List<dynamic> labs = [];
   List<Map<String, dynamic>> labTests = [];
-  List<Map<String, dynamic>> savedAddresses = [];
   List<Map<String, dynamic>> allAvailableTests = [];
 
   Map<String, dynamic>? selectedTestDetails;
@@ -68,7 +66,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
   final TextEditingController notesController =
       TextEditingController();
 
-  String? selectedAddressId;
 
 
   // =========================================================
@@ -129,7 +126,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
         await loadLabTests(selectedLabId!);
       }
 
-      await loadSavedAddresses();
     } catch (e) {
       debugPrint(
         "INITIALIZE BOOK LAB ERROR = $e",
@@ -263,166 +259,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
     setState(() {
       isLoadingAvailableTests = false;
     });
-  }
-
-  // =========================================================
-  // LOAD SAVED ADDRESSES
-  // =========================================================
-
-  Future<void> loadSavedAddresses() async {
-    if (mounted) {
-      setState(() {
-        isLoadingAddress = true;
-      });
-    }
-
-    try {
-      final userId = await ApiService.getAuthenticatedUserId();
-
-      final response =
-          await ApiService.getAddresses(
-        userId,
-      );
-
-      debugPrint(
-        "SAVED ADDRESS RESPONSE = $response",
-      );
-
-      if (response["success"] == true) {
-        final data = response["addresses"];
-
-        if (data is List) {
-          savedAddresses =
-              data
-                  .map(
-                    (item) =>
-                        Map<String, dynamic>.from(
-                      item,
-                    ),
-                  )
-                  .toList();
-        }
-      } else {
-        savedAddresses = [];
-      }
-
-      /*
-       Automatically select default address.
-       If no default address exists, use first address.
-      */
-
-      if (savedAddresses.isNotEmpty) {
-        Map<String, dynamic>? address;
-
-        for (final item in savedAddresses) {
-          if (item["isDefault"] == true) {
-            address = item;
-            break;
-          }
-        }
-
-        address ??= savedAddresses.first;
-
-        _applySavedAddress(
-          address,
-          updateController: true,
-        );
-      }
-    } catch (e) {
-      debugPrint(
-        "LOAD SAVED ADDRESS ERROR = $e",
-      );
-    }
-
-    if (!mounted) return;
-
-    setState(() {
-      isLoadingAddress = false;
-    });
-  }
-
-  // =========================================================
-  // APPLY SAVED ADDRESS
-  // =========================================================
-
-  void _applySavedAddress(
-    Map<String, dynamic> address, {
-    bool updateController = true,
-  }) {
-    final String id =
-        address["_id"]?.toString() ?? "";
-
-    final String fullAddress =
-        address["fullAddress"]?.toString() ?? "";
-
-    final String landmark =
-        address["landmark"]?.toString() ?? "";
-
-    final String city =
-        address["city"]?.toString() ?? "";
-
-    final String state =
-        address["state"]?.toString() ?? "";
-
-    final String pincode =
-        address["pincode"]?.toString() ?? "";
-
-
-    String finalAddress = fullAddress;
-
-    /*
-     Add additional saved address information
-     only when it is not already part of fullAddress.
-    */
-
-    final List<String> parts = [];
-
-    if (landmark.isNotEmpty &&
-        !finalAddress
-            .toLowerCase()
-            .contains(landmark.toLowerCase())) {
-      parts.add(landmark);
-    }
-
-    if (city.isNotEmpty &&
-        !finalAddress
-            .toLowerCase()
-            .contains(city.toLowerCase())) {
-      parts.add(city);
-    }
-
-    if (state.isNotEmpty &&
-        !finalAddress
-            .toLowerCase()
-            .contains(state.toLowerCase())) {
-      parts.add(state);
-    }
-
-    if (pincode.isNotEmpty &&
-        !finalAddress.contains(pincode)) {
-      parts.add(pincode);
-    }
-
-    if (parts.isNotEmpty) {
-      if (finalAddress.isNotEmpty) {
-        finalAddress =
-            "$finalAddress, ${parts.join(", ")}";
-      } else {
-        finalAddress = parts.join(", ");
-      }
-    }
-
-    if (updateController) {
-      addressController.text = finalAddress;
-    }
-
-    if (mounted) {
-      setState(() {
-        selectedAddressId =
-            id.isEmpty ? null : id;
-
-      });
-    }
   }
 
   // =========================================================
@@ -1419,12 +1255,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
               SizedBox(height: 15),
 
-              // SAVED ADDRESS CARD
-              if (savedAddresses.isNotEmpty)
-                _savedAddressSection(),
-
-              SizedBox(height: 12),
-
               TextField(
                 controller: addressController,
                 maxLines: 3,
@@ -1760,264 +1590,6 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
           ],
         ),
       );
-  }
-
-  // =========================================================
-  // SAVED ADDRESS SECTION
-  // =========================================================
-
-  Widget _savedAddressSection() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(14),
-
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius:
-            BorderRadius.circular(16),
-
-        border: Border.all(
-          color: Colors.grey.shade300,
-        ),
-      ),
-
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.bookmark,
-                color: primaryColor,
-              ),
-
-              SizedBox(width: 8),
-
-              Expanded(
-                child: Text(
-                  "savedAddresses".tr(),
-                  style: TextStyle(
-                    fontWeight:
-                        FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-
-              if (isLoadingAddress)
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child:
-                      CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
-                ),
-            ],
-          ),
-
-          SizedBox(height: 12),
-
-          ...savedAddresses.map(
-            (address) {
-              final id =
-                  address["_id"]
-                          ?.toString() ??
-                      "";
-
-              final label =
-                  address["label"]
-                          ?.toString() ??
-                      "address".tr();
-
-              final full =
-                  address["fullAddress"]
-                          ?.toString() ??
-                      "";
-
-              final city =
-                  address["city"]
-                          ?.toString() ??
-                      "";
-
-              final isSelected =
-                  selectedAddressId == id;
-
-              return Padding(
-                padding:
-                    EdgeInsets.only(
-                  bottom: 8,
-                ),
-
-                child: InkWell(
-                  borderRadius:
-                      BorderRadius.circular(
-                    12,
-                  ),
-
-                  onTap: () {
-                    _applySavedAddress(
-                      address,
-                    );
-                  },
-
-                  child: Container(
-                    padding:
-                        EdgeInsets.all(
-                      12,
-                    ),
-
-                    decoration:
-                        BoxDecoration(
-                      color: isSelected
-                          ? Color(
-                              0xffE8F8F5,
-                            )
-                          : Colors.grey.shade50,
-
-                      borderRadius:
-                          BorderRadius.circular(
-                        12,
-                      ),
-
-                      border: Border.all(
-                        color: isSelected
-                            ? primaryColor
-                            : Colors
-                                .grey
-                                .shade300,
-                      ),
-                    ),
-
-                    child: Row(
-                      crossAxisAlignment:
-                          CrossAxisAlignment
-                              .start,
-
-                      children: [
-                        Icon(
-                          label
-                                  .toLowerCase()
-                                  .contains(
-                                    "home",
-                                  )
-                              ? Icons.home
-                              : Icons.location_on,
-                          color:
-                              isSelected
-                                  ? primaryColor
-                                  : Colors.grey,
-                        ),
-
-                        SizedBox(
-                          width: 10,
-                        ),
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
-
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      label,
-                                      style:
-                                          TextStyle(
-                                        fontWeight:
-                                            FontWeight
-                                                .bold,
-                                      ),
-                                    ),
-                                  ),
-
-                                  if (address[
-                                          "isDefault"] ==
-                                      true)
-                                    Container(
-                                      padding:
-                                          EdgeInsets
-                                              .symmetric(
-                                        horizontal:
-                                            7,
-                                        vertical:
-                                            3,
-                                      ),
-
-                                      decoration:
-                                          BoxDecoration(
-                                        color:
-                                            primaryColor,
-                                        borderRadius:
-                                            BorderRadius
-                                                .circular(
-                                          20,
-                                        ),
-                                      ),
-
-                                      child:
-                                          Text(
-                                        "default".tr(),
-                                        style:
-                                            TextStyle(
-                                          color:
-                                              Colors.white,
-                                          fontSize:
-                                              10,
-                                          fontWeight:
-                                              FontWeight
-                                                  .bold,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-
-                              SizedBox(
-                                height: 5,
-                              ),
-
-                              Text(
-                                full.isEmpty
-                                    ? city
-                                    : full,
-                                maxLines: 3,
-                                overflow:
-                                    TextOverflow
-                                        .ellipsis,
-                                style:
-                                    TextStyle(
-                                  fontSize: 13,
-                                  color:
-                                      Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        if (isSelected)
-                          Icon(
-                            Icons
-                                .check_circle,
-                            color:
-                                primaryColor,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
   }
 
   // =========================================================
@@ -2383,7 +1955,7 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
             .trim()
             .isEmpty) {
       _showMessage(
-        "selectHomeAddress".tr(),
+        "enterHomeAddress".tr(),
       );
       return;
     }

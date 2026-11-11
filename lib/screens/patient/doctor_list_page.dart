@@ -130,7 +130,11 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          tooltip: "Back",
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.maybePop(context),
+        ),
         title: Text(
           "doctors".tr(),
         ),
