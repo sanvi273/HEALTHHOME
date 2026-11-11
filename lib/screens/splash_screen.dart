@@ -32,10 +32,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _restoreSession() async {
 
-    await Future.delayed(
-      const Duration(seconds: 2),
-    );
-
     if (!mounted) return;
 
     final prefs =
@@ -50,15 +46,10 @@ class _SplashScreenState extends State<SplashScreen> {
     final String phone =
         prefs.getString("userPhone") ?? "";
 
-    final String name =
-        prefs.getString("userName") ?? "";
-
     debugPrint("================================");
     debugPrint("RESTORING LAST LOGIN");
     debugPrint("isLoggedIn = $isLoggedIn");
     debugPrint("role       = $role");
-    debugPrint("phone      = $phone");
-    debugPrint("name       = $name");
     debugPrint("================================");
 
     // =======================================================

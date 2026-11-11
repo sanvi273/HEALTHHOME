@@ -30,6 +30,7 @@ List<dynamic> medicines = [];
 List<Map<String, dynamic>> deliveryPartners = [];
 
 bool isRemovingPartner = false;
+final Set<String> _assigningDeliveryOrderIds = <String>{};
 
 // Total pharmacy revenue
 int totalRevenue = 0;
@@ -794,7 +795,10 @@ Future<void> removeDeliveryPartner(int index) async {
                           onTap: () {
                             Navigator.pop(
                               sheetContext,
-                              partner,
+                              <String, String>{
+                                "name": name.toString().trim(),
+                                "phone": phone.toString().trim(),
+                              },
                             );
                           },
                         ),
@@ -850,64 +854,65 @@ Future<void> removeDeliveryPartner(int index) async {
       return;
     }
 
-    debugPrint(
-      "====================================",
-    );
-    debugPrint(
-      "ASSIGNING DELIVERY PARTNER",
-    );
-    debugPrint(
-      "ORDER ID = $orderId",
-    );
-    debugPrint(
-      "PARTNER NAME = $name",
-    );
-    debugPrint(
-      "PARTNER PHONE = $phone",
-    );
-    debugPrint(
-      "====================================",
-    );
+    if (!_assigningDeliveryOrderIds.add(orderId)) return;
 
-    final result = await ApiService.assignDeliveryAgent(
-      orderId: orderId,
-      deliveryAgentName: name,
-      deliveryAgentPhone: phone,
-    );
-
-    if (!mounted) return;
-
-    if (result["success"] == true) {
-      debugPrint(
-        "✅ DELIVERY PARTNER ASSIGNED",
+    if (mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text("Assigning $name…"),
+            ],
+          ),
+          duration: const Duration(seconds: 25),
+        ),
       );
+    }
 
-      await loadOrders();
+    try {
+      final result = await ApiService.assignDeliveryAgent(
+        orderId: orderId,
+        deliveryAgentName: name,
+        deliveryAgentPhone: phone,
+      );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "$name assigned successfully.",
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      debugPrint(
-        "❌ ASSIGN FAILED = ${result["message"]}",
-      );
+      if (result["success"] == true) {
+        await loadOrders();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result["message"]?.toString() ??
-                "Unable to assign delivery partner.",
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("$name assigned successfully."),
+            backgroundColor: Colors.green,
           ),
-          backgroundColor: Colors.red,
-        ),
-      );
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result["message"]?.toString() ??
+                  "Unable to assign delivery partner.",
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      _assigningDeliveryOrderIds.remove(orderId);
+      if (mounted) setState(() {});
     }
   }
 

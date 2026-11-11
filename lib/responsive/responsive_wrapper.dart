@@ -26,7 +26,7 @@ class ResponsiveWrapper extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: width >= 1100 ? 1600 : 1200,
+                maxWidth: width >= 1100 ? 1400 : 1200,
               ),
               child: SizedBox(
                 width: double.infinity,

@@ -5,14 +5,12 @@ import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'firebase_options.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/onboarding_screen.dart';
 import 'screens/patient/patient_main.dart';
 
 import 'screens/doctor_dashboard.dart';
-import 'doctor_profile_setup.dart';
 import 'lab_dashboard.dart';
 import 'pharmacy_dashboard.dart';
 import 'responsive/responsive_wrapper.dart';
@@ -43,51 +41,9 @@ Future<void> main() async {
   // ONESIGNAL
   // ====================================================
 
-  OneSignal.Debug.setLogLevel(
-    OSLogLevel.verbose,
-  );
-
   OneSignal.initialize(
     "ebea4754-636f-4c9a-a863-9902fe6ad7c0",
   );
-
-  // ====================================================
-  // FCM
-  // ====================================================
-
-  try {
-    await Future.delayed(
-      const Duration(seconds: 2),
-    );
-
-    String? fcmToken =
-        await FirebaseMessaging.instance.getToken();
-
-    debugPrint("================================");
-    debugPrint("FCM TOKEN = $fcmToken");
-
-    debugPrint(
-      "Permission = ${OneSignal.Notifications.permission}",
-    );
-
-    debugPrint(
-      "Opted In = ${OneSignal.User.pushSubscription.optedIn}",
-    );
-
-    debugPrint(
-      "Token = ${OneSignal.User.pushSubscription.token}",
-    );
-
-    debugPrint(
-      "ID = ${OneSignal.User.pushSubscription.id}",
-    );
-
-    debugPrint("================================");
-  } catch (e) {
-    debugPrint(
-      "FCM / ONESIGNAL ERROR = $e",
-    );
-  }
 
   // ====================================================
   // RUN APP
@@ -300,14 +256,6 @@ class _CheckLoginScreenState
         await SharedPreferences
             .getInstance();
 
-    // ==================================================
-    // SMALL SPLASH DELAY
-    // ==================================================
-
-    await Future.delayed(
-      const Duration(seconds: 2),
-    );
-
     if (!mounted) return;
 
     // ==================================================
@@ -341,16 +289,6 @@ class _CheckLoginScreenState
             "";
 
     // ==================================================
-    // NAME
-    // ==================================================
-
-    final String name =
-        prefs.getString(
-              "userName",
-            ) ??
-            "";
-
-    // ==================================================
     // DEBUG
     // ==================================================
 
@@ -368,14 +306,6 @@ class _CheckLoginScreenState
 
     debugPrint(
       "role       = $role",
-    );
-
-    debugPrint(
-      "phone      = $phone",
-    );
-
-    debugPrint(
-      "name       = $name",
     );
 
     debugPrint(

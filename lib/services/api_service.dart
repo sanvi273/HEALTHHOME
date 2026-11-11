@@ -1426,18 +1426,20 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     required String deliveryAgentPhone,
   }) async {
     try {
-      final response = await http.put(
-        Uri.parse(
-          "$baseUrl/api/orders/delivery-agent/$orderId",
-        ),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "deliveryAgentName": deliveryAgentName,
-          "deliveryAgentPhone": deliveryAgentPhone,
-        }),
-      );
+      final response = await http
+          .put(
+            Uri.parse(
+              "$baseUrl/api/orders/delivery-agent/$orderId",
+            ),
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: jsonEncode({
+              "deliveryAgentName": deliveryAgentName,
+              "deliveryAgentPhone": deliveryAgentPhone,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
 
       final data = jsonDecode(response.body);
 
