@@ -341,8 +341,18 @@ class _ProfessionalVerificationScreenState
       }
       final duplicate = result["duplicate"] == true;
       if (!mounted) return;
-      await loadVerification();
-      if (!mounted) return;
+      final uploadedDocument = Map<String, dynamic>.from(
+        result["document"] as Map,
+      );
+      setState(() {
+        final uploadedUrl = uploadedDocument["url"]?.toString() ?? "";
+        final alreadyListed = documents.whereType<Map>().any(
+          (document) =>
+              document["url"]?.toString() == uploadedUrl &&
+              uploadedUrl.isNotEmpty,
+        );
+        if (!alreadyListed) documents = [...documents, uploadedDocument];
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
