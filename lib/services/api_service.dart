@@ -93,6 +93,7 @@ class ApiService {
     required String termsDocumentType,
     required String termsVersion,
     required String termsContentHash,
+    required String onboardingSessionToken,
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/terms/accept"),
@@ -102,6 +103,7 @@ class ApiService {
         "termsDocumentType": termsDocumentType,
         "termsVersion": termsVersion,
         "termsContentHash": termsContentHash,
+        "onboardingSessionToken": onboardingSessionToken,
         "accepted": true,
         "readToEnd": true,
       }),
@@ -191,7 +193,7 @@ class ApiService {
     String? termsAcceptanceToken,
   }) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/login/password"),
+      Uri.parse("$baseUrl/api/auth/login/initiate"),
       headers: {
         "Content-Type": "application/json",
       },

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -36,6 +39,13 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
 
   String get _tokenKey => 'termsAcceptanceToken_${widget.selectedRole}';
   String get _versionKey => 'termsAcceptanceVersion_${widget.selectedRole}';
+  String get _sessionKey => 'termsOnboardingSession_${widget.selectedRole}';
+
+  String _createOnboardingSessionToken() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return base64UrlEncode(bytes).replaceAll('=', '');
+  }
 
   @override
   void initState() {
@@ -113,13 +123,43 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       _error = null;
     });
     try {
+      final prefs = await SharedPreferences.getInstance();
+      var sessionToken = prefs.getString(_sessionKey);
+      if (sessionToken == null ||
+          !RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(sessionToken)) {
+        sessionToken = _createOnboardingSessionToken();
+        await prefs.setString(_sessionKey, sessionToken);
+      }
+      if (!mounted) return;
       final response = await ApiService.acceptTerms(
         selectedRole: widget.selectedRole,
         termsDocumentType: document['documentType'].toString(),
         termsVersion: document['version'].toString(),
         termsContentHash: document['contentHash'].toString(),
+        onboardingSessionToken: sessionToken,
       );
       if (!mounted) return;
+      if (response['code'] == 'ONBOARDING_SESSION_EXPIRED') {
+        await prefs.remove(_sessionKey);
+        setState(() {
+          _error =
+              'Your review session expired. Tap continue again to create a new one.';
+        });
+        return;
+      }
+      if (response['code'] == 'TERMS_VERSION_MISMATCH') {
+        await prefs.remove(_sessionKey);
+        await prefs.remove(_tokenKey);
+        await prefs.remove(_versionKey);
+        if (!mounted) return;
+        setState(() {
+          _readToEnd = false;
+          _agreed = false;
+          _loading = true;
+        });
+        await _loadTerms();
+        return;
+      }
       final token = response['acceptanceToken']?.toString() ?? '';
       if (response['success'] != true || token.isEmpty) {
         setState(() {
@@ -131,15 +171,21 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       if (response['role']?.toString() != widget.selectedRole ||
           response['termsVersion']?.toString() !=
               document['version']?.toString()) {
+        await prefs.remove(_sessionKey);
+        await prefs.remove(_tokenKey);
+        await prefs.remove(_versionKey);
+        if (!mounted) return;
         setState(() {
-          _error =
-              'The server confirmed a different terms version. Reload and review the current document.';
+          _readToEnd = false;
+          _agreed = false;
+          _loading = true;
         });
+        await _loadTerms();
         return;
       }
-      final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tokenKey, token);
       await prefs.setString(_versionKey, document['version'].toString());
+      await prefs.remove(_sessionKey);
       if (!mounted) return;
       _continueToLogin();
     } catch (_) {
@@ -158,6 +204,15 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       MaterialPageRoute<void>(
         builder: (_) => LoginScreen(role: widget.roleLabel),
       ),
+    );
+  }
+
+  void _scrollToDocumentStart() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
     );
   }
 
@@ -367,8 +422,26 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
                                       ? (value) => setState(
                                           () => _agreed = value ?? false)
                                       : null,
-                                  title: const Text(
-                                      'I have read and agree to the Terms & Conditions.'),
+                                  title: Wrap(
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                      const Text(
+                                          'I have read and agree to the '),
+                                      GestureDetector(
+                                        onTap: _scrollToDocumentStart,
+                                        child: Text(
+                                          'Terms & Conditions',
+                                          style: TextStyle(
+                                            color: colors.primary,
+                                            decoration:
+                                                TextDecoration.underline,
+                                          ),
+                                        ),
+                                      ),
+                                      const Text('.'),
+                                    ],
+                                  ),
                                 ),
                                 if (_error != null && document != null)
                                   Padding(
