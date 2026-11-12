@@ -52,8 +52,9 @@ class LabHomePage extends StatelessWidget {
             // TOP ACTION CARDS
             // ======================================================
 
-            Row(
-              children: [
+            IntrinsicHeight(
+              child: Row(
+                children: [
                 // --------------------------------------------------
                 // BOOK LAB TEST
                 // --------------------------------------------------
@@ -72,7 +73,7 @@ class LabHomePage extends StatelessWidget {
                       );
                     },
                     child: Container(
-                      height: 170,
+                      constraints: const BoxConstraints(minHeight: 170),
 
                     padding:
                         const EdgeInsets.all(18),
@@ -94,6 +95,7 @@ class LabHomePage extends StatelessWidget {
                     ),
 
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment:
                           CrossAxisAlignment.start,
 
@@ -105,10 +107,11 @@ class LabHomePage extends StatelessWidget {
                           size: 42,
                         ),
 
-                        Spacer(),
+                        const SizedBox(height: 10),
 
                         Text(
                           "bookLabTest".tr(),
+                          softWrap: true,
 
                           style:
                               TextStyle(
@@ -126,6 +129,7 @@ class LabHomePage extends StatelessWidget {
 
                         Text(
                           "chooseFromHundredsOfTests".tr(),
+                          softWrap: true,
 
                           style:
                               TextStyle(
@@ -162,7 +166,7 @@ class LabHomePage extends StatelessWidget {
                     },
 
                     child: Container(
-                      height: 170,
+                      constraints: const BoxConstraints(minHeight: 170),
 
                       padding:
                           const EdgeInsets.all(18),
@@ -192,6 +196,7 @@ class LabHomePage extends StatelessWidget {
                       ),
 
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment:
                             CrossAxisAlignment.start,
 
@@ -203,10 +208,11 @@ class LabHomePage extends StatelessWidget {
                                 primaryColor,
                           ),
 
-                          Spacer(),
+                          const SizedBox(height: 10),
 
                           Text(
                             "uploadPrescription".tr(),
+                            softWrap: true,
 
                             style:
                                 TextStyle(
@@ -222,6 +228,7 @@ class LabHomePage extends StatelessWidget {
 
                           Text(
                             "quickLabBooking".tr(),
+                            softWrap: true,
 
                             style:
                                 TextStyle(
@@ -234,7 +241,8 @@ class LabHomePage extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
 
             const SizedBox(
@@ -268,9 +276,9 @@ class LabHomePage extends StatelessWidget {
                         .spaceBetween,
 
                 children: [
-                  Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
                     children: [
                       Text(
@@ -294,6 +302,7 @@ class LabHomePage extends StatelessWidget {
                         "onYourFirstLabBooking".tr(),
                       ),
                     ],
+                    ),
                   ),
 
                   Icon(
@@ -329,31 +338,12 @@ class LabHomePage extends StatelessWidget {
               height: 18,
             ),
 
-             Row(
-              mainAxisAlignment:
-                  MainAxisAlignment
-                      .spaceAround,
-
+            Row(
               children: [
-                _FeatureCard(
-                  Icons.verified,
-                  "labCertified".tr(),
-                ),
-
-                _FeatureCard(
-                  Icons.home,
-                  "labHome".tr(),
-                ),
-
-                _FeatureCard(
-                  Icons.schedule,
-                  "labFast".tr(),
-                ),
-
-                _FeatureCard(
-                  Icons.lock,
-                  "labSecure".tr(),
-                ),
+                Expanded(child: _FeatureCard(Icons.verified, "labCertified".tr())),
+                Expanded(child: _FeatureCard(Icons.home, "labHome".tr())),
+                Expanded(child: _FeatureCard(Icons.schedule, "labFast".tr())),
+                Expanded(child: _FeatureCard(Icons.lock, "labSecure".tr())),
               ],
             ),
 
@@ -465,6 +455,9 @@ class _FeatureCard
 
         Text(
           title,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          softWrap: true,
 
           style:
               const TextStyle(

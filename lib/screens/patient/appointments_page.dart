@@ -549,6 +549,8 @@ Future<void> checkReadyConsultation() async {
 
   ) {
 
+    final compact = MediaQuery.sizeOf(context).width < 400;
+
     final bool selected =
 
         selectedTab == index;
@@ -577,7 +579,7 @@ Future<void> checkReadyConsultation() async {
 
               const EdgeInsets.symmetric(
 
-            horizontal: 5,
+            horizontal: 3,
 
           ),
 
@@ -623,7 +625,8 @@ Future<void> checkReadyConsultation() async {
 
             children: [
 
-              Icon(
+              if (!compact)
+                Icon(
 
                 index == 0
 
@@ -635,7 +638,7 @@ Future<void> checkReadyConsultation() async {
 
                         : Icons.close,
 
-                size: 20,
+                size: 16,
 
                 color: selected
 
@@ -645,15 +648,21 @@ Future<void> checkReadyConsultation() async {
 
               ),
 
-              const SizedBox(width: 7),
+              if (!compact) const SizedBox(width: 4),
 
-              Text(
+              Flexible(
+                child: Text(
 
                 title,
 
+                maxLines: compact ? 2 : 1,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+
                 style: TextStyle(
 
-                  fontSize: 16,
+                  fontSize: compact ? 13 : 15,
 
                   fontWeight: selected
 
@@ -669,6 +678,7 @@ Future<void> checkReadyConsultation() async {
 
                 ),
 
+                ),
               ),
 
             ],

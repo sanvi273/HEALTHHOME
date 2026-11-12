@@ -69,7 +69,8 @@ class PharmacyPage extends StatelessWidget {
             // TOP ACTION CARDS
             // ======================================================
 
-            Row(
+            IntrinsicHeight(
+              child: Row(
               children: [
 
                 // --------------------------------------------------
@@ -119,6 +120,7 @@ class PharmacyPage extends StatelessWidget {
                   ),
                 ),
               ],
+              ),
             ),
 
             const SizedBox(
@@ -216,30 +218,11 @@ class PharmacyPage extends StatelessWidget {
             ),
 
             Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
-
               children: [
-
-                FeatureItem(
-                  Icons.verified,
-                  "genuine".tr(),
-                ),
-
-                FeatureItem(
-                  Icons.delivery_dining,
-                  "delivery".tr(),
-                ),
-
-                FeatureItem(
-                  Icons.refresh,
-                  "returns".tr(),
-                ),
-
-                FeatureItem(
-                  Icons.lock,
-                  "secure".tr(),
-                ),
+                Expanded(child: FeatureItem(Icons.verified, "genuine".tr())),
+                Expanded(child: FeatureItem(Icons.delivery_dining, "delivery".tr())),
+                Expanded(child: FeatureItem(Icons.refresh, "returns".tr())),
+                Expanded(child: FeatureItem(Icons.lock, "secure".tr())),
               ],
             ),
 
@@ -432,7 +415,7 @@ class PharmacyPage extends StatelessWidget {
       onTap: onTap,
 
       child: Container(
-        height: 150,
+        constraints: const BoxConstraints(minHeight: 150),
 
         padding:
             const EdgeInsets.all(16),
@@ -457,6 +440,7 @@ class PharmacyPage extends StatelessWidget {
         ),
 
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment:
               CrossAxisAlignment.start,
 
@@ -468,10 +452,11 @@ class PharmacyPage extends StatelessWidget {
               color: color,
             ),
 
-            const Spacer(),
+            const SizedBox(height: 10),
 
             Text(
               title,
+              softWrap: true,
 
               style:
                   const TextStyle(
@@ -487,6 +472,7 @@ class PharmacyPage extends StatelessWidget {
 
             Text(
               subtitle,
+              softWrap: true,
 
               style:
                   const TextStyle(
@@ -552,6 +538,9 @@ class FeatureItem
 
         Text(
           title,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          softWrap: true,
 
           style:
               const TextStyle(

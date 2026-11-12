@@ -355,33 +355,53 @@ class _PaymentHistoryPageState extends State<PaymentHistoryPage> {
                   ],
                 ),
                 const Divider(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final paymentDetails = Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Icon(Icons.payment_rounded, size: 14, color: Colors.grey.shade600),
-                        const SizedBox(width: 4),
                         Text(
                           method,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
                         ),
-                        if (refId.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Text("•", style: TextStyle(color: Colors.grey.shade400)),
-                          const SizedBox(width: 8),
+                        if (refId.isNotEmpty)
                           Text(
-                            "#${refId.length > 8 ? refId.substring(0, 8) : refId}",
+                            "•  #${refId.length > 8 ? refId.substring(0, 8) : refId}",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                           ),
-                        ],
                       ],
-                    ),
-                    Text(
+                    );
+
+                    final date = Text(
                       formattedDate,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: constraints.maxWidth < 380 ? TextAlign.left : TextAlign.right,
                       style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                    ),
-                  ],
+                    );
+
+                    if (constraints.maxWidth < 420) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [paymentDetails, const SizedBox(height: 6), date],
+                      );
+                    }
+
+                    return Row(
+                      children: [
+                        Expanded(child: paymentDetails),
+                        const SizedBox(width: 8),
+                        Flexible(child: date),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
