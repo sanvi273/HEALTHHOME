@@ -79,7 +79,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(document['title']! as String), findsOneWidget);
-      expect(find.text('For ${item.label} · Version 1.0.0'), findsOneWidget);
+      expect(find.textContaining('Version'), findsNothing);
 
       final checkboxFinder = find.byType(CheckboxListTile);
       final checkbox = tester.widget<CheckboxListTile>(checkboxFinder);
@@ -161,7 +161,8 @@ void main() {
         find.text('Acceptance could not be saved. Try again.'), findsOneWidget);
   });
 
-  testWidgets('valid current acceptance skips Terms and opens matching login',
+  testWidgets(
+      'valid current acceptance keeps Terms visible without reaccepting',
       (tester) async {
     SharedPreferences.setMockInitialValues({
       'termsAcceptanceToken_patient': 'existing-token',
@@ -187,7 +188,21 @@ void main() {
     )));
     await tester.pumpAndSettle();
 
-    expect(find.byType(TermsAcceptanceScreen), findsNothing);
+    expect(find.byType(TermsAcceptanceScreen), findsOneWidget);
+    expect(find.text('HealthHome Patient Terms'), findsOneWidget);
+    expect(find.text('Continue to Login'), findsOneWidget);
+    final checkboxFinder = find.byType(CheckboxListTile);
+    expect(tester.widget<CheckboxListTile>(checkboxFinder).value, isFalse);
+    expect(tester.widget<FilledButton>(_continueButtonFinder()).onPressed,
+        isNull);
+    await tester.drag(
+        find.byType(SingleChildScrollView), const Offset(0, -12000));
+    await tester.pumpAndSettle();
+    await tester.tap(checkboxFinder);
+    await tester.pumpAndSettle();
+    expect(tester.widget<CheckboxListTile>(checkboxFinder).value, isTrue);
+    await tester.tap(find.text('Continue to Login'));
+    await tester.pumpAndSettle();
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(tester.widget<LoginScreen>(find.byType(LoginScreen)).role, 'Patient');
   });
@@ -220,7 +235,7 @@ void main() {
       roleLabel: 'Patient',
     )));
     await tester.pumpAndSettle();
-    expect(find.text('For Patient · Version 2.0.0'), findsOneWidget);
+    expect(find.textContaining('Version'), findsNothing);
     expect(find.byType(LoginScreen), findsNothing);
 
     await tester.drag(
@@ -300,13 +315,10 @@ class _TestAssetLoader extends AssetLoader {
       };
 }
 
+Finder _continueButtonFinder() => find.byType(FilledButton);
+
 FilledButton _continueButton(WidgetTester tester) =>
-    tester.widget<FilledButton>(
-      find.ancestor(
-        of: find.text('I Agree & Continue'),
-        matching: find.byType(FilledButton),
-      ),
-    );
+    tester.widget<FilledButton>(_continueButtonFinder());
 
 Map<String, dynamic> _documentFor(String role, String documentType) => {
       'success': true,
@@ -323,6 +335,23 @@ Map<String, dynamic> _documentFor(String role, String documentType) => {
             '${'This role-specific agreement text is included for scroll and layout testing. ' * 5}',
       ).join('\n\n'),
       'contentHash': 'test-hash-$role',
+      'metadata': [
+        {'label': 'Effective Date', 'value': '[Insert date]'},
+        {
+          'label': role == 'patient' ? 'Operated by' : 'Platform Operator',
+          'value': '[Full legal name of proprietor], carrying on business under the trade name HealthHome',
+        },
+        {'label': 'Business Address', 'value': '[Insert address]'},
+        {
+          'label': role == 'patient' ? 'Contact Email' : 'Partner Support Email',
+          'value': role == 'patient' ? '[Insert support email]' : '[Insert email]',
+        },
+        if (role == 'patient')
+          {
+            'label': 'Grievance Officer',
+            'value': '[Insert name and contact details]',
+          },
+      ],
       'businessDetails': {
         'effectiveDate': '[TO BE PROVIDED]',
         'legalName': '[Full legal name to be provided]',

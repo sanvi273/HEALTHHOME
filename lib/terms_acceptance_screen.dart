@@ -28,6 +28,7 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
   bool _submitting = false;
   bool _readToEnd = false;
   bool _agreed = false;
+  bool _alreadyAccepted = false;
   String? _error;
 
   static const Map<String, String> _documentTypes = {
@@ -96,7 +97,11 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
         if (validation['accepted'] == true &&
             validation['termsVersion']?.toString() ==
                 document['version']?.toString()) {
-          _continueToLogin();
+          setState(() {
+            _document = document;
+            _loading = false;
+            _alreadyAccepted = true;
+          });
           return;
         }
       }
@@ -117,6 +122,10 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
 
   Future<void> _acceptAndContinue() async {
     final document = _document;
+    if (_alreadyAccepted) {
+      _continueToLogin();
+      return;
+    }
     if (document == null || !_readToEnd || !_agreed || _submitting) return;
     setState(() {
       _submitting = true;
@@ -262,38 +271,6 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
     return widgets;
   }
 
-  Widget _detailsCard(Map<String, dynamic> document) {
-    final colors = Theme.of(context).colorScheme;
-    final metadata = (document['metadata'] as List? ?? const [])
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-    if (metadata.isEmpty) return const SizedBox.shrink();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: metadata
-            .map((entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 7),
-                  child: Text('${entry['label']}: ${entry['value']}',
-                      style: TextStyle(
-                          fontSize: 13,
-                          height: 1.35,
-                          color: colors.onSurfaceVariant)),
-                ))
-            .toList(),
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
@@ -353,20 +330,15 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
                                         height: 1.2,
                                         fontWeight: FontWeight.bold,
                                         color: colors.onSurface)),
-                                const SizedBox(height: 10),
-                                Text(
-                                    'For ${widget.roleLabel} · Version ${document?['version'] ?? ''}',
-                                    style: TextStyle(
-                                        color: colors.onSurfaceVariant,
-                                        fontSize: 14)),
                                 const SizedBox(height: 18),
-                                if (document != null) _detailsCard(document),
                                 ..._documentParagraphs(
                                     document?['content']?.toString() ?? ''),
                                 const SizedBox(height: 16),
                                 if (!_readToEnd)
                                   Text(
-                                      'Scroll to the end to enable acceptance.',
+                                      _alreadyAccepted
+                                          ? 'Scroll to the end to review the complete document.'
+                                          : 'Scroll to the end to enable acceptance.',
                                       style: TextStyle(
                                           color: colors.onSurfaceVariant,
                                           fontSize: 13)),
@@ -438,8 +410,11 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
                                   width: double.infinity,
                                   height: 54,
                                   child: FilledButton(
-                                    onPressed:
-                                        _readToEnd && _agreed && !_submitting
+                                    onPressed: _alreadyAccepted &&
+                                            _readToEnd &&
+                                            _agreed
+                                        ? _continueToLogin
+                                        : _readToEnd && _agreed && !_submitting
                                             ? _acceptAndContinue
                                             : null,
                                     style: FilledButton.styleFrom(
@@ -452,7 +427,9 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
                                             child: CircularProgressIndicator(
                                                 strokeWidth: 2,
                                                 color: Colors.white))
-                                        : const Text('I Agree & Continue'),
+                                        : Text(_alreadyAccepted
+                                            ? 'Continue to Login'
+                                            : 'I Agree & Continue'),
                                   ),
                                 ),
                               ],
