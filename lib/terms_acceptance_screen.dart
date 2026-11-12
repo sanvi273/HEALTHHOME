@@ -27,6 +27,13 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
   bool _agreed = false;
   String? _error;
 
+  static const Map<String, String> _documentTypes = {
+    'patient': 'patient_individual',
+    'doctor': 'doctor_partner',
+    'laboratory': 'laboratory_partner',
+    'pharmacy': 'pharmacy_partner',
+  };
+
   String get _tokenKey => 'termsAcceptanceToken_${widget.selectedRole}';
   String get _versionKey => 'termsAcceptanceVersion_${widget.selectedRole}';
 
@@ -55,8 +62,13 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       if (!mounted) return;
       if (document['success'] != true ||
           document['role']?.toString() != widget.selectedRole ||
+          document['documentType']?.toString() !=
+              _documentTypes[widget.selectedRole] ||
+          (document['title']?.toString().trim().isEmpty ?? true) ||
+          (document['version']?.toString().trim().isEmpty ?? true) ||
           document['content'] is! String ||
-          document['contentHash'] is! String) {
+          (document['content'] as String?)?.trim().isEmpty != false ||
+          (document['contentHash']?.toString().trim().isEmpty ?? true)) {
         throw Exception('The terms document is unavailable. Please try again.');
       }
 
@@ -116,6 +128,15 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
         });
         return;
       }
+      if (response['role']?.toString() != widget.selectedRole ||
+          response['termsVersion']?.toString() !=
+              document['version']?.toString()) {
+        setState(() {
+          _error =
+              'The server confirmed a different terms version. Reload and review the current document.';
+        });
+        return;
+      }
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tokenKey, token);
       await prefs.setString(_versionKey, document['version'].toString());
@@ -142,6 +163,7 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
 
   List<Widget> _documentParagraphs(String content) {
     final widgets = <Widget>[];
+    final colors = Theme.of(context).colorScheme;
     for (final rawLine in content.split('\n')) {
       final line = rawLine.trim();
       if (line.isEmpty) {
@@ -150,11 +172,11 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
         widgets.add(Padding(
           padding: const EdgeInsets.only(top: 12, bottom: 4),
           child: Text(line,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 17,
                   height: 1.35,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xff111827))),
+                  color: colors.onSurface)),
         ));
       } else if (line.startsWith('- ')) {
         widgets.add(Padding(
@@ -168,22 +190,25 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
               ),
               Expanded(
                 child: Text(line.substring(2),
-                    style: const TextStyle(
-                        fontSize: 15, height: 1.5, color: Color(0xff374151))),
+                    style: TextStyle(
+                        fontSize: 15,
+                        height: 1.5,
+                        color: Theme.of(context).colorScheme.onSurface)),
               ),
             ],
           ),
         ));
       } else {
         widgets.add(Text(line,
-            style: const TextStyle(
-                fontSize: 15, height: 1.55, color: Color(0xff374151))));
+            style: TextStyle(
+                fontSize: 15, height: 1.55, color: colors.onSurface)));
       }
     }
     return widgets;
   }
 
   Widget _detailsCard(Map<String, dynamic> document) {
+    final colors = Theme.of(context).colorScheme;
     final details = Map<String, dynamic>.from(
         (document['businessDetails'] as Map?) ?? const {});
     final policies = Map<String, dynamic>.from(
@@ -210,9 +235,9 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
-        color: const Color(0xffF2FBFC),
+        color: colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xffCDEFF1)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,10 +245,10 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
             .map((entry) => Padding(
                   padding: const EdgeInsets.only(bottom: 7),
                   child: Text('${entry.key}: ${entry.value}',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13,
                           height: 1.35,
-                          color: Color(0xff374151))),
+                          color: colors.onSurfaceVariant)),
                 ))
             .toList(),
       ),
@@ -240,11 +265,12 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
   @override
   Widget build(BuildContext context) {
     final document = _document;
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xffF7FAFC),
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xff111827),
+        backgroundColor: colors.surface,
+        foregroundColor: colors.onSurface,
         elevation: 0,
         title: const Text('Terms & Conditions'),
       ),
@@ -283,16 +309,16 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(document?['title']?.toString() ?? '',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                         fontSize: 26,
                                         height: 1.2,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xff111827))),
+                                        color: colors.onSurface)),
                                 const SizedBox(height: 10),
                                 Text(
                                     'For ${widget.roleLabel} · Version ${document?['version'] ?? ''}',
-                                    style: const TextStyle(
-                                        color: Color(0xff6B7280),
+                                    style: TextStyle(
+                                        color: colors.onSurfaceVariant,
                                         fontSize: 14)),
                                 const SizedBox(height: 18),
                                 if (document != null) _detailsCard(document),
@@ -300,10 +326,10 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
                                     document?['content']?.toString() ?? ''),
                                 const SizedBox(height: 16),
                                 if (!_readToEnd)
-                                  const Text(
+                                  Text(
                                       'Scroll to the end to enable acceptance.',
                                       style: TextStyle(
-                                          color: Color(0xff6B7280),
+                                          color: colors.onSurfaceVariant,
                                           fontSize: 13)),
                               ],
                             ),
@@ -316,8 +342,8 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        decoration: BoxDecoration(
+                          color: colors.surface,
                           boxShadow: [
                             BoxShadow(
                                 color: Color(0x14000000),
