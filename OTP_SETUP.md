@@ -2,11 +2,11 @@
 
 ## Credentials
 
-Keep the existing Render variables `MSG91_AUTH_KEY` and `MSG91_WIDGET_ID` unchanged. Add `MSG91_WIDGET_TOKEN` in Render using the Widget-specific `tokenAuth` from MSG91. The account Auth Key stays on the backend and is used only to validate MSG91 access tokens.
+Keep the existing Render variables `MSG91_AUTH_KEY` and `MSG91_WIDGET_ID` unchanged. The account Auth Key stays on the backend and is used to send Widget OTP requests and validate MSG91 access tokens.
 
-The official Flutter and Web Widget integrations require `tokenAuth` in the client. Inject it at build time; do not commit it to Dart source, a frontend `.env`, or a repository secret file. Client-side Widget tokens are necessarily present in the compiled app/browser bundle. If the Widget token is treated as a confidential server-only secret, use a backend-only OTP integration instead of the MSG91 client SDK.
+When a Widget-specific `tokenAuth` is available, the client can use MSG91's Flutter/Web SDK to verify OTP. If it is not supplied to the app, the app sends the six-digit code to HealthHome and the backend verifies it with MSG91's Widget API using the existing server Auth Key. The backend does not need a separate `MSG91_WIDGET_TOKEN` environment variable.
 
-Flutter builds require the Widget ID and Widget token:
+The Widget ID is optional for the backend-verified OTP path. To enable the client SDK fast path, supply both Widget values at build time:
 
 ```powershell
 cd frontend
@@ -14,13 +14,13 @@ flutter pub get
 flutter run --dart-define=MSG91_WIDGET_ID=<widget-id> --dart-define=MSG91_WIDGET_TOKEN=<widget-token>
 ```
 
-For a web build, use the same build defines:
+For a web build with the client SDK fast path, use the same build defines:
 
 ```powershell
 flutter build web --dart-define=MSG91_WIDGET_ID=<widget-id> --dart-define=MSG91_WIDGET_TOKEN=<widget-token>
 ```
 
-Do not pass `MSG91_AUTH_KEY` to Flutter.
+Do not pass `MSG91_AUTH_KEY` to Flutter. Without the optional Widget token define, Flutter uses the backend verification path.
 
 ## Backend
 
@@ -29,7 +29,7 @@ cd backend
 npm start
 ```
 
-The backend requires `MSG91_AUTH_KEY`, `MSG91_WIDGET_ID`, `MSG91_WIDGET_TOKEN`, `JWT_SECRET`, and `MONGO_URL` in its runtime environment. It stores only short-lived Widget request/challenge metadata and hashed registration passwords. Temporary challenges are removed by a MongoDB TTL index.
+The backend requires `MSG91_AUTH_KEY`, `MSG91_WIDGET_ID`, `JWT_SECRET`, and `MONGO_URL` in its runtime environment. It stores only short-lived Widget request/challenge metadata and hashed registration passwords. Temporary challenges are removed by a MongoDB TTL index.
 
 ## Verification
 
