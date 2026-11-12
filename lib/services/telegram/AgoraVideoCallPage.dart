@@ -23,12 +23,10 @@ class AgoraVideoCallPage extends StatefulWidget {
   });
 
   @override
-  State<AgoraVideoCallPage> createState() =>
-      _AgoraVideoCallPageState();
+  State<AgoraVideoCallPage> createState() => _AgoraVideoCallPageState();
 }
 
-class _AgoraVideoCallPageState
-    extends State<AgoraVideoCallPage> {
+class _AgoraVideoCallPageState extends State<AgoraVideoCallPage> {
   RtcEngine? _engine;
 
   bool loading = true;
@@ -63,8 +61,7 @@ class _AgoraVideoCallPageState
   // ============================================================
 
   int _buildAgoraUid(String appointmentId, bool isDoctor) {
-    final clean =
-        appointmentId.replaceAll(RegExp(r'[^0-9a-fA-F]'), '');
+    final clean = appointmentId.replaceAll(RegExp(r'[^0-9a-fA-F]'), '');
 
     int seed;
 
@@ -148,20 +145,17 @@ class _AgoraVideoCallPageState
 
       if (tokenResponse["success"] != true) {
         throw Exception(
-          tokenResponse["message"] ??
-              "Unable to generate Agora token",
+          tokenResponse["message"] ?? "Unable to generate Agora token",
         );
       }
 
-      final String appId =
-          tokenResponse["appId"].toString();
+      final String appId = tokenResponse["appId"].toString();
 
-      final String token =
-          tokenResponse["token"].toString();
+      final String token = tokenResponse["token"].toString();
 
-      final String backendChannel =
-          tokenResponse["channelName"].toString();
-      final int backendUid = int.tryParse(tokenResponse["uid"].toString()) ?? uid;
+      final String backendChannel = tokenResponse["channelName"].toString();
+      final int backendUid =
+          int.tryParse(tokenResponse["uid"].toString()) ?? uid;
 
       channelName = backendChannel;
 
@@ -184,8 +178,7 @@ class _AgoraVideoCallPageState
       await engine.initialize(
         RtcEngineContext(
           appId: appId,
-          channelProfile:
-              ChannelProfileType.channelProfileCommunication,
+          channelProfile: ChannelProfileType.channelProfileCommunication,
         ),
       );
 
@@ -195,13 +188,11 @@ class _AgoraVideoCallPageState
 
       engine.registerEventHandler(
         RtcEngineEventHandler(
-
           // ------------------------------------------------------
           // LOCAL USER JOINED
           // ------------------------------------------------------
 
-          onJoinChannelSuccess:
-              (RtcConnection connection, int elapsed) {
+          onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
             debugPrint(
               "AGORA JOIN SUCCESS"
               " | CHANNEL: ${connection.channelId}"
@@ -249,9 +240,8 @@ class _AgoraVideoCallPageState
             setState(() {
               remoteUid = remoteUidValue;
               remoteCameraEnabled = true;
-              status = widget.isDoctor
-                  ? "Patient connected"
-                  : "Doctor connected";
+              status =
+                  widget.isDoctor ? "Patient connected" : "Doctor connected";
             });
           },
 
@@ -284,8 +274,8 @@ class _AgoraVideoCallPageState
             int remoteUidValue,
             bool muted,
           ) {
-            if (!mounted ||
-                (remoteUid != null && remoteUid != remoteUidValue)) return;
+            if (!mounted || (remoteUid != null && remoteUid != remoteUidValue))
+              return;
             setState(() {
               remoteUid = remoteUidValue;
               remoteCameraEnabled = !muted;
@@ -333,12 +323,10 @@ class _AgoraVideoCallPageState
       await engine.joinChannel(
         token: token,
         channelId: backendChannel,
-          uid: backendUid,
+        uid: backendUid,
         options: const ChannelMediaOptions(
-          clientRoleType:
-              ClientRoleType.clientRoleBroadcaster,
-          channelProfile:
-              ChannelProfileType.channelProfileCommunication,
+          clientRoleType: ClientRoleType.clientRoleBroadcaster,
+          channelProfile: ChannelProfileType.channelProfileCommunication,
         ),
       );
 
@@ -348,8 +336,7 @@ class _AgoraVideoCallPageState
       // ========================================================
 
       if (!widget.isDoctor) {
-        final joinResponse =
-            await ApiService.joinConsultation(
+        final joinResponse = await ApiService.joinConsultation(
           widget.appointmentId,
         );
 
@@ -372,8 +359,7 @@ class _AgoraVideoCallPageState
       setState(() {
         loading = false;
         joined = false;
-        status =
-            "Unable to join video consultation.\n\n$e";
+        status = "Unable to join video consultation.\n\n$e";
       });
     }
   }
@@ -480,8 +466,7 @@ class _AgoraVideoCallPageState
 
       if (widget.isDoctor) {
         try {
-          final response =
-              await ApiService.completeConsultation(
+          final response = await ApiService.completeConsultation(
             widget.appointmentId,
           );
 
@@ -549,17 +534,14 @@ class _AgoraVideoCallPageState
         color: Colors.black,
         child: Center(
           child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
                 Icons.person,
                 size: 90,
                 color: Colors.white54,
               ),
-
               const SizedBox(height: 20),
-
               Text(
                 widget.isDoctor
                     ? "Waiting for patient..."
@@ -569,9 +551,7 @@ class _AgoraVideoCallPageState
                   fontSize: 18,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               Text(
                 status,
                 textAlign: TextAlign.center,
@@ -596,7 +576,9 @@ class _AgoraVideoCallPageState
               const Icon(Icons.videocam_off, size: 72, color: Colors.white54),
               const SizedBox(height: 14),
               Text(
-                widget.isDoctor ? "Patient's camera is off" : "Doctor's camera is off",
+                widget.isDoctor
+                    ? "Patient's camera is off"
+                    : "Doctor's camera is off",
                 style: const TextStyle(color: Colors.white70, fontSize: 18),
               ),
             ],
@@ -606,8 +588,7 @@ class _AgoraVideoCallPageState
     }
 
     return AgoraVideoView(
-      controller:
-          VideoViewController.remote(
+      controller: VideoViewController.remote(
         rtcEngine: engine,
         canvas: VideoCanvas(
           uid: remoteUid,
@@ -627,15 +608,13 @@ class _AgoraVideoCallPageState
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult:
-          (didPop, result) {
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           _endCall();
         }
       },
       child: Scaffold(
         backgroundColor: Colors.black,
-
         appBar: AppBar(
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
@@ -644,10 +623,8 @@ class _AgoraVideoCallPageState
           ),
           centerTitle: true,
         ),
-
         body: Stack(
           children: [
-
             // ==================================================
             // REMOTE VIDEO
             // ==================================================
@@ -667,8 +644,7 @@ class _AgoraVideoCallPageState
                 width: 120,
                 height: 170,
                 child: ClipRRect(
-                  borderRadius:
-                      BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(14),
                   child: Container(
                     color: Colors.grey.shade900,
                     child: _buildLocalVideo(),
@@ -684,21 +660,16 @@ class _AgoraVideoCallPageState
               left: 20,
               top: 20,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black
-                      .withValues(alpha: 0.55),
-                  borderRadius:
-                      BorderRadius.circular(20),
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  widget.isDoctor
-                      ? widget.patientName
-                      : widget.doctorName,
+                  widget.isDoctor ? widget.patientName : widget.doctorName,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -717,13 +688,10 @@ class _AgoraVideoCallPageState
                 right: 20,
                 top: 70,
                 child: Container(
-                  padding:
-                      const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.black
-                        .withValues(alpha: 0.65),
-                    borderRadius:
-                        BorderRadius.circular(16),
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     children: [
@@ -731,14 +699,11 @@ class _AgoraVideoCallPageState
                         const CircularProgressIndicator(
                           color: Color(0xff00C2CB),
                         ),
-
                       const SizedBox(height: 15),
-
                       Text(
                         status,
                         textAlign: TextAlign.center,
-                        style:
-                            const TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 15,
                         ),
@@ -757,27 +722,20 @@ class _AgoraVideoCallPageState
               right: 20,
               bottom: 30,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 15,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black
-                      .withValues(alpha: 0.70),
-                  borderRadius:
-                      BorderRadius.circular(30),
+                  color: Colors.black.withValues(alpha: 0.70),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceEvenly,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-
                     // MIC
                     _controlButton(
-                      icon: microphoneEnabled
-                          ? Icons.mic
-                          : Icons.mic_off,
+                      icon: microphoneEnabled ? Icons.mic : Icons.mic_off,
                       onPressed: joined && !_togglingMicrophone
                           ? _toggleMicrophone
                           : null,
@@ -785,19 +743,15 @@ class _AgoraVideoCallPageState
 
                     // CAMERA
                     _controlButton(
-                      icon: cameraEnabled
-                          ? Icons.videocam
-                          : Icons.videocam_off,
-                      onPressed: joined && !_togglingCamera
-                          ? _toggleCamera
-                          : null,
+                      icon: cameraEnabled ? Icons.videocam : Icons.videocam_off,
+                      onPressed:
+                          joined && !_togglingCamera ? _toggleCamera : null,
                     ),
 
                     // END
                     _controlButton(
                       icon: Icons.call_end,
-                      backgroundColor:
-                          Colors.red,
+                      backgroundColor: Colors.red,
                       onPressed: _endCall,
                     ),
                   ],

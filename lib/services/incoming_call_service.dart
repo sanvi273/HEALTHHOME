@@ -21,7 +21,8 @@ final FlutterLocalNotificationsPlugin _localNotifications =
 Future<void> healthHomeFcmBackgroundHandler(RemoteMessage message) async {
   DartPluginRegistrant.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await IncomingCallService.initializeLocalNotifications(requestPermissions: false);
+  await IncomingCallService.initializeLocalNotifications(
+      requestPermissions: false);
   await IncomingCallService.showIncomingNotification(message.data);
 }
 
@@ -158,9 +159,12 @@ class IncomingCallService {
   static Future<bool> requestVideoCallPermissions() async {
     if (defaultTargetPlatform != TargetPlatform.android) return true;
     try {
-      return await _nativeCallChannel.invokeMethod<bool>('requestAvPermissions') ?? false;
+      return await _nativeCallChannel
+              .invokeMethod<bool>('requestAvPermissions') ??
+          false;
     } on PlatformException catch (error) {
-      debugPrint('Camera/microphone permission request failed: ${error.message}');
+      debugPrint(
+          'Camera/microphone permission request failed: ${error.message}');
       return false;
     }
   }
@@ -181,7 +185,9 @@ class IncomingCallService {
     if (defaultTargetPlatform != TargetPlatform.android) return;
     _ringTimeout?.cancel();
     _ringingCallId = callId;
-    _nativeCallChannel.invokeMethod<bool>('startIncomingRingtone').catchError((error) {
+    _nativeCallChannel
+        .invokeMethod<bool>('startIncomingRingtone')
+        .catchError((error) {
       debugPrint('Unable to play incoming-call ringtone: $error');
       return false;
     });
