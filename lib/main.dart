@@ -64,8 +64,8 @@ Future<void> main() async {
     ),
   );
 
-  // Notification SDK startup and permission prompts must not hold the first
-  // frame. Incoming-call listeners are installed as soon as the app is visible.
+  // Start the app before permissions, token registration, or other network
+  // notification setup. These services must not block the first visible frame.
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(IncomingCallService.initialize(appNavigatorKey));
     unawaited(

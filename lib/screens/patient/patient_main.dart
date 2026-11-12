@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,7 +7,6 @@ import 'doctor_list_page.dart';
 import 'pharmacy_page.dart';
 import 'lab_home_page.dart';
 import 'profile_page.dart';
-import '../../services/api_service.dart';
 
 class PatientMain extends StatefulWidget {
   const PatientMain({super.key});
@@ -24,17 +22,6 @@ class _PatientMainState extends State<PatientMain> {
   void initState() {
     super.initState();
     _loadPatientLanguage();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _warmDoctorList();
-    });
-  }
-
-  Future<void> _warmDoctorList() async {
-    try {
-      await ApiService.prefetchDoctors();
-    } catch (error) {
-      debugPrint('Doctor list prefetch failed: $error');
-    }
   }
 
   Future<void> _loadPatientLanguage() async {

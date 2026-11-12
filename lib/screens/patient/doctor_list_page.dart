@@ -14,7 +14,6 @@ class DoctorsListPage extends StatefulWidget {
 class _DoctorsListPageState extends State<DoctorsListPage> {
   List doctors = [];
   bool loading = true;
-  bool refreshing = false;
   String? _loadError;
 
   String searchText = "";
@@ -44,29 +43,16 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
     loadDoctors();
   }
 
-  Future<void> loadDoctors({bool forceRefresh = false}) async {
+  Future<void> loadDoctors() async {
+    if (mounted) {
+      setState(() {
+        loading = true;
+        _loadError = null;
+      });
+    }
+
     try {
-      if (!forceRefresh) {
-        final cachedDoctors = await ApiService.getCachedDoctors();
-        if (cachedDoctors != null && mounted) {
-          setState(() {
-            doctors = cachedDoctors;
-            loading = false;
-            refreshing = true;
-            _loadError = null;
-          });
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          loading = doctors.isEmpty;
-          refreshing = true;
-          _loadError = null;
-        });
-      }
-
-      final loadedDoctors = await ApiService.getDoctors(refresh: true);
+      final loadedDoctors = await ApiService.getDoctors();
       if (!mounted) return;
       setState(() {
         doctors = loadedDoctors;
@@ -74,16 +60,13 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
     } catch (e) {
       debugPrint("LOAD DOCTORS ERROR: $e");
       if (!mounted) return;
-      if (doctors.isEmpty) {
-        setState(() {
-          _loadError = "Unable to load doctors. Check your connection and retry.";
-        });
-      }
+      setState(() {
+        _loadError = "Unable to load doctors. Check your connection and retry.";
+      });
     } finally {
       if (mounted) {
         setState(() {
           loading = false;
-          refreshing = false;
         });
       }
     }
@@ -180,7 +163,7 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
                         ),
                         const SizedBox(height: 16),
                         OutlinedButton.icon(
-                          onPressed: () => loadDoctors(forceRefresh: true),
+                          onPressed: loadDoctors,
                           icon: const Icon(Icons.refresh),
                           label: const Text("Retry"),
                         ),
@@ -190,11 +173,6 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
                 )
           : Column(
               children: [
-                if (refreshing)
-                  const LinearProgressIndicator(
-                    minHeight: 2,
-                    color: Color(0xff00C2CB),
-                  ),
                 Padding(
                   padding: const EdgeInsets.all(15),
                   child: TextField(

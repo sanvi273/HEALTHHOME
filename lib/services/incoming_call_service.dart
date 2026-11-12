@@ -30,8 +30,6 @@ class IncomingCallService {
   static const MethodChannel _nativeCallChannel =
       MethodChannel('healthhome_tgcalls');
   static GlobalKey<NavigatorState>? _navigatorKey;
-  static bool _initialized = false;
-  static Future<void>? _localNotificationsInitialization;
   static final Set<String> _shownCalls = <String>{};
   static Timer? _ringTimeout;
   static Timer? _activeCallPoll;
@@ -51,92 +49,49 @@ class IncomingCallService {
 
   static Future<void> initialize(GlobalKey<NavigatorState> navigatorKey) async {
     _navigatorKey = navigatorKey;
-    if (kIsWeb || _initialized) return;
-    _initialized = true;
+    if (kIsWeb) return;
     WidgetsBinding.instance.addObserver(_lifecycleObserver);
     _activeCallPoll ??= Timer.periodic(const Duration(seconds: 5), (_) {
       if (_isForeground) unawaited(checkActivePatientCalls());
     });
     FirebaseMessaging.onBackgroundMessage(healthHomeFcmBackgroundHandler);
-    FirebaseMessaging.instance.onTokenRefresh.listen((token) {
-      unawaited(registerToken(token));
-    });
+    await initializeLocalNotifications();
+    final settings = await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    if (settings.authorizationStatus != AuthorizationStatus.denied) {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) await registerToken(token);
+    }
+    FirebaseMessaging.instance.onTokenRefresh.listen(registerToken);
     FirebaseMessaging.onMessage.listen((message) async {
       if (message.data['type'] == 'incoming_call') {
-        await initializeLocalNotifications(requestPermissions: false);
         await showIncomingNotification(message.data);
         _openIncoming(message.data);
       }
     });
     FirebaseMessaging.onMessageOpenedApp
         .listen((message) => _openIncoming(message.data));
-
-    // Keep notification permissions, FCM token registration, and launch
-    // payload inspection off the synchronous app-start path.
-    unawaited(_initializeNotificationsAndToken());
-    unawaited(_handleNotificationLaunch());
-  }
-
-  static Future<void> _initializeNotificationsAndToken() async {
-    try {
-      await initializeLocalNotifications();
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      if (settings.authorizationStatus == AuthorizationStatus.denied) return;
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) unawaited(registerToken(token));
-    } catch (error) {
-      debugPrint('Incoming-call notification setup failed: $error');
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (initial != null && initial.data['type'] == 'incoming_call') {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _openIncoming(initial.data));
     }
-  }
-
-  static Future<void> _handleNotificationLaunch() async {
-    try {
-      await initializeLocalNotifications(requestPermissions: false);
-      final initial = await FirebaseMessaging.instance.getInitialMessage();
-      if (initial != null && initial.data['type'] == 'incoming_call') {
-        WidgetsBinding.instance
-            .addPostFrameCallback((_) => _openIncoming(initial.data));
-      }
-      final launch = await _localNotifications.getNotificationAppLaunchDetails();
-      final payload = launch?.notificationResponse?.payload;
-      if (launch?.didNotificationLaunchApp == true && payload != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          try {
-            _openIncoming(Map<String, dynamic>.from(jsonDecode(payload)));
-          } catch (_) {}
-        });
-      }
-    } catch (error) {
-      debugPrint('Unable to inspect incoming-call launch payload: $error');
+    final launch = await _localNotifications.getNotificationAppLaunchDetails();
+    final payload = launch?.notificationResponse?.payload;
+    if (launch?.didNotificationLaunchApp == true && payload != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          _openIncoming(Map<String, dynamic>.from(jsonDecode(payload)));
+        } catch (_) {}
+      });
     }
   }
 
   static Future<void> initializeLocalNotifications(
       {bool requestPermissions = true}) async {
-    final initialization = _localNotificationsInitialization ??=
-        _initializeLocalNotificationsPlugin();
-    try {
-      await initialization;
-    } catch (_) {
-      if (identical(_localNotificationsInitialization, initialization)) {
-        _localNotificationsInitialization = null;
-      }
-      rethrow;
-    }
-
-    if (requestPermissions) {
-      final android = _localNotifications.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      await android?.requestNotificationsPermission();
-      await android?.requestFullScreenIntentPermission();
-    }
-  }
-
-  static Future<void> _initializeLocalNotificationsPlugin() async {
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
@@ -157,6 +112,10 @@ class IncomingCallService {
     final android = _localNotifications.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await android?.createNotificationChannel(_channel);
+    if (requestPermissions) {
+      await android?.requestNotificationsPermission();
+      await android?.requestFullScreenIntentPermission();
+    }
   }
 
   static Future<void> showIncomingNotification(

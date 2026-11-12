@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -588,57 +587,10 @@ class ApiService {
   // DOCTORS
   // ============================================================
 
-  static const String _doctorsCacheKey = 'healthhome_approved_doctors_v1';
-  static List<dynamic>? _doctorsMemoryCache;
-  static Future<List<dynamic>>? _doctorsRequest;
-
-  static Future<List<dynamic>?> getCachedDoctors() async {
-    final inMemory = _doctorsMemoryCache;
-    if (inMemory != null) return List<dynamic>.from(inMemory);
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_doctorsCacheKey);
-      if (raw == null || raw.isEmpty) return null;
-      final decoded = jsonDecode(raw);
-      if (decoded is! List) {
-        await prefs.remove(_doctorsCacheKey);
-        return null;
-      }
-      _doctorsMemoryCache = List<dynamic>.from(decoded);
-      return List<dynamic>.from(_doctorsMemoryCache!);
-    } catch (error) {
-      debugPrint('Unable to read cached doctor list: $error');
-      return null;
-    }
-  }
-
-  static Future<List<dynamic>> prefetchDoctors() => getDoctors(refresh: true);
-
-  static Future<List<dynamic>> getDoctors({bool refresh = false}) async {
-    if (!refresh) {
-      final cached = await getCachedDoctors();
-      if (cached != null) return cached;
-      final pending = _doctorsRequest;
-      if (pending != null) return List<dynamic>.from(await pending);
-    }
-
-    final pending = _doctorsRequest;
-    if (pending != null) return List<dynamic>.from(await pending);
-
-    final request = _fetchDoctors();
-    _doctorsRequest = request;
-    try {
-      return List<dynamic>.from(await request);
-    } finally {
-      if (identical(_doctorsRequest, request)) _doctorsRequest = null;
-    }
-  }
-
-  static Future<List<dynamic>> _fetchDoctors() async {
-    final response = await http
-        .get(Uri.parse("$baseUrl/api/doctors/all"))
-        .timeout(const Duration(seconds: 60));
+  static Future<List<dynamic>> getDoctors() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/doctors/all"),
+    );
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
@@ -657,19 +609,7 @@ class ApiService {
       );
     }
 
-    final doctors = List<dynamic>.from(decoded["doctors"] as List);
-    _doctorsMemoryCache = doctors;
-    unawaited(_saveDoctorsCache(doctors));
-    return List<dynamic>.from(doctors);
-  }
-
-  static Future<void> _saveDoctorsCache(List<dynamic> doctors) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_doctorsCacheKey, jsonEncode(doctors));
-    } catch (error) {
-      debugPrint('Unable to save cached doctor list: $error');
-    }
+    return List<dynamic>.from(decoded["doctors"] as List);
   }
 
   static Future<Map<String, dynamic>> getDoctorProfile(
