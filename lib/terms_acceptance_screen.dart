@@ -223,7 +223,7 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       final line = rawLine.trim();
       if (line.isEmpty) {
         widgets.add(const SizedBox(height: 8));
-      } else if (RegExp(r'^\d+\.\s').hasMatch(line)) {
+      } else if (RegExp(r'^\d+\.\s+[^.!?]+$').hasMatch(line)) {
         widgets.add(Padding(
           padding: const EdgeInsets.only(top: 12, bottom: 4),
           child: Text(line,
@@ -233,7 +233,7 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
                   fontWeight: FontWeight.w700,
                   color: colors.onSurface)),
         ));
-      } else if (line.startsWith('- ')) {
+      } else if (line.startsWith('- ') || line.startsWith('* ')) {
         widgets.add(Padding(
           padding: const EdgeInsets.only(left: 8, top: 2, bottom: 2),
           child: Row(
@@ -264,27 +264,11 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
 
   Widget _detailsCard(Map<String, dynamic> document) {
     final colors = Theme.of(context).colorScheme;
-    final details = Map<String, dynamic>.from(
-        (document['businessDetails'] as Map?) ?? const {});
-    final policies = Map<String, dynamic>.from(
-        (document['policyVersion'] as Map?) ?? const {});
-    final rows = <String, String>{
-      'Effective date':
-          details['effectiveDate']?.toString() ?? '[TO BE PROVIDED]',
-      'Operator': details['legalName']?.toString() ?? '[TO BE PROVIDED]',
-      'Business address':
-          details['businessAddress']?.toString() ?? '[TO BE PROVIDED]',
-      'Support email':
-          details['supportEmail']?.toString() ?? '[TO BE PROVIDED]',
-      'Grievance officer':
-          details['grievanceOfficerName']?.toString() ?? '[TO BE PROVIDED]',
-      'Grievance contact':
-          details['grievanceOfficerContact']?.toString() ?? '[TO BE PROVIDED]',
-      'Privacy policy version':
-          policies['privacy']?.toString() ?? '[TO BE PROVIDED]',
-      'Refund & cancellation policy version':
-          policies['refundCancellation']?.toString() ?? '[TO BE PROVIDED]',
-    };
+    final metadata = (document['metadata'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    if (metadata.isEmpty) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -296,10 +280,10 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: rows.entries
+        children: metadata
             .map((entry) => Padding(
                   padding: const EdgeInsets.only(bottom: 7),
-                  child: Text('${entry.key}: ${entry.value}',
+                  child: Text('${entry['label']}: ${entry['value']}',
                       style: TextStyle(
                           fontSize: 13,
                           height: 1.35,
