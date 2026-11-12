@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/incoming_call_service.dart';
 import 'package:healthhome/screens/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'upload_lab_report_page.dart';
@@ -3716,6 +3717,7 @@ Future<void> _logout() async {
   final prefs = await SharedPreferences.getInstance();
 
   // Clear current login/session
+  await IncomingCallService.unregisterCurrentDevice();
   await prefs.clear();
 
   if (!mounted) return;

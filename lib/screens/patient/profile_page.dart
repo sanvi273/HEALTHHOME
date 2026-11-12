@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../login_screen.dart';
 import '../../services/api_service.dart';
+import '../../services/incoming_call_service.dart';
 import '../payment/payment_history_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -436,6 +437,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       await SharedPreferences
                           .getInstance();
 
+                  await IncomingCallService.unregisterCurrentDevice();
                   await prefs.setBool(
                     "isLoggedIn",
                     false,

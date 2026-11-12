@@ -16,7 +16,7 @@ class ApiService {
   static final String baseUrl = _normalizeBaseUrl(
     const String.fromEnvironment(
       "HEALTHHOME_API_BASE_URL",
-      defaultValue: "https://healthhome-in-g4xh.onrender.com",
+      defaultValue: "https://healthhome-backend.onrender.com",
     ),
   );
 
@@ -1224,16 +1224,65 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
   static Future<Map<String, dynamic>> startConsultation(
     String appointmentId,
   ) async {
-    final response = await http.put(
-      Uri.parse(
-        "$baseUrl/api/appointments/"
-        "start-consultation/$appointmentId",
-      ),
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/video-calls/start"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"appointmentId": appointmentId}),
     );
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) {
+      throw Exception(data["message"] ?? "Unable to start consultation");
+    }
+    return data;
+  }
 
-    return Map<String, dynamic>.from(
-      jsonDecode(response.body),
+  static Future<void> registerCallDevice({required String token, required String platform}) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/video-calls/devices"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"deviceToken": token, "platform": platform}),
     );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception("Device registration failed (${response.statusCode})");
+    }
+  }
+
+  static Future<void> removeCallDevice({required String token}) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/api/video-calls/devices"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"deviceToken": token}),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception("Unable to unregister this device.");
+    }
+  }
+
+  static Future<Map<String, dynamic>> acceptVideoCall(String callId) async {
+    final response = await http.post(Uri.parse("$baseUrl/api/video-calls/$callId/accept"), headers: await _getAuthHeaders());
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) throw Exception(data["message"] ?? "Unable to accept call");
+    return data;
+  }
+
+  static Future<Map<String, dynamic>> declineVideoCall(String callId) async {
+    final response = await http.post(Uri.parse("$baseUrl/api/video-calls/$callId/decline"), headers: await _getAuthHeaders());
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) throw Exception(data["message"] ?? "Unable to decline call");
+    return data;
+  }
+
+  static Future<void> endVideoCall(String callId) async {
+    final response = await http.post(Uri.parse("$baseUrl/api/video-calls/$callId/end"), headers: await _getAuthHeaders());
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) throw Exception(data["message"] ?? "Unable to end call");
+  }
+
+  static Future<Map<String, dynamic>> joinVideoCall(String callId) async {
+    final response = await http.post(Uri.parse("$baseUrl/api/video-calls/$callId/join"), headers: await _getAuthHeaders());
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) throw Exception(data["message"] ?? "Unable to join call");
+    return data;
   }
 
   static Future<Map<String, dynamic>> joinConsultation(
@@ -1260,9 +1309,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
         Uri.parse(
           "$baseUrl/api/appointments/agora-token",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
         body: jsonEncode({
           "appointmentId": appointmentId,
           "uid": uid,

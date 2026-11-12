@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
+import '../services/incoming_call_service.dart';
 import '../services/telegram/AgoraVideoCallPage.dart';
 import 'onboarding_screen.dart';
 import '../prescription_screen.dart';
@@ -2403,6 +2404,12 @@ if (isVideo) {
         response["message"] ?? "Unable to start consultation",
       );
     }
+    final pushStatus = response["push"];
+    if (pushStatus is Map && (pushStatus["delivered"] as num? ?? 0) == 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Call started, but the patient device was not reached: ${pushStatus["reason"] ?? "no registered device"}")),
+      );
+    }
 
     // =================================================
     // 2. GET UPDATED APPOINTMENT FROM BACKEND
@@ -2415,6 +2422,9 @@ if (isVideo) {
                 response["appointment"],
               )
             : appointment;
+    final callId = response["call"] is Map
+        ? response["call"]["callId"]?.toString()
+        : null;
 
     final appointmentId =
         startedAppointment["_id"]?.toString() ?? "";
@@ -2459,6 +2469,7 @@ if (isVideo) {
           appointmentId: appointmentId,
           meetingId: meetingId,
           isDoctor: true,
+          callId: callId,
         ),
       ),
     );
@@ -3300,6 +3311,7 @@ Future<void> logout() async {
   await prefs.remove("userRole");
   await prefs.remove("userPhone");
   await prefs.remove("userName");
+  await IncomingCallService.unregisterCurrentDevice();
   await prefs.remove("token");
 
   debugPrint("================================");

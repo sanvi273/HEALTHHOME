@@ -9,6 +9,7 @@ import 'pharmacy_profile_setup.dart';
 import 'pharmacy_dashboard.dart';
 import 'screens/doctor_dashboard.dart';
 import 'services/api_service.dart';
+import 'services/incoming_call_service.dart';
 
 class ProfessionalVerificationScreen extends StatefulWidget {
   final String role;
@@ -453,6 +454,7 @@ class _ProfessionalVerificationScreenState
     final prefs =
         await SharedPreferences.getInstance();
 
+    await IncomingCallService.unregisterCurrentDevice();
     await prefs.remove("token");
 
     await prefs.setBool(

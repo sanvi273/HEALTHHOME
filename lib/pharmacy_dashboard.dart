@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:healthhome/screens/onboarding_screen.dart';
 import '../services/api_service.dart';
+import '../services/incoming_call_service.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../pharmacy/add_medicine_page.dart';
@@ -5107,6 +5108,7 @@ extension PharmacyProfileExtension on _PharmacyDashboardState {
                 await prefs.remove("userRole");
                 await prefs.remove("userPhone");
                 await prefs.remove("userName");
+                await IncomingCallService.unregisterCurrentDevice();
                 await prefs.remove("token");
 
                 debugPrint("================================");
