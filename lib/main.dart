@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -39,15 +41,6 @@ Future<void> main() async {
   );
 
   final appNavigatorKey = GlobalKey<NavigatorState>();
-  await IncomingCallService.initialize(appNavigatorKey);
-
-  // ====================================================
-  // ONESIGNAL
-  // ====================================================
-
-  OneSignal.initialize(
-    "ebea4754-636f-4c9a-a863-9902fe6ad7c0",
-  );
 
   // ====================================================
   // RUN APP
@@ -70,6 +63,18 @@ Future<void> main() async {
       child: HealthHomeApp(navigatorKey: appNavigatorKey),
     ),
   );
+
+  // Notification SDK startup and permission prompts must not hold the first
+  // frame. Incoming-call listeners are installed as soon as the app is visible.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(IncomingCallService.initialize(appNavigatorKey));
+    unawaited(
+      OneSignal.initialize("ebea4754-636f-4c9a-a863-9902fe6ad7c0")
+          .catchError((Object error) {
+        debugPrint('OneSignal initialization failed: $error');
+      }),
+    );
+  });
 }
 
 // ======================================================
