@@ -35,6 +35,9 @@ class _AgoraVideoCallPageState
   bool joined = false;
   bool microphoneEnabled = true;
   bool cameraEnabled = true;
+  bool remoteCameraEnabled = true;
+  bool _togglingMicrophone = false;
+  bool _togglingCamera = false;
   bool endingCall = false;
 
   String status = "Preparing video consultation...";
@@ -245,6 +248,7 @@ class _AgoraVideoCallPageState
 
             setState(() {
               remoteUid = remoteUidValue;
+              remoteCameraEnabled = true;
               status = widget.isDoctor
                   ? "Patient connected"
                   : "Doctor connected";
@@ -268,9 +272,23 @@ class _AgoraVideoCallPageState
 
             setState(() {
               remoteUid = null;
+              remoteCameraEnabled = true;
               status = widget.isDoctor
                   ? "Patient left the consultation"
                   : "Doctor left the consultation";
+            });
+          },
+
+          onUserMuteVideo: (
+            RtcConnection connection,
+            int remoteUidValue,
+            bool muted,
+          ) {
+            if (!mounted ||
+                (remoteUid != null && remoteUid != remoteUidValue)) return;
+            setState(() {
+              remoteUid = remoteUidValue;
+              remoteCameraEnabled = !muted;
             });
           },
 
@@ -367,19 +385,23 @@ class _AgoraVideoCallPageState
   Future<void> _toggleMicrophone() async {
     final engine = _engine;
 
-    if (engine == null) return;
+    if (engine == null || !joined || _togglingMicrophone) return;
 
     final newValue = !microphoneEnabled;
-
-    await engine.muteLocalAudioStream(
-      !newValue,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      microphoneEnabled = newValue;
-    });
+    setState(() => _togglingMicrophone = true);
+    try {
+      await engine.enableLocalAudio(newValue);
+      await engine.muteLocalAudioStream(!newValue);
+      if (mounted) setState(() => microphoneEnabled = newValue);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not change microphone: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _togglingMicrophone = false);
+    }
   }
 
   // ============================================================
@@ -389,19 +411,30 @@ class _AgoraVideoCallPageState
   Future<void> _toggleCamera() async {
     final engine = _engine;
 
-    if (engine == null) return;
+    if (engine == null || !joined || _togglingCamera) return;
 
     final newValue = !cameraEnabled;
-
-    await engine.muteLocalVideoStream(
-      !newValue,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      cameraEnabled = newValue;
-    });
+    setState(() => _togglingCamera = true);
+    try {
+      if (newValue) {
+        await engine.enableLocalVideo(true);
+        await engine.startPreview();
+        await engine.muteLocalVideoStream(false);
+      } else {
+        await engine.muteLocalVideoStream(true);
+        await engine.stopPreview();
+        await engine.enableLocalVideo(false);
+      }
+      if (mounted) setState(() => cameraEnabled = newValue);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not change camera: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _togglingCamera = false);
+    }
   }
 
   // ============================================================
@@ -480,6 +513,12 @@ class _AgoraVideoCallPageState
   Widget _buildLocalVideo() {
     final engine = _engine;
 
+    if (!cameraEnabled) {
+      return const Center(
+        child: Icon(Icons.videocam_off, color: Colors.white70, size: 56),
+      );
+    }
+
     if (engine == null) {
       return const Center(
         child: CircularProgressIndicator(
@@ -540,6 +579,25 @@ class _AgoraVideoCallPageState
                   color: Colors.white60,
                   fontSize: 14,
                 ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!remoteCameraEnabled) {
+      return Container(
+        color: Colors.black,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.videocam_off, size: 72, color: Colors.white54),
+              const SizedBox(height: 14),
+              Text(
+                widget.isDoctor ? "Patient's camera is off" : "Doctor's camera is off",
+                style: const TextStyle(color: Colors.white70, fontSize: 18),
               ),
             ],
           ),
@@ -720,8 +778,9 @@ class _AgoraVideoCallPageState
                       icon: microphoneEnabled
                           ? Icons.mic
                           : Icons.mic_off,
-                      onPressed:
-                          _toggleMicrophone,
+                      onPressed: joined && !_togglingMicrophone
+                          ? _toggleMicrophone
+                          : null,
                     ),
 
                     // CAMERA
@@ -729,8 +788,9 @@ class _AgoraVideoCallPageState
                       icon: cameraEnabled
                           ? Icons.videocam
                           : Icons.videocam_off,
-                      onPressed:
-                          _toggleCamera,
+                      onPressed: joined && !_togglingCamera
+                          ? _toggleCamera
+                          : null,
                     ),
 
                     // END
@@ -756,7 +816,7 @@ class _AgoraVideoCallPageState
 
   Widget _controlButton({
     required IconData icon,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     Color? backgroundColor,
   }) {
     return Container(

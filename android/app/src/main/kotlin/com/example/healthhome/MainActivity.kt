@@ -6,6 +6,8 @@ import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -16,6 +18,16 @@ class MainActivity : FlutterActivity() {
     private val AV_PERMISSION_REQUEST = 9183
     private var pendingAvPermissionResult: MethodChannel.Result? = null
     private var incomingRingtone: Ringtone? = null
+    private val ringtoneHandler = Handler(Looper.getMainLooper())
+    private val ringtoneLoop = object : Runnable {
+        override fun run() {
+            val ringtone = incomingRingtone ?: return
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P && !ringtone.isPlaying) {
+                ringtone.play()
+            }
+            if (incomingRingtone != null) ringtoneHandler.postDelayed(this, 500)
+        }
+    }
 
     override fun configureFlutterEngine(
         flutterEngine: FlutterEngine
@@ -111,8 +123,15 @@ class MainActivity : FlutterActivity() {
     private fun startIncomingRingtone(result: MethodChannel.Result) {
         try {
             stopIncomingRingtone()
-            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            val uri = RingtoneManager.getActualDefaultRingtoneUri(
+                applicationContext,
+                RingtoneManager.TYPE_RINGTONE
+            ) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            if (uri == null) {
+                result.error("RINGTONE_UNAVAILABLE", "No default phone ringtone is configured.", null)
+                return
+            }
             incomingRingtone = RingtoneManager.getRingtone(applicationContext, uri)
             incomingRingtone?.let { ringtone ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -123,8 +142,15 @@ class MainActivity : FlutterActivity() {
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) ringtone.isLooping = true
                 ringtone.play()
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                    ringtoneHandler.postDelayed(ringtoneLoop, 500)
+                }
             }
-            result.success(incomingRingtone != null)
+            if (incomingRingtone == null) {
+                result.error("RINGTONE_UNAVAILABLE", "Android could not load the default phone ringtone.", null)
+            } else {
+                result.success(true)
+            }
         } catch (error: Throwable) {
             stopIncomingRingtone()
             result.error("RINGTONE_ERROR", error.message, null)
@@ -132,6 +158,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun stopIncomingRingtone() {
+        ringtoneHandler.removeCallbacks(ringtoneLoop)
         try {
             incomingRingtone?.stop()
         } catch (_: Throwable) {

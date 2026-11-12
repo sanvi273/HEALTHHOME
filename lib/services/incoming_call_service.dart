@@ -21,7 +21,7 @@ final FlutterLocalNotificationsPlugin _localNotifications =
 Future<void> healthHomeFcmBackgroundHandler(RemoteMessage message) async {
   DartPluginRegistrant.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await IncomingCallService.initializeLocalNotifications();
+  await IncomingCallService.initializeLocalNotifications(requestPermissions: false);
   await IncomingCallService.showIncomingNotification(message.data);
 }
 
@@ -89,7 +89,8 @@ class IncomingCallService {
     }
   }
 
-  static Future<void> initializeLocalNotifications() async {
+  static Future<void> initializeLocalNotifications(
+      {bool requestPermissions = true}) async {
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
@@ -110,8 +111,10 @@ class IncomingCallService {
     final android = _localNotifications.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await android?.createNotificationChannel(_channel);
-    await android?.requestNotificationsPermission();
-    await android?.requestFullScreenIntentPermission();
+    if (requestPermissions) {
+      await android?.requestNotificationsPermission();
+      await android?.requestFullScreenIntentPermission();
+    }
   }
 
   static Future<void> showIncomingNotification(
@@ -130,6 +133,9 @@ class IncomingCallService {
         autoCancel: false,
         playSound: true,
         enableVibration: true,
+        showWhen: false,
+        visibility: NotificationVisibility.public,
+        timeoutAfter: 45000,
       ),
       iOS: const DarwinNotificationDetails(
           presentAlert: true,
