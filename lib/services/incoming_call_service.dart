@@ -31,7 +31,12 @@ class IncomingCallService {
   static GlobalKey<NavigatorState>? _navigatorKey;
   static final Set<String> _shownCalls = <String>{};
   static Timer? _ringTimeout;
+  static Timer? _activeCallPoll;
   static String? _ringingCallId;
+  static bool _isForeground = true;
+  static bool _checkingActiveCalls = false;
+  static final _IncomingCallLifecycleObserver _lifecycleObserver =
+      _IncomingCallLifecycleObserver();
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'incoming_calls',
     'Incoming calls',
@@ -44,6 +49,10 @@ class IncomingCallService {
   static Future<void> initialize(GlobalKey<NavigatorState> navigatorKey) async {
     _navigatorKey = navigatorKey;
     if (kIsWeb) return;
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+    _activeCallPoll ??= Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_isForeground) unawaited(checkActivePatientCalls());
+    });
     FirebaseMessaging.onBackgroundMessage(healthHomeFcmBackgroundHandler);
     await initializeLocalNotifications();
     final settings = await FirebaseMessaging.instance.requestPermission(
@@ -194,9 +203,41 @@ class IncomingCallService {
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await registerToken(token);
+      await checkActivePatientCalls();
     } catch (error) {
       debugPrint('Unable to obtain FCM token: $error');
     }
+  }
+
+  static Future<void> checkActivePatientCalls() async {
+    if (_checkingActiveCalls || !_isForeground || kIsWeb) return;
+    _checkingActiveCalls = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if ((prefs.getString('userRole') ?? '').toLowerCase() != 'patient' ||
+          (prefs.getString('token') ?? '').isEmpty) {
+        return;
+      }
+      final calls = await ApiService.getActiveVideoCalls();
+      for (final call in calls) {
+        if (call['status']?.toString().toUpperCase() != 'RINGING') continue;
+        presentIncomingCall({
+          'type': 'incoming_call',
+          'callId': call['callId']?.toString() ?? '',
+          'appointmentId': call['appointmentId']?.toString() ?? '',
+          'doctorName': call['doctorName']?.toString() ?? 'Your doctor',
+        });
+      }
+    } catch (error) {
+      debugPrint('Active incoming-call check failed: $error');
+    } finally {
+      _checkingActiveCalls = false;
+    }
+  }
+
+  static void _setForeground(bool foreground) {
+    _isForeground = foreground;
+    if (foreground) unawaited(checkActivePatientCalls());
   }
 
   static Future<void> unregisterCurrentDevice() async {
@@ -229,5 +270,16 @@ class IncomingCallService {
       ),
       fullscreenDialog: true,
     ));
+  }
+
+  static void presentIncomingCall(Map<String, dynamic> data) {
+    _openIncoming(data);
+  }
+}
+
+class _IncomingCallLifecycleObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    IncomingCallService._setForeground(state == AppLifecycleState.resumed);
   }
 }

@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
+import '../../services/incoming_call_service.dart';
 
 import '../../services/telegram/AgoraVideoCallPage.dart';
 
@@ -214,6 +215,19 @@ Future<void> checkReadyConsultation() async {
             Map<String, dynamic>.from(result);
 
       });
+
+      final callId = result["callId"]?.toString() ?? "";
+      if (callId.isNotEmpty &&
+          result["callStatus"]?.toString().toUpperCase() == "RINGING") {
+        IncomingCallService.presentIncomingCall({
+          "type": "incoming_call",
+          "callId": callId,
+          "appointmentId": result["_id"]?.toString() ?? "",
+          "doctorName": result["doctorName"]?.toString() ?? "Your doctor",
+          "doctorImage": result["doctorImage"]?.toString() ?? "",
+          "expiresAt": result["callExpiresAt"]?.toString() ?? "",
+        });
+      }
 
       print("================================");
 
@@ -725,6 +739,11 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
       readyConsultation!["_id"].toString() == appointmentId;
 
+  final bool isRingingCall = readyConsultation?["callStatus"]
+          ?.toString()
+          .toUpperCase() ==
+      "RINGING";
+
   return Container(
 
     margin: const EdgeInsets.only(bottom: 14),
@@ -943,6 +962,20 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
                     onPressed: () async {
 
+                      final activeCallId =
+                          readyConsultation?["callId"]?.toString() ?? "";
+                      final activeCallStatus =
+                          readyConsultation?["callStatus"]?.toString().toUpperCase() ?? "";
+                      if (activeCallId.isNotEmpty && activeCallStatus == "RINGING") {
+                        IncomingCallService.presentIncomingCall({
+                          "type": "incoming_call",
+                          "callId": activeCallId,
+                          "appointmentId": appointmentId,
+                          "doctorName": doctorName,
+                        });
+                        return;
+                      }
+
                       final result = await Navigator.push(
 
                         context,
@@ -986,9 +1019,11 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
                     },
 
-                    icon: const Icon(Icons.videocam),
+                    icon: Icon(isRingingCall ? Icons.call : Icons.videocam),
 
-                    label: const Text("Join Video Consultation"),
+                    label: Text(isRingingCall
+                        ? "Answer Video Consultation"
+                        : "Join Video Consultation"),
 
                     style: ElevatedButton.styleFrom(
 

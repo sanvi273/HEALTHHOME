@@ -1305,6 +1305,25 @@ class ApiService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getActiveVideoCalls() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/video-calls/active"),
+      headers: await _getAuthHeaders(),
+    );
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(decoded is Map
+          ? decoded["message"] ?? "Unable to check incoming calls"
+          : "Unable to check incoming calls");
+    }
+    final calls = decoded is Map ? decoded["calls"] : null;
+    if (calls is! List) return const [];
+    return calls
+        .whereType<Map>()
+        .map((call) => Map<String, dynamic>.from(call))
+        .toList();
+  }
+
   static Future<Map<String, dynamic>> acceptVideoCall(String callId) async {
     final response = await http.post(
         Uri.parse("$baseUrl/api/video-calls/$callId/accept"),
