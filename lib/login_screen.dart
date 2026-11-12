@@ -596,18 +596,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    if (!mounted) return;
-    final response = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OtpVerificationScreen(
-          phone: phone,
-          challengeId: initiation["challengeId"].toString(),
-          requestId: initiation["requestId"].toString(),
-        ),
-      ),
-    );
-    if (!mounted || response == null) return;
+    // Login OTP is temporarily deferred; the backend still verifies the
+    // submitted password, current role and terms acceptance before issuing JWT.
+    final response = initiation;
 
     // ================= GET USER DATA =================
 

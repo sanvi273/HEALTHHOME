@@ -191,7 +191,7 @@ class ApiService {
     String? termsAcceptanceToken,
   }) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/login/initiate"),
+      Uri.parse("$baseUrl/api/auth/login/password"),
       headers: {
         "Content-Type": "application/json",
       },
