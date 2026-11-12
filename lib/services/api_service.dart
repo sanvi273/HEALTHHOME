@@ -144,95 +144,92 @@ class ApiService {
   static Future<Map<String, dynamic>> loginUser({
     required String phone,
     required String password,
+    required String role,
   }) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/login"),
+      Uri.parse("$baseUrl/api/auth/login/initiate"),
       headers: {
         "Content-Type": "application/json",
       },
       body: jsonEncode({
         "phone": phone,
         "password": password,
+        "role": role.trim().toLowerCase() == "lab"
+            ? "laboratory"
+            : role.trim().toLowerCase(),
       }),
     );
 
-    return jsonDecode(response.body);
+    return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
-  // ============================================================
-  // SEND OTP
-  // ============================================================
-
-  static Future<Map<String, dynamic>> sendOTP({
-    required String phone,
+  static Future<Map<String, dynamic>> verifyLoginOtp({
+    required String challengeId,
+    required String accessToken,
   }) async {
-    try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/api/auth/send-otp"),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "phone": phone,
-        }),
-      );
-
-      debugPrint("================================");
-      debugPrint("SEND OTP");
-      debugPrint("STATUS = ${response.statusCode}");
-      debugPrint("BODY = ${response.body}");
-      debugPrint("================================");
-
-      return Map<String, dynamic>.from(
-        jsonDecode(response.body),
-      );
-    } catch (e) {
-      debugPrint("SEND OTP ERROR = $e");
-
-      return {
-        "success": false,
-        "message": e.toString(),
-      };
-    }
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/auth/login/verify"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"challengeId": challengeId, "accessToken": accessToken}),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
-  // ============================================================
-  // VERIFY OTP
-  // ============================================================
-
-  static Future<Map<String, dynamic>> verifyOTP({
-    required String phone,
-    required String otp,
+  static Future<Map<String, dynamic>> resendLoginOtp({
+    required String challengeId,
+    String purpose = "login",
   }) async {
-    try {
-      final response = await http.post(
-        Uri.parse("$baseUrl/api/auth/verify-otp"),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "phone": phone,
-          "otp": otp,
-        }),
-      );
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/auth/otp/resend"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"challengeId": challengeId, "purpose": purpose}),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
 
-      debugPrint("================================");
-      debugPrint("VERIFY OTP");
-      debugPrint("STATUS = ${response.statusCode}");
-      debugPrint("BODY = ${response.body}");
-      debugPrint("================================");
+  static Future<Map<String, dynamic>> verifyRegistrationOtp({
+    required String challengeId,
+    required String accessToken,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/auth/register/verify"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"challengeId": challengeId, "accessToken": accessToken}),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
 
-      return Map<String, dynamic>.from(
-        jsonDecode(response.body),
-      );
-    } catch (e) {
-      debugPrint("VERIFY OTP ERROR = $e");
+  static Future<Map<String, dynamic>> startPasswordReset({required String phone}) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/auth/forgot-password"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"phone": phone}),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
 
-      return {
-        "success": false,
-        "message": e.toString(),
-      };
-    }
+  static Future<Map<String, dynamic>> verifyPasswordResetOtp({
+    required String challengeId,
+    required String accessToken,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/auth/forgot-password/verify"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"challengeId": challengeId, "accessToken": accessToken}),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    required String resetToken,
+    required String password,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/auth/reset-password"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"resetToken": resetToken, "password": password}),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
   // ============================================================

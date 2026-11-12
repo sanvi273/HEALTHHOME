@@ -5,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'services/api_service.dart';
+import 'otp_verification_screen.dart';
+import 'forgot_password_screen.dart';
 
 import 'screens/onboarding_screen.dart';
 
@@ -357,6 +359,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscure: true,
                 ),
 
+                if (isLogin)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                      ),
+                      child: const Text('Forgot password?', style: TextStyle(color: Color(0xff008F98))),
+                    ),
+                  ),
+
                 const SizedBox(height: 30),
 
                 // =================================================
@@ -464,7 +478,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final password = passwordController.text.trim();
 
-    if (phone.length != 10) {
+    final validPhone = RegExp(r'^[6-9]\d{9}$').hasMatch(phone) ||
+        RegExp(r'^\+?[1-9]\d{7,14}$').hasMatch(phone.replaceAll(RegExp(r'[\s()-]'), ''));
+    if (!validPhone) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -478,7 +494,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // ================= PASSWORD VALIDATION =================
 
-    if (password.length < 6) {
+    if (password.length < (isLogin ? 6 : 8)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -547,26 +563,40 @@ class _LoginScreenState extends State<LoginScreen> {
     String phone,
     String password,
   ) async {
-    final response = await ApiService.loginUser(
+    final initiation = await ApiService.loginUser(
       phone: phone,
       password: password,
+      role: widget.role,
     );
 
     // ================= LOGIN FAILED =================
 
-    if (response["success"] != true) {
+    if (initiation["success"] != true) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            response["message"]?.toString() ?? "loginFailed".tr(),
+            initiation["message"]?.toString() ?? "loginFailed".tr(),
           ),
         ),
       );
 
       return;
     }
+
+    if (!mounted) return;
+    final response = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpVerificationScreen(
+          phone: phone,
+          challengeId: initiation["challengeId"].toString(),
+          requestId: initiation["requestId"].toString(),
+        ),
+      ),
+    );
+    if (!mounted || response == null) return;
 
     // ================= GET USER DATA =================
 
@@ -1288,7 +1318,7 @@ if (role == "admin") {
       return;
     }
 
-    final response = await ApiService.registerUser(
+    final initiation = await ApiService.registerUser(
       name: name,
       email: "$phone@gmail.com",
       password: password,
@@ -1306,13 +1336,13 @@ if (role == "admin") {
 
     // ================= SIGNUP FAILED =================
 
-    if (response["success"] != true) {
+    if (initiation["success"] != true) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            response["message"]?.toString() ?? "Registration failed",
+            initiation["message"]?.toString() ?? "Registration failed",
           ),
         ),
       );
@@ -1320,58 +1350,28 @@ if (role == "admin") {
       return;
     }
 
-    // The verification page needs an authenticated session. Sign professional
-    // users in immediately after registration and show their existing pending
-    // application instead of sending them back to the login form.
-    final registeredRole = widget.role.trim().toLowerCase();
-    if (["doctor", "laboratory", "lab", "pharmacy"]
-        .contains(registeredRole)) {
-      try {
-        final loginResponse = await ApiService.loginUser(
+    if (!mounted) return;
+    final response = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpVerificationScreen(
           phone: phone,
-          password: password,
-        );
-        if (loginResponse["success"] != true) {
-          throw Exception(
-            loginResponse["message"] ?? "Unable to sign in after registration",
-          );
-        }
-        final user = Map<String, dynamic>.from(loginResponse["user"] ?? {});
-        final token = loginResponse["token"]?.toString() ?? "";
-        if (token.isEmpty) throw Exception("Login token was not returned");
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", token);
-        await prefs.setBool("isLoggedIn", true);
-        await prefs.setString("userName", user["name"]?.toString() ?? name);
-        await prefs.setString("userPhone", phone);
-        await prefs.setString(
-          "userRole",
-          registeredRole == "lab" ? "laboratory" : registeredRole,
-        );
-
-        if (!mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ProfessionalVerificationScreen(
-              role: registeredRole,
-            ),
-          ),
-          (route) => false,
-        );
-        return;
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Account created, but sign-in failed: $e. Please log in to continue.",
-            ),
-          ),
-        );
-      }
+          challengeId: initiation["challengeId"].toString(),
+          requestId: initiation["requestId"].toString(),
+          purpose: 'register',
+        ),
+      ),
+    );
+    if (!mounted || response == null) return;
+    if (response['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message']?.toString() ?? 'Registration was not verified.')),
+      );
+      return;
     }
+
+    // Verified registration creates the professional account in PENDING state;
+    // the existing admin review process remains unchanged.
 
     // ================= SAVE BASIC STATE =================
 
