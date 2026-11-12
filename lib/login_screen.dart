@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 Text(
                   isLogin
-                      ? "${'loginAs'.tr()} ${widget.role}"
+                      ? 'loginAs'.tr(namedArgs: {'role': widget.role})
                       : "signUpToGetStarted".tr(),
                   style: const TextStyle(
                     color: Colors.grey,
@@ -494,7 +494,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // ================= PASSWORD VALIDATION =================
 
-    if (password.length < (isLogin ? 6 : 8)) {
+    if (password.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

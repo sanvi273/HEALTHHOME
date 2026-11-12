@@ -165,12 +165,13 @@ class ApiService {
 
   static Future<Map<String, dynamic>> verifyLoginOtp({
     required String challengeId,
-    required String accessToken,
+    required String otp,
+    String? accessToken,
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/login/verify"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"challengeId": challengeId, "accessToken": accessToken}),
+      body: jsonEncode({"challengeId": challengeId, "otp": otp, if (accessToken != null) "accessToken": accessToken}),
     );
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }
@@ -189,12 +190,13 @@ class ApiService {
 
   static Future<Map<String, dynamic>> verifyRegistrationOtp({
     required String challengeId,
-    required String accessToken,
+    required String otp,
+    String? accessToken,
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/register/verify"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"challengeId": challengeId, "accessToken": accessToken}),
+      body: jsonEncode({"challengeId": challengeId, "otp": otp, if (accessToken != null) "accessToken": accessToken}),
     );
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }
@@ -210,12 +212,13 @@ class ApiService {
 
   static Future<Map<String, dynamic>> verifyPasswordResetOtp({
     required String challengeId,
-    required String accessToken,
+    required String otp,
+    String? accessToken,
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/forgot-password/verify"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"challengeId": challengeId, "accessToken": accessToken}),
+      body: jsonEncode({"challengeId": challengeId, "otp": otp, if (accessToken != null) "accessToken": accessToken}),
     );
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }

@@ -57,42 +57,40 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       setState(() => error = 'Enter the six-digit code.');
       return;
     }
-    if (!Msg91OtpBridge.configured) {
-      setState(
-          () => error = 'OTP verification is not configured in this build.');
-      return;
-    }
     setState(() {
       isLoading = true;
       error = null;
     });
     try {
-      final widgetResponse = await Msg91OtpBridge.verify(widget.requestId, otp);
-      if (!mounted) return;
-      if (widgetResponse == null || widgetResponse['type'] != 'success') {
-        setState(() => error = 'The code is invalid or expired.');
-        return;
-      }
-      final accessToken = (widgetResponse['access-token'] ??
-              widgetResponse['accessToken'] ??
-              widgetResponse['token'])
-          ?.toString();
-      if (accessToken == null || accessToken.isEmpty) {
-        setState(() => error = 'MSG91 did not return a verification token.');
-        return;
+      String? accessToken;
+      if (Msg91OtpBridge.configured) {
+        final widgetResponse =
+            await Msg91OtpBridge.verify(widget.requestId, otp);
+        if (!mounted) return;
+        if (widgetResponse == null || widgetResponse['type'] != 'success') {
+          setState(() => error = 'The code is invalid or expired.');
+          return;
+        }
+        accessToken = (widgetResponse['access-token'] ??
+                widgetResponse['accessToken'] ??
+                widgetResponse['token'])
+            ?.toString();
       }
       final response = widget.purpose == 'register'
           ? await ApiService.verifyRegistrationOtp(
               challengeId: widget.challengeId,
+              otp: otp,
               accessToken: accessToken,
             )
           : widget.purpose == 'reset'
               ? await ApiService.verifyPasswordResetOtp(
                   challengeId: widget.challengeId,
+                  otp: otp,
                   accessToken: accessToken,
                 )
               : await ApiService.verifyLoginOtp(
                   challengeId: widget.challengeId,
+                  otp: otp,
                   accessToken: accessToken,
                 );
       if (!mounted) return;
