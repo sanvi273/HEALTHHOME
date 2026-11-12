@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 
 import '../../services/api_service.dart';
+import '../../services/incoming_call_service.dart';
 
 class AgoraVideoCallPage extends StatefulWidget {
   final String doctorName;
@@ -94,6 +95,13 @@ class _AgoraVideoCallPageState
             ? "Connecting to consultation..."
             : "Joining consultation...";
       });
+
+      final avPermissionsGranted =
+          await IncomingCallService.requestVideoCallPermissions();
+      if (!avPermissionsGranted) {
+        throw Exception(
+            'Camera and microphone permissions are required. Allow them in Android Settings to join.');
+      }
 
       final uid = _buildAgoraUid(
         widget.appointmentId,

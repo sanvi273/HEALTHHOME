@@ -2384,6 +2384,13 @@ debugPrint("================================");
                 // =================================================
 if (isVideo) {
   try {
+    final avPermissionsGranted =
+        await IncomingCallService.requestVideoCallPermissions();
+    if (!avPermissionsGranted) {
+      throw Exception(
+          'Camera and microphone permissions are required. Allow them in Android Settings before starting the call.');
+    }
+
     // =================================================
     // 1. DOCTOR STARTS VIDEO CONSULTATION
     // =================================================

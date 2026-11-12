@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' show DartPluginRegistrant;
 
@@ -6,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../firebase_options.dart';
@@ -24,8 +26,12 @@ Future<void> healthHomeFcmBackgroundHandler(RemoteMessage message) async {
 }
 
 class IncomingCallService {
+  static const MethodChannel _nativeCallChannel =
+      MethodChannel('healthhome_tgcalls');
   static GlobalKey<NavigatorState>? _navigatorKey;
   static final Set<String> _shownCalls = <String>{};
+  static Timer? _ringTimeout;
+  static String? _ringingCallId;
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'incoming_calls',
     'Incoming calls',
@@ -134,6 +140,41 @@ class IncomingCallService {
     await _localNotifications.cancel(callId.hashCode);
   }
 
+  static Future<bool> requestVideoCallPermissions() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return true;
+    try {
+      return await _nativeCallChannel.invokeMethod<bool>('requestAvPermissions') ?? false;
+    } on PlatformException catch (error) {
+      debugPrint('Camera/microphone permission request failed: ${error.message}');
+      return false;
+    }
+  }
+
+  static Future<void> stopIncomingRingtone() async {
+    _ringTimeout?.cancel();
+    _ringTimeout = null;
+    _ringingCallId = null;
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      await _nativeCallChannel.invokeMethod<void>('stopIncomingRingtone');
+    } catch (error) {
+      debugPrint('Unable to stop incoming-call ringtone: $error');
+    }
+  }
+
+  static void _startIncomingRingtone(String callId) {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    _ringTimeout?.cancel();
+    _ringingCallId = callId;
+    _nativeCallChannel.invokeMethod<bool>('startIncomingRingtone').catchError((error) {
+      debugPrint('Unable to play incoming-call ringtone: $error');
+      return false;
+    });
+    _ringTimeout = Timer(const Duration(seconds: 45), () {
+      if (_ringingCallId == callId) unawaited(stopIncomingRingtone());
+    });
+  }
+
   static Future<void> registerToken(String token) async {
     if (kIsWeb) return;
     final prefs = await SharedPreferences.getInstance();
@@ -177,6 +218,7 @@ class IncomingCallService {
         !_shownCalls.add(callId)) {
       return;
     }
+    _startIncomingRingtone(callId);
     _navigatorKey!.currentState!.push(MaterialPageRoute<void>(
       builder: (_) => IncomingVideoCallScreen(
         callId: callId,

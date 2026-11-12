@@ -55,6 +55,7 @@ class _IncomingVideoCallScreenState extends State<IncomingVideoCallScreen> {
     try {
       await ApiService.acceptVideoCall(widget.callId);
       if (!mounted) return;
+      await IncomingCallService.stopIncomingRingtone();
       await IncomingCallService.cancelNotification(widget.callId);
       if (!mounted) return;
       widget.onClosed();
@@ -78,6 +79,7 @@ class _IncomingVideoCallScreenState extends State<IncomingVideoCallScreen> {
   }
 
   Future<void> _dismiss() async {
+    await IncomingCallService.stopIncomingRingtone();
     await IncomingCallService.cancelNotification(widget.callId);
     widget.onClosed();
     if (mounted) Navigator.of(context).pop();
