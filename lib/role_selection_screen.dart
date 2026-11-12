@@ -136,17 +136,19 @@ class RoleSelectionScreen extends StatelessWidget {
                         spacing: cardSpacing,
                       ),
 
-                      const SizedBox(height: 12),
-
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(role: 'Admin'),
-                          ),
-                        ),
-                        child: const Text('Administrator sign in'),
+                      // ADMIN
+                      _roleCard(
+                        context,
+                        icon: Icons.admin_panel_settings,
+                        iconColor: Colors.deepPurple,
+                        iconBg: const Color(0xffF1EBFF),
+                        title: 'Admin',
+                        subtitle: 'Administrator access',
+                        role: 'Admin',
+                        spacing: cardSpacing,
                       ),
+
+                      const SizedBox(height: 12),
 
                       // LANGUAGE BUTTONS
                       Wrap(
@@ -209,10 +211,12 @@ class RoleSelectionScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => TermsAcceptanceScreen(
-                  selectedRole: role.toLowerCase(),
-                  roleLabel: role,
-                ),
+                builder: (_) => role.toLowerCase() == 'admin'
+                    ? const LoginScreen(role: 'Admin')
+                    : TermsAcceptanceScreen(
+                        selectedRole: role.toLowerCase(),
+                        roleLabel: role,
+                      ),
               ),
             );
           },

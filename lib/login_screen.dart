@@ -567,7 +567,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String password,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final initiation = await ApiService.loginUser(
+    final response = await ApiService.loginUser(
       phone: phone,
       password: password,
       role: widget.role,
@@ -577,9 +577,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // ================= LOGIN FAILED =================
 
-    if (initiation["success"] != true) {
+    if (response["success"] != true) {
       if (!mounted) return;
-      if (initiation['code'] == 'TERMS_ACCEPTANCE_REQUIRED' &&
+      if (response['code'] == 'TERMS_ACCEPTANCE_REQUIRED' &&
           widget.role.toLowerCase() != 'admin') {
         _openCurrentTerms();
         return;
@@ -588,7 +588,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            initiation["message"]?.toString() ?? "loginFailed".tr(),
+            response["message"]?.toString() ?? "loginFailed".tr(),
           ),
         ),
       );
@@ -597,17 +597,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (!mounted) return;
-    final response = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OtpVerificationScreen(
-          phone: phone,
-          challengeId: initiation["challengeId"].toString(),
-          requestId: initiation["requestId"].toString(),
-        ),
-      ),
-    );
-    if (!mounted || response == null) return;
 
     // ================= GET USER DATA =================
 
