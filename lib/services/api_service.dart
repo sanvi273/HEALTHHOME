@@ -9,6 +9,11 @@ import 'package:open_filex/open_filex.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
+  // Injectable client used only by the Terms endpoints and their widget tests.
+  static http.Client? _termsClient;
+  static http.Client get termsClient => _termsClient ??= http.Client();
+  static set termsClient(http.Client client) => _termsClient = client;
+
   // ============================================================
   // BASE URL
   // ============================================================
@@ -82,7 +87,7 @@ class ApiService {
   // ============================================================
 
   static Future<Map<String, dynamic>> getCurrentTerms(String role) async {
-    final response = await http.get(Uri.parse(
+    final response = await termsClient.get(Uri.parse(
       "$baseUrl/api/terms/${Uri.encodeComponent(role.toLowerCase())}/current",
     ));
     return Map<String, dynamic>.from(jsonDecode(response.body));
@@ -95,7 +100,7 @@ class ApiService {
     required String termsContentHash,
     required String onboardingSessionToken,
   }) async {
-    final response = await http.post(
+    final response = await termsClient.post(
       Uri.parse("$baseUrl/api/terms/accept"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
@@ -115,7 +120,7 @@ class ApiService {
     required String selectedRole,
     required String acceptanceToken,
   }) async {
-    final response = await http.post(
+    final response = await termsClient.post(
       Uri.parse("$baseUrl/api/terms/acceptance/validate"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({

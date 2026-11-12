@@ -203,6 +203,7 @@ class RoleSelectionScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
+          key: ValueKey('role-selection-${role.toLowerCase()}'),
           borderRadius: BorderRadius.circular(20),
           onTap: () {
             Navigator.push(
