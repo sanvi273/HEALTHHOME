@@ -137,6 +137,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
   }
 
+  String get maskedPhone {
+    final digits = widget.phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.length < 4) return widget.phone;
+    final visibleDigits = digits.substring(digits.length - 4);
+    return '${widget.phone.substring(0, widget.phone.length - 4).replaceAll(RegExp(r'\d'), '•')}$visibleDigits';
+  }
+
   @override
   void dispose() {
     timer?.cancel();
@@ -167,32 +174,62 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         fontWeight: FontWeight.bold,
                         color: Color(0xff111827))),
                 const SizedBox(height: 12),
-                Text('Enter the 6-digit OTP sent to\n${widget.phone}',
+                Text('Enter the 6-digit OTP sent to\n$maskedPhone',
                     style: const TextStyle(fontSize: 16, color: Colors.grey)),
                 const SizedBox(height: 35),
-                TextField(
-                  controller: otpController,
-                  autofocus: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(6)
-                  ],
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 8),
-                  decoration: InputDecoration(
-                      counterText: '',
-                      hintText: '000000',
-                      filled: true,
-                      fillColor: const Color(0xffF5F7FB),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide.none)),
-                  onSubmitted: (_) => verifyOtp(),
+                Semantics(
+                  label: 'Six digit verification code',
+                  child: SizedBox(
+                    height: 62,
+                    child: Stack(children: [
+                      Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(6, (index) {
+                            final value = otpController.text;
+                            return Container(
+                              width: 46,
+                              height: 58,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(0xffF5F7FB),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: index == value.length
+                                        ? const Color(0xff00C2CB)
+                                        : const Color(0xffE5E7EB),
+                                    width: index == value.length ? 2 : 1),
+                              ),
+                              child: Text(
+                                  index < value.length ? value[index] : '',
+                                  style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xff111827))),
+                            );
+                          })),
+                      Positioned.fill(
+                          child: TextField(
+                        controller: otpController,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(6)
+                        ],
+                        maxLength: 6,
+                        showCursor: false,
+                        style: const TextStyle(
+                            color: Colors.transparent, fontSize: 1),
+                        cursorColor: Colors.transparent,
+                        decoration: const InputDecoration(
+                            counterText: '',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero),
+                        onChanged: (_) => setState(() => error = null),
+                        onSubmitted: (_) => verifyOtp(),
+                      )),
+                    ]),
+                  ),
                 ),
                 if (error != null)
                   Padding(

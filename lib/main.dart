@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 
 import 'firebase_options.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/incoming_call_service.dart';
 
 import 'screens/onboarding_screen.dart';
 import 'screens/patient/patient_main.dart';
@@ -37,6 +38,9 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  final appNavigatorKey = GlobalKey<NavigatorState>();
+  await IncomingCallService.initialize(appNavigatorKey);
+
   // ====================================================
   // ONESIGNAL
   // ====================================================
@@ -63,7 +67,7 @@ Future<void> main() async {
 
       startLocale: const Locale('en'),
 
-      child: const HealthHomeApp(),
+      child: HealthHomeApp(navigatorKey: appNavigatorKey),
     ),
   );
 }
@@ -73,13 +77,17 @@ Future<void> main() async {
 // ======================================================
 
 class HealthHomeApp extends StatelessWidget {
+  final GlobalKey<NavigatorState> navigatorKey;
+
   const HealthHomeApp({
     super.key,
+    required this.navigatorKey,
   });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       builder: (context, child) {
   return ResponsiveWrapper(
     child: child ?? const SizedBox.shrink(),

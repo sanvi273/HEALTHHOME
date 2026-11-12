@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'login_screen.dart';
+import 'terms_acceptance_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -136,19 +136,17 @@ class RoleSelectionScreen extends StatelessWidget {
                         spacing: cardSpacing,
                       ),
 
-                      // ADMIN
-                      _roleCard(
-                        context,
-                        icon: Icons.admin_panel_settings,
-                        iconColor: const Color(0xff00A6B2),
-                        iconBg: const Color(0xffE6FAFB),
-                        title: 'Admin',
-                        subtitle: 'Manage professional verifications',
-                        role: 'Admin',
-                        spacing: cardSpacing,
-                      ),
-
                       const SizedBox(height: 12),
+
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(role: 'Admin'),
+                          ),
+                        ),
+                        child: const Text('Administrator sign in'),
+                      ),
 
                       // LANGUAGE BUTTONS
                       Wrap(
@@ -210,7 +208,10 @@ class RoleSelectionScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => LoginScreen(role: role),
+                builder: (_) => TermsAcceptanceScreen(
+                  selectedRole: role.toLowerCase(),
+                  roleLabel: role,
+                ),
               ),
             );
           },
@@ -231,9 +232,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     color: iconColor,
                   ),
                 ),
-
                 const SizedBox(width: 14),
-
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,9 +258,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-
                 const SizedBox(width: 8),
-
                 const Icon(
                   Icons.arrow_forward_ios,
                   size: 16,

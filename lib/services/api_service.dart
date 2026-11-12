@@ -16,7 +16,7 @@ class ApiService {
   static final String baseUrl = _normalizeBaseUrl(
     const String.fromEnvironment(
       "HEALTHHOME_API_BASE_URL",
-      defaultValue: "https://healthhome-backend.onrender.com",
+      defaultValue: "https://healthhome-in-g4xh.onrender.com",
     ),
   );
 
@@ -65,10 +65,8 @@ class ApiService {
         base64Url.decode(base64Url.normalize(parts[1])),
       );
       final payload = jsonDecode(payloadJson);
-      final userId = (payload is Map ? payload["id"] : null)
-              ?.toString()
-              .trim() ??
-          "";
+      final userId =
+          (payload is Map ? payload["id"] : null)?.toString().trim() ?? "";
       if (!RegExp(r"^[a-fA-F0-9]{24}$").hasMatch(userId)) {
         throw Exception("Signed-in account has no valid user ID.");
       }
@@ -83,13 +81,55 @@ class ApiService {
   // AUTH
   // ============================================================
 
+  static Future<Map<String, dynamic>> getCurrentTerms(String role) async {
+    final response = await http.get(Uri.parse(
+      "$baseUrl/api/terms/${Uri.encodeComponent(role.toLowerCase())}/current",
+    ));
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  static Future<Map<String, dynamic>> acceptTerms({
+    required String selectedRole,
+    required String termsDocumentType,
+    required String termsVersion,
+    required String termsContentHash,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/terms/accept"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "selectedRole": selectedRole,
+        "termsDocumentType": termsDocumentType,
+        "termsVersion": termsVersion,
+        "termsContentHash": termsContentHash,
+        "accepted": true,
+        "readToEnd": true,
+      }),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  static Future<Map<String, dynamic>> validateTermsAcceptance({
+    required String selectedRole,
+    required String acceptanceToken,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/terms/acceptance/validate"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "selectedRole": selectedRole,
+        "acceptanceToken": acceptanceToken,
+      }),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
   static Future<Map<String, dynamic>> registerUser({
     required String name,
     required String email,
     required String password,
     required String phone,
     required String role,
-
     required String label,
     required String fullAddress,
     String landmark = "",
@@ -98,6 +138,7 @@ class ApiService {
     required String pincode,
     double? latitude,
     double? longitude,
+    String? termsAcceptanceToken,
   }) async {
     try {
       final response = await http.post(
@@ -119,6 +160,8 @@ class ApiService {
           "pincode": pincode,
           "latitude": latitude,
           "longitude": longitude,
+          if (termsAcceptanceToken != null)
+            "termsAcceptanceToken": termsAcceptanceToken,
         }),
       );
 
@@ -145,6 +188,7 @@ class ApiService {
     required String phone,
     required String password,
     required String role,
+    String? termsAcceptanceToken,
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/login/initiate"),
@@ -157,6 +201,8 @@ class ApiService {
         "role": role.trim().toLowerCase() == "lab"
             ? "laboratory"
             : role.trim().toLowerCase(),
+        if (termsAcceptanceToken != null)
+          "termsAcceptanceToken": termsAcceptanceToken,
       }),
     );
 
@@ -171,7 +217,11 @@ class ApiService {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/login/verify"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"challengeId": challengeId, "otp": otp, if (accessToken != null) "accessToken": accessToken}),
+      body: jsonEncode({
+        "challengeId": challengeId,
+        "otp": otp,
+        if (accessToken != null) "accessToken": accessToken
+      }),
     );
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }
@@ -196,12 +246,17 @@ class ApiService {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/register/verify"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"challengeId": challengeId, "otp": otp, if (accessToken != null) "accessToken": accessToken}),
+      body: jsonEncode({
+        "challengeId": challengeId,
+        "otp": otp,
+        if (accessToken != null) "accessToken": accessToken
+      }),
     );
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
-  static Future<Map<String, dynamic>> startPasswordReset({required String phone}) async {
+  static Future<Map<String, dynamic>> startPasswordReset(
+      {required String phone}) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/forgot-password"),
       headers: {"Content-Type": "application/json"},
@@ -218,7 +273,11 @@ class ApiService {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/forgot-password/verify"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"challengeId": challengeId, "otp": otp, if (accessToken != null) "accessToken": accessToken}),
+      body: jsonEncode({
+        "challengeId": challengeId,
+        "otp": otp,
+        if (accessToken != null) "accessToken": accessToken
+      }),
     );
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }
@@ -377,7 +436,6 @@ class ApiService {
     }
   }
 
-
   // ============================================================
   // ADMIN - BUSINESS ANALYTICS
   // ============================================================
@@ -437,8 +495,7 @@ class ApiService {
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
@@ -470,8 +527,7 @@ class ApiService {
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
@@ -507,8 +563,7 @@ class ApiService {
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
@@ -562,63 +617,61 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  
-static Future<Map<String, dynamic>> updateDoctorAvailability({
-  required String doctorId,
-  required bool isAvailable,
-}) async {
-  final response = await http.put(
-    Uri.parse('$baseUrl/api/doctors/availability/$doctorId'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'isAvailable': isAvailable}),
-  );
+  static Future<Map<String, dynamic>> updateDoctorAvailability({
+    required String doctorId,
+    required bool isAvailable,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/doctors/availability/$doctorId'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'isAvailable': isAvailable}),
+    );
 
-  final data = jsonDecode(response.body);
+    final data = jsonDecode(response.body);
 
-  if (response.statusCode >= 200 && response.statusCode < 300) {
-    return Map<String, dynamic>.from(data);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    throw Exception(
+      data['message'] ?? 'Failed to update doctor availability',
+    );
   }
 
-  throw Exception(
-    data['message'] ?? 'Failed to update doctor availability',
-  );
-}
+  static Future<Map<String, dynamic>> updateDoctorSchedule({
+    required String doctorId,
+    required List<String> workingDays,
+    required String startTime,
+    required String endTime,
+    required String breakStart,
+    required String breakEnd,
+    required int slotDurationMinutes,
+    required int maxAppointmentsPerDay,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/doctors/schedule/$doctorId'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'workingDays': workingDays,
+        'startTime': startTime,
+        'endTime': endTime,
+        'breakStart': breakStart,
+        'breakEnd': breakEnd,
+        'slotDurationMinutes': slotDurationMinutes,
+        'maxAppointmentsPerDay': maxAppointmentsPerDay,
+      }),
+    );
 
-static Future<Map<String, dynamic>> updateDoctorSchedule({
-  required String doctorId,
-  required List<String> workingDays,
-  required String startTime,
-  required String endTime,
-  required String breakStart,
-  required String breakEnd,
-  required int slotDurationMinutes,
-  required int maxAppointmentsPerDay,
-}) async {
-  final response = await http.put(
-    Uri.parse('$baseUrl/api/doctors/schedule/$doctorId'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'workingDays': workingDays,
-      'startTime': startTime,
-      'endTime': endTime,
-      'breakStart': breakStart,
-      'breakEnd': breakEnd,
-      'slotDurationMinutes': slotDurationMinutes,
-      'maxAppointmentsPerDay': maxAppointmentsPerDay,
-    }),
-  );
+    final data = jsonDecode(response.body);
 
-  final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
+    }
 
-  if (response.statusCode >= 200 && response.statusCode < 300) {
-    return Map<String, dynamic>.from(data);
+    throw Exception(
+      data['message'] ?? 'Failed to update doctor schedule',
+    );
   }
-
-  throw Exception(
-    data['message'] ?? 'Failed to update doctor schedule',
-  );
-}
-
 
   static Future<Map<String, dynamic>> addDoctor({
     required String name,
@@ -814,9 +867,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     try {
       final allMedicines = await getMedicines();
 
-      final searchName = medicineName
-          .trim()
-          .toLowerCase();
+      final searchName = medicineName.trim().toLowerCase();
 
       if (searchName.isEmpty) {
         return [];
@@ -828,24 +879,14 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
         }
 
         final inventoryName =
-            item["medicineName"]
-                    ?.toString()
-                    .trim()
-                    .toLowerCase() ??
-                "";
+            item["medicineName"]?.toString().trim().toLowerCase() ?? "";
 
-        final stock =
-            int.tryParse(
+        final stock = int.tryParse(
               item["stock"]?.toString() ?? "0",
             ) ??
             0;
 
-        final status =
-            item["status"]
-                    ?.toString()
-                    .trim()
-                    .toLowerCase() ??
-                "";
+        final status = item["status"]?.toString().trim().toLowerCase() ?? "";
 
         return inventoryName == searchName &&
             stock > 0 &&
@@ -1038,8 +1079,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
       final data = jsonDecode(response.body);
 
-      if (data is Map &&
-          data["appointments"] is List) {
+      if (data is Map && data["appointments"] is List) {
         return List<dynamic>.from(
           data["appointments"],
         );
@@ -1072,8 +1112,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
       final data = jsonDecode(response.body);
 
-      if (data is Map &&
-          data["appointments"] is List) {
+      if (data is Map && data["appointments"] is List) {
         return List<dynamic>.from(
           data["appointments"],
         );
@@ -1095,8 +1134,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(
           data["appointment"] ?? {},
         );
@@ -1131,8 +1169,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
   }
 
-  static Future<Map<String, dynamic>>
-      updateAppointmentPaymentStatus({
+  static Future<Map<String, dynamic>> updateAppointmentPaymentStatus({
     required String id,
     required String paymentStatus,
   }) async {
@@ -1230,13 +1267,16 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
       body: jsonEncode({"appointmentId": appointmentId}),
     );
     final data = Map<String, dynamic>.from(jsonDecode(response.body));
-    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) {
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true) {
       throw Exception(data["message"] ?? "Unable to start consultation");
     }
     return data;
   }
 
-  static Future<void> registerCallDevice({required String token, required String platform}) async {
+  static Future<void> registerCallDevice(
+      {required String token, required String platform}) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/video-calls/devices"),
       headers: await _getAuthHeaders(),
@@ -1259,29 +1299,49 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
   }
 
   static Future<Map<String, dynamic>> acceptVideoCall(String callId) async {
-    final response = await http.post(Uri.parse("$baseUrl/api/video-calls/$callId/accept"), headers: await _getAuthHeaders());
+    final response = await http.post(
+        Uri.parse("$baseUrl/api/video-calls/$callId/accept"),
+        headers: await _getAuthHeaders());
     final data = Map<String, dynamic>.from(jsonDecode(response.body));
-    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) throw Exception(data["message"] ?? "Unable to accept call");
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true)
+      throw Exception(data["message"] ?? "Unable to accept call");
     return data;
   }
 
   static Future<Map<String, dynamic>> declineVideoCall(String callId) async {
-    final response = await http.post(Uri.parse("$baseUrl/api/video-calls/$callId/decline"), headers: await _getAuthHeaders());
+    final response = await http.post(
+        Uri.parse("$baseUrl/api/video-calls/$callId/decline"),
+        headers: await _getAuthHeaders());
     final data = Map<String, dynamic>.from(jsonDecode(response.body));
-    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) throw Exception(data["message"] ?? "Unable to decline call");
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true)
+      throw Exception(data["message"] ?? "Unable to decline call");
     return data;
   }
 
   static Future<void> endVideoCall(String callId) async {
-    final response = await http.post(Uri.parse("$baseUrl/api/video-calls/$callId/end"), headers: await _getAuthHeaders());
+    final response = await http.post(
+        Uri.parse("$baseUrl/api/video-calls/$callId/end"),
+        headers: await _getAuthHeaders());
     final data = Map<String, dynamic>.from(jsonDecode(response.body));
-    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) throw Exception(data["message"] ?? "Unable to end call");
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true)
+      throw Exception(data["message"] ?? "Unable to end call");
   }
 
   static Future<Map<String, dynamic>> joinVideoCall(String callId) async {
-    final response = await http.post(Uri.parse("$baseUrl/api/video-calls/$callId/join"), headers: await _getAuthHeaders());
+    final response = await http.post(
+        Uri.parse("$baseUrl/api/video-calls/$callId/join"),
+        headers: await _getAuthHeaders());
     final data = Map<String, dynamic>.from(jsonDecode(response.body));
-    if (response.statusCode < 200 || response.statusCode >= 300 || data["success"] != true) throw Exception(data["message"] ?? "Unable to join call");
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true)
+      throw Exception(data["message"] ?? "Unable to join call");
     return data;
   }
 
@@ -1318,14 +1378,12 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       throw Exception(
-        data["message"] ??
-            "Failed to generate Agora token",
+        data["message"] ?? "Failed to generate Agora token",
       );
     } catch (e) {
       rethrow;
@@ -1347,8 +1405,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
   }
 
-  static Future<Map<String, dynamic>?>
-      checkReadyConsultation(
+  static Future<Map<String, dynamic>?> checkReadyConsultation(
     String patientPhone,
   ) async {
     try {
@@ -1490,15 +1547,13 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       return {
         "success": false,
-        "message": data["message"] ??
-            "Failed to assign delivery partner.",
+        "message": data["message"] ?? "Failed to assign delivery partner.",
       };
     } catch (e) {
       return {
@@ -1528,15 +1583,13 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       return {
         "success": false,
-        "message": data["message"] ??
-            "Failed to remove delivery partner.",
+        "message": data["message"] ?? "Failed to remove delivery partner.",
       };
     } catch (e) {
       return {
@@ -1721,8 +1774,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     }
   }
 
-  static Future<Map<String, dynamic>>
-      confirmPrescriptionOrder({
+  static Future<Map<String, dynamic>> confirmPrescriptionOrder({
     required String orderId,
     required List<dynamic> medicines,
     double deliveryFee = 0,
@@ -1746,15 +1798,13 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       return {
         "success": false,
-        "message": data["message"] ??
-            "Failed to confirm prescription order.",
+        "message": data["message"] ?? "Failed to confirm prescription order.",
       };
     } catch (e) {
       return {
@@ -1800,16 +1850,13 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
         ),
       );
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
 
-        if (data is Map &&
-            data["orders"] is List) {
+        if (data is Map && data["orders"] is List) {
           return List<Map<String, dynamic>>.from(
             (data["orders"] as List).map(
-              (order) =>
-                  Map<String, dynamic>.from(order),
+              (order) => Map<String, dynamic>.from(order),
             ),
           );
         }
@@ -1817,8 +1864,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
         if (data is List) {
           return List<Map<String, dynamic>>.from(
             data.map(
-              (order) =>
-                  Map<String, dynamic>.from(order),
+              (order) => Map<String, dynamic>.from(order),
             ),
           );
         }
@@ -1858,8 +1904,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
   }
 
-  static Future<List<Map<String, dynamic>>>
-      getSampleCollectors(
+  static Future<List<Map<String, dynamic>>> getSampleCollectors(
     String labId,
   ) async {
     try {
@@ -1872,16 +1917,13 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
         },
       );
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
 
-        if (data is Map &&
-            data["collectors"] is List) {
+        if (data is Map && data["collectors"] is List) {
           return List<Map<String, dynamic>>.from(
             (data["collectors"] as List).map(
-              (collector) =>
-                  Map<String, dynamic>.from(collector),
+              (collector) => Map<String, dynamic>.from(collector),
             ),
           );
         }
@@ -1889,8 +1931,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
         if (data is List) {
           return List<Map<String, dynamic>>.from(
             data.map(
-              (collector) =>
-                  Map<String, dynamic>.from(collector),
+              (collector) => Map<String, dynamic>.from(collector),
             ),
           );
         }
@@ -1929,14 +1970,12 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final patientId = await getAuthenticatedUserId();
-    final patientName = (prefs.getString("patientName") ??
-            prefs.getString("userName") ??
-            "")
-        .trim();
-    final patientPhone = (prefs.getString("patientPhone") ??
-            prefs.getString("userPhone") ??
-            "")
-        .trim();
+    final patientName =
+        (prefs.getString("patientName") ?? prefs.getString("userName") ?? "")
+            .trim();
+    final patientPhone =
+        (prefs.getString("patientPhone") ?? prefs.getString("userPhone") ?? "")
+            .trim();
     if (patientName.isEmpty || patientPhone.isEmpty) {
       throw Exception(
         "Patient name and phone are required. Please update your profile.",
@@ -1981,7 +2020,8 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
-      throw Exception("The server returned an invalid COD collection response.");
+      throw Exception(
+          "The server returned an invalid COD collection response.");
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
@@ -2019,7 +2059,6 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
   }
 
-  
   // ============================================================
   // CANCEL LAB BOOKING
   // ============================================================
@@ -2041,8 +2080,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
     final data = jsonDecode(response.body);
 
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return Map<String, dynamic>.from(data);
     }
 
@@ -2073,8 +2111,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
     final data = jsonDecode(response.body);
 
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return Map<String, dynamic>.from(data);
     }
 
@@ -2113,8 +2150,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 
     final data = jsonDecode(response.body);
 
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return Map<String, dynamic>.from(data);
     }
 
@@ -2123,9 +2159,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
   }
 
-
-  static Future<Map<String, dynamic>>
-      assignSampleCollector({
+  static Future<Map<String, dynamic>> assignSampleCollector({
     required String orderId,
     required String collectorId,
     required String collectorName,
@@ -2169,8 +2203,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
   // LAB COLLECTION OTP
   // ============================================================
 
-  static Future<Map<String, dynamic>>
-      generateCollectionOtp(
+  static Future<Map<String, dynamic>> generateCollectionOtp(
     String orderId,
   ) async {
     try {
@@ -2217,8 +2250,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     }
   }
 
-  static Future<Map<String, dynamic>>
-      verifyCollectionOtp({
+  static Future<Map<String, dynamic>> verifyCollectionOtp({
     required String orderId,
     required String otp,
   }) async {
@@ -2247,8 +2279,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     }
   }
 
-  static Future<Map<String, dynamic>>
-      markSampleCollected(
+  static Future<Map<String, dynamic>> markSampleCollected(
     String orderId,
   ) async {
     final response = await http.put(
@@ -2263,8 +2294,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
   }
 
-  static Future<Map<String, dynamic>>
-      markSampleReceived(
+  static Future<Map<String, dynamic>> markSampleReceived(
     String orderId,
   ) async {
     final response = await http.put(
@@ -2279,8 +2309,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
   }
 
-  static Future<Map<String, dynamic>>
-      startLabTesting(
+  static Future<Map<String, dynamic>> startLabTesting(
     String orderId,
   ) async {
     final response = await http.put(
@@ -2295,8 +2324,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     );
   }
 
-  static Future<Map<String, dynamic>>
-      updateLabOrderStatus({
+  static Future<Map<String, dynamic>> updateLabOrderStatus({
     required String orderId,
     required String status,
   }) async {
@@ -2346,8 +2374,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
         }),
       );
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(
           jsonDecode(response.body),
         );
@@ -2356,8 +2383,7 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
       final data = jsonDecode(response.body);
 
       throw Exception(
-        data["message"] ??
-            "Failed to upload lab report",
+        data["message"] ?? "Failed to upload lab report",
       );
     } catch (e) {
       rethrow;
@@ -2437,11 +2463,9 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
     String prescriptionId,
   ) async {
     try {
-      final dir =
-          await getApplicationDocumentsDirectory();
+      final dir = await getApplicationDocumentsDirectory();
 
-      final filePath =
-          "${dir.path}/Prescription_$prescriptionId.pdf";
+      final filePath = "${dir.path}/Prescription_$prescriptionId.pdf";
 
       await Dio().download(
         "$baseUrl/api/prescriptions/pdf/$prescriptionId",
@@ -2461,135 +2485,130 @@ static Future<Map<String, dynamic>> updateDoctorSchedule({
 // NORMAL RAZORPAY CHECKOUT
 // ============================================================
 
-static Future<Map<String, dynamic>> createPaymentOrder({
-  required String userId,
-  required String userName,
-  required String userPhone,
-  required String serviceType,
-  required String serviceId,
-}) async {
-  try {
-    debugPrint("================================");
-    debugPrint("CREATE RAZORPAY ORDER");
-    debugPrint("SERVICE TYPE = $serviceType");
-    debugPrint("SERVICE ID = $serviceId");
-    debugPrint("================================");
+  static Future<Map<String, dynamic>> createPaymentOrder({
+    required String userId,
+    required String userName,
+    required String userPhone,
+    required String serviceType,
+    required String serviceId,
+  }) async {
+    try {
+      debugPrint("================================");
+      debugPrint("CREATE RAZORPAY ORDER");
+      debugPrint("SERVICE TYPE = $serviceType");
+      debugPrint("SERVICE ID = $serviceId");
+      debugPrint("================================");
 
-    final response = await http.post(
-      Uri.parse(
-        "$baseUrl/api/payment/create-order",
-      ),
-      headers: await _getAuthHeaders(),
-      body: jsonEncode({
-        "userId": userId,
-        "userName": userName,
-        "userPhone": userPhone,
-        "serviceType": serviceType,
-        "serviceId": serviceId,
-      }),
-    );
+      final response = await http.post(
+        Uri.parse(
+          "$baseUrl/api/payment/create-order",
+        ),
+        headers: await _getAuthHeaders(),
+        body: jsonEncode({
+          "userId": userId,
+          "userName": userName,
+          "userPhone": userPhone,
+          "serviceType": serviceType,
+          "serviceId": serviceId,
+        }),
+      );
 
-    debugPrint(
-      "CREATE RAZORPAY ORDER STATUS = ${response.statusCode}",
-    );
+      debugPrint(
+        "CREATE RAZORPAY ORDER STATUS = ${response.statusCode}",
+      );
 
-    debugPrint(
-      "CREATE RAZORPAY ORDER BODY = ${response.body}",
-    );
+      debugPrint(
+        "CREATE RAZORPAY ORDER BODY = ${response.body}",
+      );
 
-    final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
 
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300) {
-      return Map<String, dynamic>.from(data);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception(
+        data["message"] ?? "Failed to create Razorpay order.",
+      );
+    } catch (e) {
+      debugPrint(
+        "CREATE RAZORPAY ORDER ERROR = $e",
+      );
+
+      rethrow;
     }
-
-    throw Exception(
-      data["message"] ??
-          "Failed to create Razorpay order.",
-    );
-  } catch (e) {
-    debugPrint(
-      "CREATE RAZORPAY ORDER ERROR = $e",
-    );
-
-    rethrow;
   }
-}
-
 
 // ============================================================
 // VERIFY NORMAL RAZORPAY CHECKOUT PAYMENT
 // ============================================================
 
-static Future<Map<String, dynamic>> verifyPayment({
-  required String razorpayOrderId,
-  required String razorpayPaymentId,
-  required String razorpaySignature,
-  required String serviceType,
-  required String serviceId,
-}) async {
-  try {
-    debugPrint("================================");
-    debugPrint("VERIFY RAZORPAY PAYMENT");
-    debugPrint(
-      "ORDER ID = $razorpayOrderId",
-    );
-    debugPrint(
-      "PAYMENT ID = $razorpayPaymentId",
-    );
-    debugPrint(
-      "SERVICE TYPE = $serviceType",
-    );
-    debugPrint(
-      "SERVICE ID = $serviceId",
-    );
-    debugPrint("================================");
+  static Future<Map<String, dynamic>> verifyPayment({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+    required String serviceType,
+    required String serviceId,
+  }) async {
+    try {
+      debugPrint("================================");
+      debugPrint("VERIFY RAZORPAY PAYMENT");
+      debugPrint(
+        "ORDER ID = $razorpayOrderId",
+      );
+      debugPrint(
+        "PAYMENT ID = $razorpayPaymentId",
+      );
+      debugPrint(
+        "SERVICE TYPE = $serviceType",
+      );
+      debugPrint(
+        "SERVICE ID = $serviceId",
+      );
+      debugPrint("================================");
 
-    final response = await http.post(
-      Uri.parse(
-        "$baseUrl/api/payment/verify-payment",
-      ),
-      headers: await _getAuthHeaders(),
-      body: jsonEncode({
-        "razorpayOrderId": razorpayOrderId,
-        "razorpayPaymentId": razorpayPaymentId,
-        "razorpaySignature": razorpaySignature,
-        "razorpay_order_id": razorpayOrderId,
-        "razorpay_payment_id": razorpayPaymentId,
-        "razorpay_signature": razorpaySignature,
-        "serviceType": serviceType,
-        "serviceId": serviceId,
-      }),
-    );
+      final response = await http.post(
+        Uri.parse(
+          "$baseUrl/api/payment/verify-payment",
+        ),
+        headers: await _getAuthHeaders(),
+        body: jsonEncode({
+          "razorpayOrderId": razorpayOrderId,
+          "razorpayPaymentId": razorpayPaymentId,
+          "razorpaySignature": razorpaySignature,
+          "razorpay_order_id": razorpayOrderId,
+          "razorpay_payment_id": razorpayPaymentId,
+          "razorpay_signature": razorpaySignature,
+          "serviceType": serviceType,
+          "serviceId": serviceId,
+        }),
+      );
 
-    debugPrint(
-      "VERIFY PAYMENT STATUS = ${response.statusCode}",
-    );
+      debugPrint(
+        "VERIFY PAYMENT STATUS = ${response.statusCode}",
+      );
 
-    debugPrint(
-      "VERIFY PAYMENT BODY = ${response.body}",
-    );
+      debugPrint(
+        "VERIFY PAYMENT BODY = ${response.body}",
+      );
 
-    final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
 
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300) {
-      return Map<String, dynamic>.from(data);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception(
+        data["message"] ?? "Payment verification failed.",
+      );
+    } catch (e) {
+      debugPrint(
+        "VERIFY RAZORPAY PAYMENT ERROR = $e",
+      );
+
+      rethrow;
     }
-
-    throw Exception(
-      data["message"] ??
-          "Payment verification failed.",
-    );
-  } catch (e) {
-    debugPrint(
-      "VERIFY RAZORPAY PAYMENT ERROR = $e",
-    );
-
-    rethrow;
   }
-} 
 
   // ============================================================
   // GET UPI QR PAYMENT STATUS
@@ -2601,8 +2620,7 @@ static Future<Map<String, dynamic>> verifyPayment({
   // a captured UPI payment for the exact expected amount exists.
   // ============================================================
 
-  static Future<Map<String, dynamic>>
-      getQrPaymentStatus({
+  static Future<Map<String, dynamic>> getQrPaymentStatus({
     required String paymentRecordId,
   }) async {
     try {
@@ -2634,14 +2652,12 @@ static Future<Map<String, dynamic>> verifyPayment({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       throw Exception(
-        data["message"] ??
-            "Failed to get QR payment status.",
+        data["message"] ?? "Failed to get QR payment status.",
       );
     } catch (e) {
       debugPrint(
@@ -2661,8 +2677,7 @@ static Future<Map<String, dynamic>> verifyPayment({
   // be closed as an unpaid QR.
   // ============================================================
 
-  static Future<Map<String, dynamic>>
-      closeQrPayment({
+  static Future<Map<String, dynamic>> closeQrPayment({
     required String paymentRecordId,
   }) async {
     try {
@@ -2699,14 +2714,12 @@ static Future<Map<String, dynamic>> verifyPayment({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       throw Exception(
-        data["message"] ??
-            "Failed to close QR payment.",
+        data["message"] ?? "Failed to close QR payment.",
       );
     } catch (e) {
       debugPrint("CLOSE QR PAYMENT ERROR = $e");
@@ -2753,7 +2766,8 @@ static Future<Map<String, dynamic>> verifyPayment({
   // GET PAYMENT DETAILS BY ID
   // ============================================================
 
-  static Future<Map<String, dynamic>> getPaymentDetails(String paymentId) async {
+  static Future<Map<String, dynamic>> getPaymentDetails(
+      String paymentId) async {
     try {
       final response = await http.get(
         Uri.parse("$baseUrl/api/payment/detail/$paymentId"),
@@ -2784,8 +2798,7 @@ static Future<Map<String, dynamic>> verifyPayment({
   // receives cash from patient.
   // ============================================================
 
-  static Future<Map<String, dynamic>>
-      collectCODPayment({
+  static Future<Map<String, dynamic>> collectCODPayment({
     required String orderId,
   }) async {
     try {
@@ -2798,14 +2811,12 @@ static Future<Map<String, dynamic>> verifyPayment({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       throw Exception(
-        data["message"] ??
-            "Failed to collect COD payment.",
+        data["message"] ?? "Failed to collect COD payment.",
       );
     } catch (e) {
       rethrow;
@@ -2987,8 +2998,7 @@ static Future<Map<String, dynamic>> verifyPayment({
     }
   }
 
-  static Future<Map<String, dynamic>>
-      setDefaultAddress({
+  static Future<Map<String, dynamic>> setDefaultAddress({
     required String userId,
     required String addressId,
   }) async {
@@ -3065,23 +3075,19 @@ static Future<Map<String, dynamic>> verifyPayment({
     }
   }
 
-  static Future<List<Map<String, dynamic>>>
-      getLabTests() async {
+  static Future<List<Map<String, dynamic>>> getLabTests() async {
     try {
       final response = await http.get(
         Uri.parse("$baseUrl/api/labs/tests/all"),
       );
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
 
-        if (data is Map &&
-            data["tests"] is List) {
+        if (data is Map && data["tests"] is List) {
           return List<Map<String, dynamic>>.from(
             (data["tests"] as List).map(
-              (test) =>
-                  Map<String, dynamic>.from(test),
+              (test) => Map<String, dynamic>.from(test),
             ),
           );
         }
@@ -3089,8 +3095,7 @@ static Future<Map<String, dynamic>> verifyPayment({
         if (data is List) {
           return List<Map<String, dynamic>>.from(
             data.map(
-              (test) =>
-                  Map<String, dynamic>.from(test),
+              (test) => Map<String, dynamic>.from(test),
             ),
           );
         }
@@ -3102,8 +3107,7 @@ static Future<Map<String, dynamic>> verifyPayment({
     }
   }
 
-  static Future<List<Map<String, dynamic>>>
-      getLabTestsByLab(
+  static Future<List<Map<String, dynamic>>> getLabTestsByLab(
     String labId,
   ) async {
     try {
@@ -3114,16 +3118,13 @@ static Future<Map<String, dynamic>> verifyPayment({
         ),
       );
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
 
-        if (data is Map &&
-            data["tests"] is List) {
+        if (data is Map && data["tests"] is List) {
           return List<Map<String, dynamic>>.from(
             (data["tests"] as List).map(
-              (test) =>
-                  Map<String, dynamic>.from(test),
+              (test) => Map<String, dynamic>.from(test),
             ),
           );
         }
@@ -3131,8 +3132,7 @@ static Future<Map<String, dynamic>> verifyPayment({
         if (data is List) {
           return List<Map<String, dynamic>>.from(
             data.map(
-              (test) =>
-                  Map<String, dynamic>.from(test),
+              (test) => Map<String, dynamic>.from(test),
             ),
           );
         }
@@ -3232,8 +3232,7 @@ static Future<Map<String, dynamic>> verifyPayment({
   // Gets the OTP generated for the medicine order.
   // ============================================================
 
-  static Future<Map<String, dynamic>>
-      getDeliveryOtp({
+  static Future<Map<String, dynamic>> getDeliveryOtp({
     required String orderId,
   }) async {
     try {
@@ -3273,8 +3272,7 @@ static Future<Map<String, dynamic>> verifyPayment({
   // Delivery partner enters patient's OTP.
   // ============================================================
 
-  static Future<Map<String, dynamic>>
-      verifyDeliveryOtp({
+  static Future<Map<String, dynamic>> verifyDeliveryOtp({
     required String orderId,
     required String otp,
   }) async {
@@ -3292,14 +3290,12 @@ static Future<Map<String, dynamic>> verifyPayment({
 
     final data = jsonDecode(response.body);
 
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return data;
     }
 
     throw Exception(
-      data["message"] ??
-          "Failed to verify delivery OTP",
+      data["message"] ?? "Failed to verify delivery OTP",
     );
   }
 
@@ -3307,13 +3303,11 @@ static Future<Map<String, dynamic>> verifyPayment({
   // PHARMACY DELIVERY PARTNERS
   // ============================================================
 
-  static Future<Map<String, dynamic>>
-      getDeliveryPartners(
+  static Future<Map<String, dynamic>> getDeliveryPartners(
     String pharmacyPhone,
   ) async {
     try {
-      final encodedPhone =
-          Uri.encodeComponent(pharmacyPhone);
+      final encodedPhone = Uri.encodeComponent(pharmacyPhone);
 
       final response = await http.get(
         Uri.parse(
@@ -3324,15 +3318,13 @@ static Future<Map<String, dynamic>> verifyPayment({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       return {
         "success": false,
-        "message": data["message"] ??
-            "Failed to load delivery partners.",
+        "message": data["message"] ?? "Failed to load delivery partners.",
         "deliveryPartners": [],
       };
     } catch (e) {
@@ -3344,15 +3336,13 @@ static Future<Map<String, dynamic>> verifyPayment({
     }
   }
 
-  static Future<Map<String, dynamic>>
-      addDeliveryPartner({
+  static Future<Map<String, dynamic>> addDeliveryPartner({
     required String pharmacyPhone,
     required String name,
     required String phone,
   }) async {
     try {
-      final encodedPhone =
-          Uri.encodeComponent(pharmacyPhone);
+      final encodedPhone = Uri.encodeComponent(pharmacyPhone);
 
       final response = await http.post(
         Uri.parse(
@@ -3370,15 +3360,13 @@ static Future<Map<String, dynamic>> verifyPayment({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       return {
         "success": false,
-        "message": data["message"] ??
-            "Failed to add delivery partner.",
+        "message": data["message"] ?? "Failed to add delivery partner.",
       };
     } catch (e) {
       return {
@@ -3388,17 +3376,14 @@ static Future<Map<String, dynamic>> verifyPayment({
     }
   }
 
-  static Future<Map<String, dynamic>>
-      deleteDeliveryPartner({
+  static Future<Map<String, dynamic>> deleteDeliveryPartner({
     required String pharmacyPhone,
     required String partnerId,
   }) async {
     try {
-      final encodedPhone =
-          Uri.encodeComponent(pharmacyPhone);
+      final encodedPhone = Uri.encodeComponent(pharmacyPhone);
 
-      final encodedPartnerId =
-          Uri.encodeComponent(partnerId);
+      final encodedPartnerId = Uri.encodeComponent(partnerId);
 
       final response = await http.delete(
         Uri.parse(
@@ -3410,15 +3395,13 @@ static Future<Map<String, dynamic>> verifyPayment({
 
       final data = jsonDecode(response.body);
 
-      if (response.statusCode >= 200 &&
-          response.statusCode < 300) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return Map<String, dynamic>.from(data);
       }
 
       return {
         "success": false,
-        "message": data["message"] ??
-            "Failed to delete delivery partner.",
+        "message": data["message"] ?? "Failed to delete delivery partner.",
       };
     } catch (e) {
       return {
@@ -3428,332 +3411,323 @@ static Future<Map<String, dynamic>> verifyPayment({
     }
   }
 
-static Future<Map<String, dynamic>> createDoctorPaymentOrder({
-  required String patientName,
-  required String patientPhone,
-  required String doctorId,
-  required String doctorName,
-  required String specialization,
-  required String hospital,
-  required String consultationType,
-  required String appointmentDate,
-  required String appointmentTime,
-  required List<File> reports,
-}) async {
-  try {
-    // Create Dio instance
-    final dio = Dio();
+  static Future<Map<String, dynamic>> createDoctorPaymentOrder({
+    required String patientName,
+    required String patientPhone,
+    required String doctorId,
+    required String doctorName,
+    required String specialization,
+    required String hospital,
+    required String consultationType,
+    required String appointmentDate,
+    required String appointmentTime,
+    required List<File> reports,
+  }) async {
+    try {
+      // Create Dio instance
+      final dio = Dio();
 
-    final formData = FormData.fromMap({
-      "patientName": patientName,
-      "patientPhone": patientPhone,
-      "doctorId": doctorId,
-      "doctorName": doctorName,
-      "specialization": specialization,
-      "hospital": hospital,
-      "consultationType": consultationType,
-      "appointmentDate": appointmentDate,
-      "appointmentTime": appointmentTime,
-    });
+      final formData = FormData.fromMap({
+        "patientName": patientName,
+        "patientPhone": patientPhone,
+        "doctorId": doctorId,
+        "doctorName": doctorName,
+        "specialization": specialization,
+        "hospital": hospital,
+        "consultationType": consultationType,
+        "appointmentDate": appointmentDate,
+        "appointmentTime": appointmentTime,
+      });
 
-    // Attach reports
-    for (final file in reports) {
-      formData.files.add(
-        MapEntry(
-          "reports",
-          await MultipartFile.fromFile(
-            file.path,
-            filename: file.path.split(RegExp(r'[\\/]')).last,
+      // Attach reports
+      for (final file in reports) {
+        formData.files.add(
+          MapEntry(
+            "reports",
+            await MultipartFile.fromFile(
+              file.path,
+              filename: file.path.split(RegExp(r'[\\/]')).last,
+            ),
           ),
+        );
+      }
+
+      print("========================================");
+      print("CREATE DOCTOR PAYMENT REQUEST");
+      print("PATIENT: $patientName");
+      print("PHONE: $patientPhone");
+      print("DOCTOR ID: $doctorId");
+      print("DOCTOR: $doctorName");
+      print("DATE: $appointmentDate");
+      print("TIME: $appointmentTime");
+      print("REPORTS: ${reports.length}");
+      print("========================================");
+
+      final response = await dio.post(
+        "$baseUrl/api/payment/create-doctor-order",
+        data: formData,
+        options: Options(
+          headers: {
+            "Authorization": (await _getAuthHeaders())["Authorization"],
+          },
         ),
       );
-    }
 
-    print("========================================");
-    print("CREATE DOCTOR PAYMENT REQUEST");
-    print("PATIENT: $patientName");
-    print("PHONE: $patientPhone");
-    print("DOCTOR ID: $doctorId");
-    print("DOCTOR: $doctorName");
-    print("DATE: $appointmentDate");
-    print("TIME: $appointmentTime");
-    print("REPORTS: ${reports.length}");
-    print("========================================");
+      print("========================================");
+      print("CREATE DOCTOR PAYMENT STATUS");
+      print(response.statusCode);
+      print("CREATE DOCTOR PAYMENT BODY");
+      print(response.data);
+      print("========================================");
 
-    final response = await dio.post(
-      "$baseUrl/api/payment/create-doctor-order",
-      data: formData,
-      options: Options(
-        headers: {
-          "Authorization": (await _getAuthHeaders())["Authorization"],
-        },
-      ),
-    );
+      return Map<String, dynamic>.from(response.data);
+    } on DioException catch (e) {
+      print("========================================");
+      print("DOCTOR PAYMENT DIO ERROR");
+      print("STATUS: ${e.response?.statusCode}");
+      print("DATA: ${e.response?.data}");
+      print("MESSAGE: ${e.message}");
+      print("URL: ${e.requestOptions.uri}");
+      print("========================================");
 
-    print("========================================");
-    print("CREATE DOCTOR PAYMENT STATUS");
-    print(response.statusCode);
-    print("CREATE DOCTOR PAYMENT BODY");
-    print(response.data);
-    print("========================================");
+      final data = e.response?.data;
 
-    return Map<String, dynamic>.from(response.data);
-  } on DioException catch (e) {
-    print("========================================");
-    print("DOCTOR PAYMENT DIO ERROR");
-    print("STATUS: ${e.response?.statusCode}");
-    print("DATA: ${e.response?.data}");
-    print("MESSAGE: ${e.message}");
-    print("URL: ${e.requestOptions.uri}");
-    print("========================================");
+      if (data is Map) {
+        throw Exception(
+          data["message"] ??
+              data["error"] ??
+              "Server returned ${e.response?.statusCode}",
+        );
+      }
 
-    final data = e.response?.data;
-
-    if (data is Map) {
       throw Exception(
-        data["message"] ??
-            data["error"] ??
-            "Server returned ${e.response?.statusCode}",
+        "Server returned ${e.response?.statusCode}: "
+        "${e.message ?? "Unknown error"}",
       );
+    } catch (e) {
+      print("CREATE DOCTOR PAYMENT ERROR: $e");
+      rethrow;
     }
-
-    throw Exception(
-      "Server returned ${e.response?.statusCode}: "
-      "${e.message ?? "Unknown error"}",
-    );
-  } catch (e) {
-    print("CREATE DOCTOR PAYMENT ERROR: $e");
-    rethrow;
   }
-}
 
+  /// Verifies Razorpay payment on the BACKEND.
+  ///
+  /// The backend checks:
+  /// 1. Razorpay signature
+  /// 2. Razorpay order
+  /// 3. Payment ID
+  /// 4. Amount
+  /// 5. Currency
+  /// 6. Payment status = captured
+  /// 7. UPI method
+  /// 8. Exact appointment/order mapping
+  ///
+  /// Only after successful verification is the appointment marked Paid.
+  static Future<Map<String, dynamic>> verifyDoctorPayment({
+    required String appointmentId,
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+    required String patientPhone,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/api/payment/verify-doctor-payment"),
+        headers: await _getAuthHeaders(),
+        body: jsonEncode({
+          "appointmentId": appointmentId,
+          "razorpayOrderId": razorpayOrderId,
+          "razorpayPaymentId": razorpayPaymentId,
+          "razorpaySignature": razorpaySignature,
+          "userPhone": patientPhone,
+        }),
+      );
 
+      print("VERIFY DOCTOR PAYMENT STATUS: ${response.statusCode}");
+      print("VERIFY DOCTOR PAYMENT BODY: ${response.body}");
 
-/// Verifies Razorpay payment on the BACKEND.
-///
-/// The backend checks:
-/// 1. Razorpay signature
-/// 2. Razorpay order
-/// 3. Payment ID
-/// 4. Amount
-/// 5. Currency
-/// 6. Payment status = captured
-/// 7. UPI method
-/// 8. Exact appointment/order mapping
-///
-/// Only after successful verification is the appointment marked Paid.
-static Future<Map<String, dynamic>> verifyDoctorPayment({
-  required String appointmentId,
-  required String razorpayOrderId,
-  required String razorpayPaymentId,
-  required String razorpaySignature,
-  required String patientPhone,
-}) async {
-  try {
-    final response = await http.post(
-      Uri.parse("$baseUrl/api/payment/verify-doctor-payment"),
-      headers: await _getAuthHeaders(),
-      body: jsonEncode({
-        "appointmentId": appointmentId,
-        "razorpayOrderId": razorpayOrderId,
-        "razorpayPaymentId": razorpayPaymentId,
-        "razorpaySignature": razorpaySignature,
-        "userPhone": patientPhone,
-      }),
-    );
+      final decoded = jsonDecode(response.body);
 
-    print("VERIFY DOCTOR PAYMENT STATUS: ${response.statusCode}");
-    print("VERIFY DOCTOR PAYMENT BODY: ${response.body}");
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return Map<String, dynamic>.from(decoded);
+      }
 
-    final decoded = jsonDecode(response.body);
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return Map<String, dynamic>.from(decoded);
+      throw Exception(
+        decoded["message"] ??
+            decoded["error"] ??
+            "Doctor payment verification failed",
+      );
+    } catch (e) {
+      print("VERIFY DOCTOR PAYMENT ERROR: $e");
+      rethrow;
     }
-
-    throw Exception(
-      decoded["message"] ??
-          decoded["error"] ??
-          "Doctor payment verification failed",
-    );
-  } catch (e) {
-    print("VERIFY DOCTOR PAYMENT ERROR: $e");
-    rethrow;
   }
-}
 
+  /// Cancels the pending doctor appointment/payment reservation
+  /// when the user closes Razorpay or payment fails.
+  ///
+  /// This prevents an unpaid appointment from unnecessarily blocking
+  /// the doctor's time slot.
+  static Future<Map<String, dynamic>> cancelDoctorPayment({
+    required String appointmentId,
+    required String razorpayOrderId,
+    required String patientPhone,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/api/payment/cancel-doctor-order"),
+        headers: await _getAuthHeaders(),
+        body: jsonEncode({
+          "appointmentId": appointmentId,
+          "razorpayOrderId": razorpayOrderId,
+          "userPhone": patientPhone,
+        }),
+      );
 
-/// Cancels the pending doctor appointment/payment reservation
-/// when the user closes Razorpay or payment fails.
-///
-/// This prevents an unpaid appointment from unnecessarily blocking
-/// the doctor's time slot.
-static Future<Map<String, dynamic>> cancelDoctorPayment({
-  required String appointmentId,
-  required String razorpayOrderId,
-  required String patientPhone,
-}) async {
-  try {
-    final response = await http.post(
-      Uri.parse("$baseUrl/api/payment/cancel-doctor-order"),
-      headers: await _getAuthHeaders(),
-      body: jsonEncode({
-        "appointmentId": appointmentId,
-        "razorpayOrderId": razorpayOrderId,
-        "userPhone": patientPhone,
-      }),
-    );
+      print("CANCEL DOCTOR PAYMENT STATUS: ${response.statusCode}");
+      print("CANCEL DOCTOR PAYMENT BODY: ${response.body}");
 
-    print("CANCEL DOCTOR PAYMENT STATUS: ${response.statusCode}");
-    print("CANCEL DOCTOR PAYMENT BODY: ${response.body}");
+      final decoded = jsonDecode(response.body);
 
-    final decoded = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return Map<String, dynamic>.from(decoded);
+      }
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return Map<String, dynamic>.from(decoded);
+      throw Exception(
+        decoded["message"] ??
+            decoded["error"] ??
+            "Failed to cancel doctor payment",
+      );
+    } catch (e) {
+      print("CANCEL DOCTOR PAYMENT ERROR: $e");
+      rethrow;
     }
-
-    throw Exception(
-      decoded["message"] ??
-          decoded["error"] ??
-          "Failed to cancel doctor payment",
-    );
-  } catch (e) {
-    print("CANCEL DOCTOR PAYMENT ERROR: $e");
-    rethrow;
   }
-}
 
 // Add this method inside ApiService in api_service.dart.
 // It uses the existing baseUrl, http, and jsonEncode members.
 
-static Future<Map<String, dynamic>> proposeLabReschedule({
-  required String orderId,
-  required String labId,
-  required DateTime scheduledAt,
-  required String reason,
-}) async {
-  final response = await http.put(
-    Uri.parse(
-      "$baseUrl/api/lab-orders/reschedule/$orderId/propose",
-    ),
-    headers: {"Content-Type": "application/json"},
-    body: jsonEncode({
-      "labId": labId,
-      "scheduledAt": scheduledAt.toUtc().toIso8601String(),
-      "reason": reason,
-    }),
-  );
+  static Future<Map<String, dynamic>> proposeLabReschedule({
+    required String orderId,
+    required String labId,
+    required DateTime scheduledAt,
+    required String reason,
+  }) async {
+    final response = await http.put(
+      Uri.parse(
+        "$baseUrl/api/lab-orders/reschedule/$orderId/propose",
+      ),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "labId": labId,
+        "scheduledAt": scheduledAt.toUtc().toIso8601String(),
+        "reason": reason,
+      }),
+    );
 
-  final dynamic decoded = jsonDecode(response.body);
-  final data = decoded is Map
-      ? Map<String, dynamic>.from(decoded)
-      : <String, dynamic>{};
+    final dynamic decoded = jsonDecode(response.body);
+    final data = decoded is Map
+        ? Map<String, dynamic>.from(decoded)
+        : <String, dynamic>{};
 
-  if (response.statusCode >= 200 &&
-      response.statusCode < 300 &&
-      data["success"] != false) {
-    return data;
-  }
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        data["success"] != false) {
+      return data;
+    }
 
-  throw Exception(
-    data["message"]?.toString() ??
-        "Failed to propose a new date/time",
-  );
-}
-
-/// Patient responds to a date/time proposed by the laboratory.
-///
-/// Endpoint: PUT /api/lab-orders/reschedule/:id/respond
-/// decision: "Accepted", "Declined", or "Requested Another Time".
-/// Requesting another time keeps the original booking unchanged and asks
-/// the laboratory to send a different proposal.
-static Future<Map<String, dynamic>> respondToLabReschedule({
-  required String orderId,
-  required String patientId,
-  required String decision,
-  String reason = "",
-}) async {
-  if (orderId.trim().isEmpty) {
-    throw ArgumentError("Lab order ID is required.");
-  }
-  if (patientId.trim().isEmpty) {
-    throw ArgumentError("Patient ID is required.");
-  }
-  const allowedDecisions = [
-    "Accepted",
-    "Declined",
-    "Requested Another Time",
-  ];
-  if (!allowedDecisions.contains(decision)) {
-    throw ArgumentError(
-      'Decision must be "Accepted", "Declined", or "Requested Another Time".',
+    throw Exception(
+      data["message"]?.toString() ?? "Failed to propose a new date/time",
     );
   }
 
-  final response = await http.put(
-    Uri.parse(
-      "$baseUrl/api/lab-orders/reschedule/"
-      "${Uri.encodeComponent(orderId)}/respond",
-    ),
-    headers: {"Content-Type": "application/json"},
-    body: jsonEncode({
-      "patientId": patientId,
-      "decision": decision,
-      "reason": reason,
-    }),
-  );
+  /// Patient responds to a date/time proposed by the laboratory.
+  ///
+  /// Endpoint: PUT /api/lab-orders/reschedule/:id/respond
+  /// decision: "Accepted", "Declined", or "Requested Another Time".
+  /// Requesting another time keeps the original booking unchanged and asks
+  /// the laboratory to send a different proposal.
+  static Future<Map<String, dynamic>> respondToLabReschedule({
+    required String orderId,
+    required String patientId,
+    required String decision,
+    String reason = "",
+  }) async {
+    if (orderId.trim().isEmpty) {
+      throw ArgumentError("Lab order ID is required.");
+    }
+    if (patientId.trim().isEmpty) {
+      throw ArgumentError("Patient ID is required.");
+    }
+    const allowedDecisions = [
+      "Accepted",
+      "Declined",
+      "Requested Another Time",
+    ];
+    if (!allowedDecisions.contains(decision)) {
+      throw ArgumentError(
+        'Decision must be "Accepted", "Declined", or "Requested Another Time".',
+      );
+    }
 
-  final dynamic decoded = jsonDecode(response.body);
-  final data = decoded is Map
-      ? Map<String, dynamic>.from(decoded)
-      : <String, dynamic>{};
+    final response = await http.put(
+      Uri.parse(
+        "$baseUrl/api/lab-orders/reschedule/"
+        "${Uri.encodeComponent(orderId)}/respond",
+      ),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "patientId": patientId,
+        "decision": decision,
+        "reason": reason,
+      }),
+    );
 
-  if (response.statusCode >= 200 &&
-      response.statusCode < 300 &&
-      data["success"] != false) {
-    return data;
+    final dynamic decoded = jsonDecode(response.body);
+    final data = decoded is Map
+        ? Map<String, dynamic>.from(decoded)
+        : <String, dynamic>{};
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        data["success"] != false) {
+      return data;
+    }
+
+    throw Exception(
+      data["message"]?.toString() ??
+          "Failed to respond to lab reschedule proposal "
+              "(${response.statusCode})",
+    );
   }
 
-  throw Exception(
-    data["message"]?.toString() ??
-        "Failed to respond to lab reschedule proposal "
-            "(${response.statusCode})",
-  );
-}
+  /// Fetches the latest lab booking details after a reschedule action.
+  static Future<Map<String, dynamic>> refreshLabOrder(
+    String orderId,
+  ) async {
+    if (orderId.trim().isEmpty) {
+      throw ArgumentError("Lab order ID is required.");
+    }
 
-/// Fetches the latest lab booking details after a reschedule action.
-static Future<Map<String, dynamic>> refreshLabOrder(
-  String orderId,
-) async {
-  if (orderId.trim().isEmpty) {
-    throw ArgumentError("Lab order ID is required.");
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/api/lab-orders/"
+        "${Uri.encodeComponent(orderId)}",
+      ),
+    );
+
+    final dynamic decoded = jsonDecode(response.body);
+    final data = decoded is Map
+        ? Map<String, dynamic>.from(decoded)
+        : <String, dynamic>{};
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data;
+    }
+
+    throw Exception(
+      data["message"]?.toString() ??
+          "Failed to refresh lab booking (${response.statusCode})",
+    );
   }
-
-  final response = await http.get(
-    Uri.parse(
-      "$baseUrl/api/lab-orders/"
-      "${Uri.encodeComponent(orderId)}",
-    ),
-  );
-
-  final dynamic decoded = jsonDecode(response.body);
-  final data = decoded is Map
-      ? Map<String, dynamic>.from(decoded)
-      : <String, dynamic>{};
-
-  if (response.statusCode >= 200 &&
-      response.statusCode < 300) {
-    return data;
-  }
-
-  throw Exception(
-    data["message"]?.toString() ??
-        "Failed to refresh lab booking (${response.statusCode})",
-  );
-}
-
-
-
-
 }

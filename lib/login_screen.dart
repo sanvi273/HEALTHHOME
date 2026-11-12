@@ -5,8 +5,10 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'services/api_service.dart';
+import 'services/incoming_call_service.dart';
 import 'otp_verification_screen.dart';
 import 'forgot_password_screen.dart';
+import 'terms_acceptance_screen.dart';
 
 import 'screens/onboarding_screen.dart';
 
@@ -202,8 +204,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(width: 35),
 
                     // ================= SIGN UP =================
-
-                    
                   ],
                 ),
 
@@ -365,9 +365,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: TextButton(
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const ForgotPasswordScreen()),
                       ),
-                      child: const Text('Forgot password?', style: TextStyle(color: Color(0xff008F98))),
+                      child: const Text('Forgot password?',
+                          style: TextStyle(color: Color(0xff008F98))),
                     ),
                   ),
 
@@ -425,38 +427,38 @@ class _LoginScreenState extends State<LoginScreen> {
                 // ================= BOTTOM SWITCH =================
                 // =================================================
 
-               if (widget.role.toLowerCase() != "admin")
-  Center(
-    child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isLogin = !isLogin;
-                      });
-                    },
-                    child: RichText(
-                      text: TextSpan(
-                        text: isLogin
-                            ? "newHere".tr()
-                            : "alreadyHaveAccount".tr(),
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: isLogin ? "signUp".tr() : "login".tr(),
-                            style: const TextStyle(
-                              color: Color(
-                                0xff00C2CB,
-                              ),
-                              fontWeight: FontWeight.bold,
-                            ),
+                if (widget.role.toLowerCase() != "admin")
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isLogin = !isLogin;
+                        });
+                      },
+                      child: RichText(
+                        text: TextSpan(
+                          text: isLogin
+                              ? "newHere".tr()
+                              : "alreadyHaveAccount".tr(),
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
                           ),
-                        ],
+                          children: [
+                            TextSpan(
+                              text: isLogin ? "signUp".tr() : "login".tr(),
+                              style: const TextStyle(
+                                color: Color(
+                                  0xff00C2CB,
+                                ),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
                 const SizedBox(height: 25),
               ],
@@ -479,7 +481,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = passwordController.text.trim();
 
     final validPhone = RegExp(r'^[6-9]\d{9}$').hasMatch(phone) ||
-        RegExp(r'^\+?[1-9]\d{7,14}$').hasMatch(phone.replaceAll(RegExp(r'[\s()-]'), ''));
+        RegExp(r'^\+?[1-9]\d{7,14}$')
+            .hasMatch(phone.replaceAll(RegExp(r'[\s()-]'), ''));
     if (!validPhone) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -563,16 +566,24 @@ class _LoginScreenState extends State<LoginScreen> {
     String phone,
     String password,
   ) async {
+    final prefs = await SharedPreferences.getInstance();
     final initiation = await ApiService.loginUser(
       phone: phone,
       password: password,
       role: widget.role,
+      termsAcceptanceToken:
+          prefs.getString('termsAcceptanceToken_${widget.role.toLowerCase()}'),
     );
 
     // ================= LOGIN FAILED =================
 
     if (initiation["success"] != true) {
       if (!mounted) return;
+      if (initiation['code'] == 'TERMS_ACCEPTANCE_REQUIRED' &&
+          widget.role.toLowerCase() != 'admin') {
+        _openCurrentTerms();
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -618,8 +629,6 @@ class _LoginScreenState extends State<LoginScreen> {
     // ================= SHARED PREFERENCES =================
     // =====================================================
 
-    final prefs = await SharedPreferences.getInstance();
-
     // =====================================================
     // SAVE LOGIN TOKEN BEFORE VERIFICATION CHECK
     // =====================================================
@@ -636,6 +645,7 @@ class _LoginScreenState extends State<LoginScreen> {
       "token",
       loginToken,
     );
+    await IncomingCallService.registerCurrentDevice();
 
     await prefs.setBool(
       "isLoggedIn",
@@ -862,19 +872,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final cleanPhone = phone.trim();
 
-if (role == "admin") {
-  if (!mounted) return;
+    if (role == "admin") {
+      if (!mounted) return;
 
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const AdminDashboard(),
-    ),
-    (route) => false,
-  );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const AdminDashboard(),
+        ),
+        (route) => false,
+      );
 
-  return;
-}
+      return;
+    }
     debugPrint("================================");
     debugPrint("PROFILE NAVIGATION");
     debugPrint("ROLE  = $role");
@@ -1270,7 +1280,6 @@ if (role == "admin") {
   ) async {
     final name = nameController.text.trim();
 
-
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1318,6 +1327,7 @@ if (role == "admin") {
       return;
     }
 
+    final prefs = await SharedPreferences.getInstance();
     final initiation = await ApiService.registerUser(
       name: name,
       email: "$phone@gmail.com",
@@ -1332,12 +1342,18 @@ if (role == "admin") {
       pincode: pincodeController.text.trim(),
       latitude: selectedLatitude,
       longitude: selectedLongitude,
+      termsAcceptanceToken:
+          prefs.getString('termsAcceptanceToken_${widget.role.toLowerCase()}'),
     );
 
     // ================= SIGNUP FAILED =================
 
     if (initiation["success"] != true) {
       if (!mounted) return;
+      if (initiation['code'] == 'TERMS_ACCEPTANCE_REQUIRED') {
+        _openCurrentTerms();
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1365,7 +1381,9 @@ if (role == "admin") {
     if (!mounted || response == null) return;
     if (response['success'] != true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message']?.toString() ?? 'Registration was not verified.')),
+        SnackBar(
+            content: Text(response['message']?.toString() ??
+                'Registration was not verified.')),
       );
       return;
     }
@@ -1374,8 +1392,6 @@ if (role == "admin") {
     // the existing admin review process remains unchanged.
 
     // ================= SAVE BASIC STATE =================
-
-    final prefs = await SharedPreferences.getInstance();
 
     await prefs.setBool(
       "profileCompleted_$phone",
@@ -1399,6 +1415,18 @@ if (role == "admin") {
 
       passwordController.clear();
     });
+  }
+
+  void _openCurrentTerms() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => TermsAcceptanceScreen(
+          selectedRole: widget.role.toLowerCase(),
+          roleLabel: widget.role,
+        ),
+      ),
+    );
   }
 
   // =========================================================

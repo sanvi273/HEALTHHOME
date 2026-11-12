@@ -968,6 +968,7 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
                             ).toString(),
 
                             isDoctor: false,
+                            callId: readyConsultation?["callId"]?.toString(),
 
                           ),
 

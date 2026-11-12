@@ -9,6 +9,7 @@ class AgoraVideoCallPage extends StatefulWidget {
   final String appointmentId;
   final String meetingId;
   final bool isDoctor;
+  final String? callId;
 
   const AgoraVideoCallPage({
     super.key,
@@ -17,6 +18,7 @@ class AgoraVideoCallPage extends StatefulWidget {
     required this.appointmentId,
     required this.meetingId,
     required this.isDoctor,
+    this.callId,
   });
 
   @override
@@ -122,11 +124,12 @@ class _AgoraVideoCallPageState
         status = "Getting secure Agora token...";
       });
 
-      final tokenResponse =
-          await ApiService.generateAgoraToken(
-        appointmentId: widget.appointmentId,
-        uid: uid,
-      );
+      final tokenResponse = widget.callId != null
+          ? await ApiService.joinVideoCall(widget.callId!)
+          : await ApiService.generateAgoraToken(
+              appointmentId: widget.appointmentId,
+              uid: uid,
+            );
 
       debugPrint(
         "AGORA TOKEN RESPONSE = $tokenResponse",
@@ -147,6 +150,7 @@ class _AgoraVideoCallPageState
 
       final String backendChannel =
           tokenResponse["channelName"].toString();
+      final int backendUid = int.tryParse(tokenResponse["uid"].toString()) ?? uid;
 
       channelName = backendChannel;
 
@@ -303,7 +307,7 @@ class _AgoraVideoCallPageState
       await engine.joinChannel(
         token: token,
         channelId: backendChannel,
-        uid: uid,
+          uid: backendUid,
         options: const ChannelMediaOptions(
           clientRoleType:
               ClientRoleType.clientRoleBroadcaster,
@@ -419,6 +423,14 @@ class _AgoraVideoCallPageState
       }
 
       _engine = null;
+
+      if (widget.callId != null) {
+        try {
+          await ApiService.endVideoCall(widget.callId!);
+        } catch (e) {
+          debugPrint("END VIDEO CALL SESSION ERROR = $e");
+        }
+      }
 
       // Only doctor should complete the consultation.
       //
