@@ -5068,7 +5068,7 @@ extension PharmacyProfileExtension on _PharmacyDashboardState {
             ),
           ),
 
-          const HelpSupportCard(),
+          const HelpSupportCard(horizontalMargin: 34),
 
           const SizedBox(height: 30),
 

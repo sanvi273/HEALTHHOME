@@ -4633,7 +4633,7 @@ Widget profilePage() {
           ),
         ),
 
-        const HelpSupportCard(),
+        const HelpSupportCard(horizontalMargin: 20),
 
         const SizedBox(height: 30),
 
