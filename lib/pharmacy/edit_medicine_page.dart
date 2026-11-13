@@ -1,5 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
+import '../services/medicine_image_selection.dart';
+import '../widgets/medicine_image.dart';
 
 class EditMedicinePage extends StatefulWidget {
   final Map medicine;
@@ -32,9 +37,13 @@ class _EditMedicinePageState
   // ============================================================
 
   String imageUrl = "";
+  Uint8List? selectedImageBytes;
+  String? selectedImageFileName;
   String selectedCategory = "Tablet";
 
   bool isUpdating = false;
+
+  static const Color primaryColor = Color(0xff00C2CB);
 
   // ============================================================
   // INIT STATE
@@ -130,6 +139,143 @@ class _EditMedicinePageState
   // ============================================================
   // UPDATE MEDICINE
   // ============================================================
+
+  Future<void> chooseMedicineImage() async {
+    if (isUpdating) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text("Select from Gallery"),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text("Take Photo"),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    try {
+      final selected = await selectMedicineImage(source);
+      if (selected == null || !mounted) return;
+      setState(() {
+        selectedImageBytes = selected.bytes;
+        selectedImageFileName = selected.fileName;
+      });
+    } on MedicineImageException catch (error) {
+      showMessage(error.message);
+    } catch (_) {
+      showMessage("Could not select the medicine photo. Please try again.");
+    }
+  }
+
+  Widget medicineImageSection() {
+    final hasImage = selectedImageBytes != null || imageUrl.trim().isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        sectionTitle("Medicine Image"),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xffF7FCFC),
+            border: Border.all(color: const Color(0xffD8EEEE)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: selectedImageBytes != null
+                    ? Image.memory(
+                        selectedImageBytes!,
+                        width: double.infinity,
+                        height: 190,
+                        fit: BoxFit.contain,
+                      )
+                    : hasImage
+                        ? MedicineImage(
+                            imageUrl: imageUrl,
+                            width: double.infinity,
+                            height: 190,
+                            fit: BoxFit.contain,
+                            borderRadius: BorderRadius.circular(12),
+                          )
+                        : Container(
+                            width: double.infinity,
+                            height: 150,
+                            color: const Color(0xffEAF9FA),
+                            alignment: Alignment.center,
+                            child: const Icon(
+                              Icons.medication_outlined,
+                              size: 54,
+                              color: primaryColor,
+                            ),
+                          ),
+              ),
+              const SizedBox(height: 8),
+              if (selectedImageFileName != null)
+                Text(
+                  selectedImageFileName!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.black54, fontSize: 12),
+                )
+              else if (!hasImage)
+                const Text(
+                  "Add a clear photo of the medicine pack. Photo is optional.",
+                  style: TextStyle(color: Colors.black54, height: 1.35),
+                ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: isUpdating ? null : chooseMedicineImage,
+                    icon: Icon(hasImage ? Icons.edit_outlined : Icons.add_a_photo_outlined),
+                    label: Text(hasImage ? "Change Image" : "Add Medicine Photo"),
+                    style: OutlinedButton.styleFrom(foregroundColor: primaryColor),
+                  ),
+                  if (hasImage)
+                    TextButton.icon(
+                      onPressed: isUpdating
+                          ? null
+                          : () => setState(() {
+                                imageUrl = "";
+                                selectedImageBytes = null;
+                                selectedImageFileName = null;
+                              }),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text("Remove Image"),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    ),
+                ],
+              ),
+              if (isUpdating && selectedImageBytes != null) ...[
+                const SizedBox(height: 8),
+                const LinearProgressIndicator(color: primaryColor),
+                const SizedBox(height: 6),
+                const Text("Uploading photo and updating medicine…"),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> updateMedicine() async {
 
@@ -246,6 +392,12 @@ class _EditMedicinePageState
 
         image:
             imageUrl,
+
+        imageBytes:
+            selectedImageBytes,
+
+        imageFileName:
+            selectedImageFileName,
       );
 
       // --------------------------------------------------------
@@ -634,6 +786,10 @@ class _EditMedicinePageState
 
               const SizedBox(height: 35),
 
+              medicineImageSection(),
+
+              const SizedBox(height: 35),
+
               // ==================================================
               // UPDATE BUTTON
               // ==================================================
@@ -653,9 +809,7 @@ class _EditMedicinePageState
                       ElevatedButton.styleFrom(
 
                     backgroundColor:
-                        const Color(
-                      0xff14B8A6,
-                    ),
+                      primaryColor,
 
                     disabledBackgroundColor:
                         Colors.grey.shade400,
@@ -686,10 +840,12 @@ class _EditMedicinePageState
                           ),
                         )
 
-                      : const Text(
-                          "Update Medicine",
+                      : Text(
+                          selectedImageBytes == null
+                              ? "Update Medicine"
+                              : "Upload Photo & Update Medicine",
 
-                          style: TextStyle(
+                          style: const TextStyle(
                             color:
                                 Colors.white,
                             fontSize:

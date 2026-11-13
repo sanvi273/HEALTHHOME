@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import '../../services/api_service.dart';
 import 'upload_prescription_page.dart';
 import 'my_cart_page.dart';
+import '../../widgets/medicine_image.dart';
 
 class HealthHomePharmacyPage extends StatefulWidget {
   const HealthHomePharmacyPage({super.key});
@@ -183,13 +184,11 @@ class _HealthHomePharmacyPageState
         ),
         elevation: 2,
         child: ListTile(
-          leading: const CircleAvatar(
-            backgroundColor:
-                Color(0xffEAFBF8),
-            child: Icon(
-              Icons.medication,
-              color: Color(0xff00C2CB),
-            ),
+          leading: MedicineImage(
+            imageUrl: medicine["image"]?.toString(),
+            width: 48,
+            height: 48,
+            borderRadius: BorderRadius.circular(24),
           ),
           title: Text(
             medicine["medicineName"]

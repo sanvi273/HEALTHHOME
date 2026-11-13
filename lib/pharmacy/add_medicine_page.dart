@@ -1,6 +1,11 @@
+import 'dart:typed_data';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/medicine_image_selection.dart';
 
 class AddMedicinePage extends StatefulWidget {
   const AddMedicinePage({super.key});
@@ -32,7 +37,29 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
   String selectedCategory = "Tablet";
 
+  Uint8List? selectedImageBytes;
+  String? selectedImageFileName;
+  String submissionKey = _createSubmissionKey();
+  bool hasSubmittedAttempt = false;
+
   bool isSaving = false;
+
+  static const Color primaryColor = Color(0xff00C2CB);
+
+  static String _createSubmissionKey() {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+    final random = Random.secure();
+    return List.generate(
+      32,
+      (_) => alphabet[random.nextInt(alphabet.length)],
+    ).join();
+  }
+
+  void _markFormEdited() {
+    if (!hasSubmittedAttempt || isSaving) return;
+    submissionKey = _createSubmissionKey();
+    hasSubmittedAttempt = false;
+  }
 
   // ============================================================
   // DISPOSE
@@ -51,6 +78,142 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
   // ============================================================
   // SAVE MEDICINE
   // ============================================================
+
+  Future<void> chooseMedicineImage() async {
+    if (isSaving) return;
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text("Select from Gallery"),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text("Take Photo"),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    try {
+      final selected = await selectMedicineImage(source);
+      if (selected == null || !mounted) return;
+      setState(() {
+        _markFormEdited();
+        selectedImageBytes = selected.bytes;
+        selectedImageFileName = selected.fileName;
+      });
+    } on MedicineImageException catch (error) {
+      showMessage(error.message);
+    } catch (_) {
+      showMessage("Could not select the medicine photo. Please try again.");
+    }
+  }
+
+  Widget medicineImageSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        sectionTitle("Medicine Image"),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xffF7FCFC),
+            border: Border.all(color: const Color(0xffD8EEEE)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (selectedImageBytes != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.memory(
+                    selectedImageBytes!,
+                    width: double.infinity,
+                    height: 190,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  selectedImageFileName ?? "Medicine photo selected",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: const Color(0xffEAF9FA),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.medication_outlined,
+                    size: 54,
+                    color: primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Add a clear photo of the medicine pack. Photo is optional.",
+                  style: TextStyle(color: Colors.black54, height: 1.35),
+                ),
+              ],
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: isSaving ? null : chooseMedicineImage,
+                    icon: Icon(selectedImageBytes == null
+                        ? Icons.add_a_photo_outlined
+                        : Icons.edit_outlined),
+                    label: Text(selectedImageBytes == null
+                        ? "Add Medicine Photo"
+                        : "Change Image"),
+                    style: OutlinedButton.styleFrom(foregroundColor: primaryColor),
+                  ),
+                  if (selectedImageBytes != null)
+                    TextButton.icon(
+                      onPressed: isSaving
+                          ? null
+                          : () => setState(() {
+                                _markFormEdited();
+                                selectedImageBytes = null;
+                                selectedImageFileName = null;
+                              }),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text("Remove Image"),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    ),
+                ],
+              ),
+              if (isSaving && selectedImageBytes != null) ...[
+                const SizedBox(height: 8),
+                const LinearProgressIndicator(color: primaryColor),
+                const SizedBox(height: 6),
+                const Text("Uploading photo and saving medicine…"),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> saveMedicine() async {
     // ------------------------------------------------------------
@@ -96,6 +259,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
     setState(() {
       isSaving = true;
+      hasSubmittedAttempt = true;
     });
 
     try {
@@ -138,6 +302,9 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
         stock: stock.toString(),
 
         image: "",
+        imageBytes: selectedImageBytes,
+        imageFileName: selectedImageFileName,
+        submissionKey: submissionKey,
       );
 
       // ----------------------------------------------------------
@@ -170,9 +337,13 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
         priceController.clear();
         stockController.clear();
         descriptionController.clear();
+        selectedImageBytes = null;
+        selectedImageFileName = null;
 
         setState(() {
           selectedCategory = "Tablet";
+          submissionKey = _createSubmissionKey();
+          hasSubmittedAttempt = false;
         });
 
         // --------------------------------------------------------
@@ -322,6 +493,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
               TextField(
                 controller: medicineController,
+                onChanged: (_) => _markFormEdited(),
                 textInputAction: TextInputAction.next,
                 decoration: fieldDecoration(
                   hint: "Enter medicine name",
@@ -380,6 +552,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                         if (value == null) return;
 
                         setState(() {
+                          _markFormEdited();
                           selectedCategory = value;
                         });
                       },
@@ -397,6 +570,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
               TextField(
                 controller: priceController,
+                onChanged: (_) => _markFormEdited(),
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
 
@@ -418,6 +592,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
               TextField(
                 controller: stockController,
+                onChanged: (_) => _markFormEdited(),
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
 
@@ -439,6 +614,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
               TextField(
                 controller: descriptionController,
+                onChanged: (_) => _markFormEdited(),
                 maxLines: 4,
 
                 decoration: fieldDecoration(
@@ -446,6 +622,10 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                   icon: Icons.description_outlined,
                 ),
               ),
+
+              const SizedBox(height: 35),
+
+              medicineImageSection(),
 
               const SizedBox(height: 35),
 
@@ -463,7 +643,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        const Color(0xff14B8A6),
+                        primaryColor,
 
                     disabledBackgroundColor:
                         Colors.grey.shade400,
@@ -488,9 +668,11 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                             strokeWidth: 3,
                           ),
                         )
-                      : const Text(
-                          "Save Medicine",
-                          style: TextStyle(
+                      : Text(
+                          selectedImageBytes == null
+                              ? "Save Medicine"
+                              : "Upload Photo & Save Medicine",
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight:

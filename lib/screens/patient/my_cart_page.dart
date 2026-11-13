@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
 import '../payment/payment_page.dart';
+import '../../widgets/medicine_image.dart';
 
 class MyCartPage extends StatefulWidget {
   const MyCartPage({super.key});
@@ -32,6 +33,7 @@ class _MyCartPageState extends State<MyCartPage> {
 
   List<dynamic> cartItems = [];
   List<dynamic> pharmacies = [];
+  List<dynamic> medicineRecords = [];
 
   String? selectedPharmacy;
 
@@ -151,6 +153,13 @@ class _MyCartPageState extends State<MyCartPage> {
 
       cartItems = results[0];
       pharmacies = results[1];
+      try {
+        medicineRecords = await ApiService.getMedicines();
+      } catch (error) {
+        // Image lookup is optional; keep cart and checkout available on failure.
+        debugPrint("Unable to load medicine images for cart: $error");
+        medicineRecords = [];
+      }
 
       debugPrint(
         "CART ITEMS = $cartItems",
@@ -451,6 +460,16 @@ class _MyCartPageState extends State<MyCartPage> {
   Widget buildCartItem(
     dynamic item,
   ) {
+    final medicineId = item["medicineId"]?.toString() ?? "";
+    final medicineRecord = medicineRecords.firstWhere(
+      (medicine) => medicine is Map &&
+          medicine["_id"]?.toString() == medicineId,
+      orElse: () => null,
+    );
+    final medicineImageUrl = medicineRecord is Map
+        ? medicineRecord["image"]?.toString()
+        : null;
+
     final medicineName =
         item["medicine"]?.toString() ??
             item["medicineName"]?.toString() ??
@@ -523,21 +542,11 @@ class _MyCartPageState extends State<MyCartPage> {
                   CrossAxisAlignment.start,
 
               children: [
-                CircleAvatar(
-                  radius: 28,
-
-                  backgroundColor:
-                      primaryColor
-                          .withOpacity(.12),
-
-                  child: Icon(
-                    Icons.medication,
-
-                    color:
-                        primaryColor,
-
-                    size: 30,
-                  ),
+                MedicineImage(
+                  imageUrl: medicineImageUrl,
+                  width: 56,
+                  height: 56,
+                  borderRadius: BorderRadius.circular(28),
                 ),
 
                 const SizedBox(

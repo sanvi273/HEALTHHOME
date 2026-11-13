@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -838,23 +839,44 @@ class ApiService {
     required String price,
     required String stock,
     required String image,
+    Uint8List? imageBytes,
+    String? imageFileName,
+    String submissionKey = "",
   }) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/api/medicines/add"),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "pharmacyPhone": pharmacyPhone,
-        "medicineName": medicineName,
-        "category": category,
-        "description": description,
-        "price": int.parse(price),
-        "stock": int.parse(stock),
-        "image": image,
-      }),
-    );
+    final uri = Uri.parse("$baseUrl/api/medicines/add");
+    final fields = <String, String>{
+      // The backend ignores this client value and derives the owner from JWT.
+      "pharmacyPhone": pharmacyPhone,
+      "medicineName": medicineName,
+      "category": category,
+      "description": description,
+      "price": int.parse(price).toString(),
+      "stock": int.parse(stock).toString(),
+      "image": image,
+      "submissionKey": submissionKey,
+    };
 
+    if (imageBytes != null) {
+      final headers = await _getAuthHeaders();
+      headers.remove("Content-Type");
+      final request = http.MultipartRequest("POST", uri)
+        ..headers.addAll(headers)
+        ..fields.addAll(fields)
+        ..files.add(http.MultipartFile.fromBytes(
+          "image",
+          imageBytes,
+          filename: imageFileName ?? "medicine.jpg",
+        ));
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      return jsonDecode(response.body);
+    }
+
+    final response = await http.post(
+      uri,
+      headers: await _getAuthHeaders(),
+      body: jsonEncode(fields),
+    );
     return jsonDecode(response.body);
   }
 
@@ -923,24 +945,42 @@ class ApiService {
     required String price,
     required String stock,
     required String image,
+    Uint8List? imageBytes,
+    String? imageFileName,
   }) async {
-    final response = await http.put(
-      Uri.parse("$baseUrl/api/medicines/$id"),
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "medicineName": medicineName,
-        "category": category,
-        "manufacturer": manufacturer,
-        "description": description,
-        "price": int.parse(price),
-        "stock": int.parse(stock),
-        "image": image,
-      }),
-    );
+    final uri = Uri.parse("$baseUrl/api/medicines/$id");
+    final fields = <String, String>{
+      "medicineName": medicineName,
+      "category": category,
+      "manufacturer": manufacturer,
+      "description": description,
+      "price": int.parse(price).toString(),
+      "stock": int.parse(stock).toString(),
+      "image": image,
+    };
 
-    return jsonDecode(response.body);
+    if (imageBytes != null) {
+      final headers = await _getAuthHeaders();
+      headers.remove("Content-Type");
+      final request = http.MultipartRequest("PUT", uri)
+        ..headers.addAll(headers)
+        ..fields.addAll(fields)
+        ..files.add(http.MultipartFile.fromBytes(
+          "image",
+          imageBytes,
+          filename: imageFileName ?? "medicine.jpg",
+        ));
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      return Map<String, dynamic>.from(jsonDecode(response.body));
+    }
+
+    final response = await http.put(
+      uri,
+      headers: await _getAuthHeaders(),
+      body: jsonEncode(fields),
+    );
+    return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
   static Future<Map<String, dynamic>> deleteMedicine(
@@ -948,6 +988,7 @@ class ApiService {
   ) async {
     final response = await http.delete(
       Uri.parse("$baseUrl/api/medicines/$id"),
+      headers: await _getAuthHeaders(),
     );
 
     return jsonDecode(response.body);

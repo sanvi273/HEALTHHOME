@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
 import '../payment/payment_page.dart';
+import '../../widgets/medicine_image.dart';
 
 class OrderMedicinesPage extends StatefulWidget {
   const OrderMedicinesPage({super.key});
@@ -969,39 +970,13 @@ class _OrderMedicinesPageState
                     ),
                   ),
 
-                  child: image.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius:
-                              BorderRadius.circular(
-                            16,
-                          ),
-                          child:
-                              Image.network(
-                            image,
-                            fit: BoxFit
-                                .cover,
-                            errorBuilder:
-                                (
-                              context,
-                              error,
-                              stackTrace,
-                            ) {
-                              return const Icon(
-                                Icons.medication,
-                                color:
-                                    primaryColor,
-                                size:
-                                    40,
-                              );
-                            },
-                          ),
-                        )
-                      : const Icon(
-                          Icons.medication,
-                          color:
-                              primaryColor,
-                          size: 40,
-                        ),
+                  child: MedicineImage(
+                    imageUrl: image,
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
 
                 const SizedBox(
@@ -1493,42 +1468,13 @@ class MedicineDetailPage
                 ),
               ),
 
-              child:
-                  image.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius:
-                              BorderRadius
-                                  .circular(
-                            24,
-                          ),
-                          child:
-                              Image.network(
-                            image,
-                            fit: BoxFit
-                                .contain,
-                            errorBuilder:
-                                (
-                              context,
-                              error,
-                              stackTrace,
-                            ) {
-                              return const Icon(
-                                Icons.medication,
-                                size:
-                                    100,
-                                color:
-                                    primaryColor,
-                              );
-                            },
-                          ),
-                        )
-                      : const Icon(
-                          Icons.medication,
-                          size:
-                              100,
-                          color:
-                              primaryColor,
-                        ),
+              child: MedicineImage(
+                imageUrl: image,
+                width: double.infinity,
+                height: 280,
+                fit: BoxFit.contain,
+                borderRadius: BorderRadius.circular(24),
+              ),
             ),
 
             const SizedBox(
@@ -2299,27 +2245,13 @@ class _MedicineCartPageState
                     14,
                   ),
                 ),
-                child:
-                    image.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(
-                              14,
-                            ),
-                            child:
-                                Image.network(
-                              image,
-                              fit: BoxFit
-                                  .cover,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.medication,
-                            color:
-                                primaryColor,
-                            size:
-                                35,
-                          ),
+                child: MedicineImage(
+                  imageUrl: image,
+                  width: 75,
+                  height: 75,
+                  fit: BoxFit.cover,
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
 
               const SizedBox(
