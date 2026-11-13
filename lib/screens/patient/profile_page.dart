@@ -6,6 +6,7 @@ import '../../login_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/incoming_call_service.dart';
 import '../payment/payment_history_page.dart';
+import '../../widgets/help_support_card.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -410,6 +411,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 },
               ),
             ),
+
+            const HelpSupportCard(),
 
             const SizedBox(height: 30),
 

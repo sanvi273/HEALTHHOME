@@ -4,6 +4,7 @@ import '../services/incoming_call_service.dart';
 import 'package:healthhome/screens/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'upload_lab_report_page.dart';
+import 'widgets/help_support_card.dart';
 
 
 class LaboratoryDashboard extends StatefulWidget {
@@ -4631,6 +4632,8 @@ Widget profilePage() {
             ),
           ),
         ),
+
+        const HelpSupportCard(),
 
         const SizedBox(height: 30),
 

@@ -7,7 +7,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'services/api_service.dart';
 import 'services/incoming_call_service.dart';
 import 'otp_verification_screen.dart';
-import 'forgot_password_screen.dart';
 import 'terms_acceptance_screen.dart';
 
 import 'screens/onboarding_screen.dart';
@@ -358,20 +357,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: Icons.lock,
                   obscure: true,
                 ),
-
-                if (isLogin)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ForgotPasswordScreen()),
-                      ),
-                      child: const Text('Forgot password?',
-                          style: TextStyle(color: Color(0xff008F98))),
-                    ),
-                  ),
 
                 const SizedBox(height: 30),
 
@@ -1344,10 +1329,19 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
+      final registrationMessage =
+          initiation['message']?.toString() ?? 'Registration failed';
+      final unavailable =
+          initiation['code'] == 'OTP_PROVIDER_UNAVAILABLE' ||
+              registrationMessage.toLowerCase().contains('otp service') ||
+              registrationMessage.toLowerCase().contains('verification is temporarily unavailable');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            initiation["message"]?.toString() ?? "Registration failed",
+            unavailable
+                ? 'Unable to send a verification code. Try again later or call 9313069960 or 9313788070.'
+                : registrationMessage,
           ),
         ),
       );

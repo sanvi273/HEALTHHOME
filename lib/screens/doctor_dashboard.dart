@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../services/incoming_call_service.dart';
 import '../services/telegram/AgoraVideoCallPage.dart';
+import '../widgets/help_support_card.dart';
 import 'onboarding_screen.dart';
 import '../prescription_screen.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -1814,26 +1815,23 @@ Widget patientReportsSection(
       const SizedBox(height: 10),
 
       ...reports.map<Widget>((report) {
+        final reportMap = report is Map
+            ? Map<String, dynamic>.from(report)
+            : const <String, dynamic>{};
         final fileType =
-            report["fileType"]
+            reportMap["fileType"]
                     ?.toString()
                     .toLowerCase() ??
                 "";
 
-        final fileName =
-            report["fileName"]
-                    ?.toString()
-                    .trim() ??
-                "Patient Report";
+        final rawFileName = reportMap["fileName"]?.toString().trim() ?? "";
+        final fileName = rawFileName.isEmpty ? "Patient Report" : rawFileName;
+        final fileUrl = _patientReportUrl(reportMap);
 
-        final fileUrl =
-            report["fileUrl"]
-                    ?.toString()
-                    .trim() ??
-                "";
-
-        final isPdf =
-            fileType.contains("pdf");
+        final filePath = Uri.tryParse(fileUrl)?.path.toLowerCase() ?? "";
+        final isPdf = fileType.contains("pdf") ||
+            fileName.toLowerCase().endsWith(".pdf") ||
+            filePath.endsWith(".pdf");
 
         return Container(
           width: double.infinity,
@@ -1860,7 +1858,26 @@ Widget patientReportsSection(
             ),
           ),
 
-          child: Row(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              if (fileUrl.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'This report has no saved file link. Ask the patient to upload it again.',
+                    ),
+                  ),
+                );
+                return;
+              }
+              _openPatientReport(
+                fileUrl: fileUrl,
+                fileName: fileName,
+                isPdf: isPdf,
+              );
+            },
+            child: Row(
             children: [
 
               // ==========================================
@@ -1921,65 +1938,60 @@ Widget patientReportsSection(
               // ==========================================
               // VIEW BUTTON
               // ==========================================
-SizedBox(
+Container(
   width: 75,
   height: 40,
-  child: ElevatedButton(
-    onPressed: fileUrl.isEmpty
-        ? null
-        : () {
-            _openPatientReport(
-              fileUrl: fileUrl,
-              fileName: fileName,
-              isPdf: isPdf,
-            );
-          },
-
-    style: ElevatedButton.styleFrom(
-      backgroundColor:
-          const Color(0xff14B8A6),
-
-      foregroundColor: Colors.white,
-
-      padding: EdgeInsets.zero,
-
-      shape: RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.circular(10),
+  decoration: BoxDecoration(
+    color: fileUrl.isEmpty ? Colors.grey.shade300 : const Color(0xff14B8A6),
+    borderRadius: BorderRadius.circular(10),
+  ),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(
+        fileUrl.isEmpty ? Icons.link_off : Icons.visibility,
+        size: 17,
+        color: Colors.white,
       ),
-    ),
-
-    child: const Row(
-      mainAxisAlignment:
-          MainAxisAlignment.center,
-
-      children: [
-
-        Icon(
-          Icons.visibility,
-          size: 17,
+      const SizedBox(width: 4),
+      Text(
+        fileUrl.isEmpty ? "No link" : "View",
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
-
-        SizedBox(width: 4),
-
-        Text(
-          "View",
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    ),
+      ),
+    ],
   ),
 ),
-             
+
             ],
           ),
-        );
+        ),
+      );
       }),
     ],
   );
+}
+
+String _patientReportUrl(Map<String, dynamic> report) {
+  for (final key in const [
+    "fileUrl",
+    "secure_url",
+    "secureUrl",
+    "reportUrl",
+    "url",
+  ]) {
+    final value = report[key]?.toString().trim() ?? "";
+    final uri = Uri.tryParse(value);
+    if (uri != null &&
+        (uri.scheme == "http" || uri.scheme == "https") &&
+        uri.host.isNotEmpty) {
+      return uri.toString();
+    }
+  }
+  return "";
 }
 
 //==================================================
@@ -3091,6 +3103,8 @@ if (isVideo) {
             doctorAbout,
 
           ),
+
+          const HelpSupportCard(),
 
           const SizedBox(height: 20),
 

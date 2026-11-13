@@ -6,6 +6,7 @@ import '../services/incoming_call_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../pharmacy/add_medicine_page.dart';
 import '../pharmacy/my_medicines_page.dart';
+import 'widgets/help_support_card.dart';
 
 class PharmacyDashboard extends StatefulWidget {
   const PharmacyDashboard({super.key});
@@ -5066,6 +5067,8 @@ extension PharmacyProfileExtension on _PharmacyDashboardState {
               ],
             ),
           ),
+
+          const HelpSupportCard(),
 
           const SizedBox(height: 30),
 
