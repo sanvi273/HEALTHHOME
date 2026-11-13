@@ -2,11 +2,11 @@
 
 ## Credentials
 
-Keep the existing Render variables `MSG91_AUTH_KEY` and `MSG91_WIDGET_ID` unchanged. The account Auth Key stays on the backend and is used to send Widget OTP requests and validate MSG91 access tokens.
+Keep the existing Render variables `MSG91_AUTH_KEY` and `MSG91_WIDGET_ID` unchanged. The account Auth Key stays on the backend and is used by OTP-protected sign-in and password recovery. New account registration does not send an OTP.
 
 When a Widget-specific `tokenAuth` is available, the client can use MSG91's Flutter/Web SDK to verify OTP. If it is not supplied to the app, the app sends the six-digit code to HealthHome and the backend verifies it with MSG91's Widget API using the existing server Auth Key. The backend does not need a separate `MSG91_WIDGET_TOKEN` environment variable.
 
-The Widget ID is optional for the backend-verified OTP path. To enable the client SDK fast path, supply both Widget values at build time:
+OTP-protected sign-in and password recovery require both `MSG91_AUTH_KEY` and `MSG91_WIDGET_ID` in the backend runtime environment. To enable the optional client SDK verification fast path, also supply the widget values at build time:
 
 ```powershell
 cd frontend
@@ -29,7 +29,7 @@ cd backend
 npm start
 ```
 
-The backend requires `MSG91_AUTH_KEY`, `MSG91_WIDGET_ID`, `JWT_SECRET`, and `MONGO_URL` in its runtime environment. It stores only short-lived Widget request/challenge metadata and hashed registration passwords. Temporary challenges are removed by a MongoDB TTL index.
+The backend requires its database configuration for registration. MSG91 variables are used only by OTP-protected sign-in and password recovery. Registration stores the password hash and accepted terms, creates the account directly, and does not claim the phone number was verified.
 
 ## Verification
 
@@ -38,4 +38,4 @@ cd backend
 node --test test/*.test.js
 ```
 
-The OTP provider should be exercised from Render after its Widget token is configured and the Render outbound IP is allowed by MSG91, if IP allowlisting is enabled.
+Exercise OTP-protected sign-in and password recovery from Render after both backend MSG91 variables are configured and the Render outbound IP is allowed by MSG91, if IP allowlisting is enabled. Sign-up does not depend on MSG91.
