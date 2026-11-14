@@ -548,8 +548,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> handleLogin(
     String phone,
-    String password,
-  ) async {
+    String password, {
+    bool retryAfterTerms = false,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final response = await ApiService.loginUser(
       phone: phone,
@@ -565,7 +566,23 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       if (response['code'] == 'TERMS_ACCEPTANCE_REQUIRED' &&
           widget.role.toLowerCase() != 'admin') {
-        _openCurrentTerms();
+        if (retryAfterTerms) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Terms acceptance could not be applied. Please try again.',
+              ),
+            ),
+          );
+          return;
+        }
+
+        await _clearSavedTermsAcceptance(prefs);
+        if (!mounted) return;
+        final accepted = await _openCurrentTerms();
+        if (accepted && mounted) {
+          await handleLogin(phone, password, retryAfterTerms: true);
+        }
         return;
       }
 
@@ -618,6 +635,7 @@ class _LoginScreenState extends State<LoginScreen> {
       "token",
       loginToken,
     );
+    await _clearSavedTermsAcceptance(prefs);
     await IncomingCallService.registerCurrentDevice();
 
     await prefs.setBool(
@@ -1249,8 +1267,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> handleSignUp(
     String phone,
-    String password,
-  ) async {
+    String password, {
+    bool retryAfterTerms = false,
+  }) async {
     final name = nameController.text.trim();
 
     if (name.isEmpty) {
@@ -1324,7 +1343,23 @@ class _LoginScreenState extends State<LoginScreen> {
     if (initiation["success"] != true) {
       if (!mounted) return;
       if (initiation['code'] == 'TERMS_ACCEPTANCE_REQUIRED') {
-        _openCurrentTerms();
+        if (retryAfterTerms) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Terms acceptance could not be applied. Please try again.',
+              ),
+            ),
+          );
+          return;
+        }
+
+        await _clearSavedTermsAcceptance(prefs);
+        if (!mounted) return;
+        final accepted = await _openCurrentTerms();
+        if (accepted && mounted) {
+          await handleSignUp(phone, password, retryAfterTerms: true);
+        }
         return;
       }
 
@@ -1350,6 +1385,10 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
+
+    // The server has linked this one-time acceptance to the new account.
+    // Keep the device from reusing the token for a different account later.
+    await _clearSavedTermsAcceptance(prefs);
 
     // ================= SAVE BASIC STATE =================
 
@@ -1377,16 +1416,24 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  void _openCurrentTerms() {
-    Navigator.pushReplacement(
+  Future<bool> _openCurrentTerms() async {
+    final accepted = await Navigator.push<bool>(
       context,
-      MaterialPageRoute<void>(
+      MaterialPageRoute<bool>(
         builder: (_) => TermsAcceptanceScreen(
           selectedRole: widget.role.toLowerCase(),
           roleLabel: widget.role,
+          returnToCaller: true,
         ),
       ),
     );
+    return accepted ?? false;
+  }
+
+  Future<void> _clearSavedTermsAcceptance(SharedPreferences prefs) async {
+    final roleKey = widget.role.toLowerCase();
+    await prefs.remove('termsAcceptanceToken_$roleKey');
+    await prefs.remove('termsAcceptanceVersion_$roleKey');
   }
 
   // =========================================================

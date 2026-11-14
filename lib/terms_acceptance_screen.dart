@@ -10,11 +10,13 @@ import 'services/api_service.dart';
 class TermsAcceptanceScreen extends StatefulWidget {
   final String selectedRole;
   final String roleLabel;
+  final bool returnToCaller;
 
   const TermsAcceptanceScreen({
     super.key,
     required this.selectedRole,
     required this.roleLabel,
+    this.returnToCaller = false,
   });
 
   @override
@@ -208,6 +210,11 @@ class _TermsAcceptanceScreenState extends State<TermsAcceptanceScreen> {
   }
 
   void _continueToLogin() {
+    if (widget.returnToCaller) {
+      Navigator.pop(context, true);
+      return;
+    }
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute<void>(
