@@ -8,6 +8,7 @@ import '../services/incoming_call_service.dart';
 import '../services/telegram/AgoraVideoCallPage.dart';
 import '../models/patient_report.dart';
 import '../widgets/help_support_card.dart';
+import '../widgets/profile_image.dart';
 import 'onboarding_screen.dart';
 import '../prescription_screen.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -2906,34 +2907,12 @@ if (isVideo) {
 
           const SizedBox(height: 15),
 
-          Center(
-
-            child: CircleAvatar(
-
-              radius: 55,
-
-              backgroundColor: const Color(0xff14B8A6),
-
-              child: Text(
-
-                doctorName.isNotEmpty
-                    ? doctorName[0].toUpperCase()
-                    : "D",
-
-                style: const TextStyle(
-
-                  color: Colors.white,
-
-                  fontSize: 40,
-
-                  fontWeight: FontWeight.bold,
-
-                ),
-
-              ),
-
+          const Center(
+            child: ProfileImageEditor(
+              accentColor: Color(0xff14B8A6),
+              backgroundColor: Color(0xffE6FFFB),
+              fallbackIcon: Icons.medical_services,
             ),
-
           ),
 
           const SizedBox(height: 20),

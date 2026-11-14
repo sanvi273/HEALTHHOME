@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../pharmacy/add_medicine_page.dart';
 import '../pharmacy/my_medicines_page.dart';
 import 'widgets/help_support_card.dart';
+import 'widgets/profile_image.dart';
 
 class PharmacyDashboard extends StatefulWidget {
   const PharmacyDashboard({super.key});
@@ -4757,17 +4758,10 @@ extension PharmacyProfileExtension on _PharmacyDashboardState {
           Column(
             children: [
               const SizedBox(height: 25),
-              CircleAvatar(
-                radius: 62,
-                backgroundColor: const Color(0xff14B8A6),
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : "P",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 50,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              const ProfileImageEditor(
+                accentColor: Color(0xff14B8A6),
+                backgroundColor: Color(0xffE6FFFB),
+                fallbackIcon: Icons.local_pharmacy,
               ),
               const SizedBox(height: 20),
               Text(

@@ -5,6 +5,7 @@ import 'package:healthhome/screens/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'upload_lab_report_page.dart';
 import 'widgets/help_support_card.dart';
+import 'widgets/profile_image.dart';
 
 
 class LaboratoryDashboard extends StatefulWidget {
@@ -3808,14 +3809,10 @@ Widget profilePage() {
           child: Column(
             children: [
 
-              const CircleAvatar(
-                radius: 42,
+              const ProfileImageEditor(
+                accentColor: Color(0xFF20C6D3),
                 backgroundColor: Colors.white,
-                child: Icon(
-                  Icons.science,
-                  size: 45,
-                  color: Color(0xFF20C6D3),
-                ),
+                fallbackIcon: Icons.science,
               ),
 
               const SizedBox(height: 15),
