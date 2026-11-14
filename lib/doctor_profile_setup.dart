@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'services/api_service.dart';
 import 'professional_verification_screen.dart';
 import 'screens/doctor_dashboard.dart';
+import 'widgets/profile_image.dart';
 
 class DoctorProfileSetup extends StatefulWidget {
   const DoctorProfileSetup({super.key});
@@ -308,14 +309,10 @@ final profileResult = await ApiService.addDoctor(
         child: Column(
           children: [
             const SizedBox(height: 10),
-            const CircleAvatar(
-              radius: 48,
+            const ProfileImageEditor(
+              accentColor: primary,
               backgroundColor: Color(0xffD1FAF5),
-              child: Icon(
-                Icons.medical_services,
-                size: 55,
-                color: primary,
-              ),
+              fallbackIcon: Icons.medical_services,
             ),
             const SizedBox(height: 15),
             const Text(

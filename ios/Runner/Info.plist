@@ -5,9 +5,9 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>HealthHome uses the camera to take a medicine photo.</string>
+	<string>HealthHome uses the camera to take profile and medicine photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>HealthHome uses your photo library to select a medicine photo.</string>
+	<string>HealthHome uses your photo library to select profile and medicine photos.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

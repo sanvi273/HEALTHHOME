@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/api_service.dart';
 import 'lab_dashboard.dart';
+import 'widgets/profile_image.dart';
 
 class LabProfileSetup extends StatefulWidget {
   const LabProfileSetup({super.key});
@@ -157,14 +158,10 @@ Future<void> saveLabProfile() async {
 
   const SizedBox(height: 20),
 
-  const CircleAvatar(
-    radius: 55,
+  const ProfileImageEditor(
+    accentColor: Color(0xff14B8A6),
     backgroundColor: Color(0xffD1FAF5),
-    child: Icon(
-      Icons.science,
-      size: 60,
-      color: Color(0xff14B8A6),
-    ),
+    fallbackIcon: Icons.science,
   ),
 
   const SizedBox(height: 25),

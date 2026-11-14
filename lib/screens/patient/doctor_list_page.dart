@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import '../../services/api_service.dart';
+import '../../widgets/profile_image.dart';
 import 'doctor_profile_page.dart';
 
 class DoctorsListPage extends StatefulWidget {
@@ -258,14 +259,14 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
                                   padding: const EdgeInsets.all(15),
                                   child: Row(
                                     children: [
-                                      CircleAvatar(
+                                      HealthHomeProfileAvatar(
+                                        imageUrl: doctor["profileImageUrl"]
+                                            ?.toString(),
                                         radius: 35,
                                         backgroundColor:
                                             Colors.blue.shade100,
-                                        child: const Icon(
-                                          Icons.person,
-                                          size: 40,
-                                        ),
+                                        fallbackIcon: Icons.person,
+                                        iconColor: Colors.blue.shade700,
                                       ),
 
                                       const SizedBox(width: 15),

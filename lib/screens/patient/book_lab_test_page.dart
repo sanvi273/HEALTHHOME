@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
+import '../../widgets/profile_image.dart';
 import '../payment/payment_page.dart';
 
 class BookLabTestPage extends StatefulWidget {
@@ -232,6 +233,8 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
             test["labId"] = labId;
             test["labName"] = labName;
+            test["labProfileImageUrl"] =
+                (lab["profileImageUrl"] ?? lab["image"] ?? "").toString();
 
             result.add(test);
           }
@@ -638,19 +641,12 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
           padding: EdgeInsets.all(16),
           child: Row(
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Color(0xffE8F8F5),
-                  borderRadius:
-                      BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  Icons.science,
-                  color: primaryColor,
-                  size: 29,
-                ),
+              HealthHomeProfileAvatar(
+                imageUrl: test["labProfileImageUrl"]?.toString(),
+                radius: 26,
+                fallbackIcon: Icons.science,
+                backgroundColor: const Color(0xffE8F8F5),
+                iconColor: primaryColor,
               ),
               SizedBox(width: 13),
               Expanded(
@@ -1161,10 +1157,28 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
                       lab["name"]?.toString() ??
                           "laboratory".tr();
 
-                  return DropdownMenuItem<
-                      String>(
+                  return DropdownMenuItem<String>(
                     value: id,
-                    child: Text(name),
+                    child: Row(
+                      children: [
+                        HealthHomeProfileAvatar(
+                          imageUrl: (lab["profileImageUrl"] ?? lab["image"])
+                              ?.toString(),
+                          radius: 16,
+                          fallbackIcon: Icons.science,
+                          backgroundColor: primaryColor.withOpacity(.10),
+                          iconColor: primaryColor,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 },
               ).toList(),

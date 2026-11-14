@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'book_appointment_page.dart';
+import '../../widgets/profile_image.dart';
 
 class DoctorProfilePage extends StatelessWidget {
   final Map doctor;
@@ -38,6 +39,8 @@ class DoctorProfilePage extends StatelessWidget {
     final String about =
         doctor["about"]?.toString() ??
             "Experienced healthcare professional.";
+    final String profileImageUrl =
+        doctor["profileImageUrl"]?.toString() ?? "";
 
     // ============================================================
     // DEBUG
@@ -73,15 +76,13 @@ class DoctorProfilePage extends StatelessWidget {
             // ====================================================
 
             Center(
-              child: CircleAvatar(
+              child: HealthHomeProfileAvatar(
+                imageUrl: profileImageUrl,
                 radius: 55,
                 backgroundColor:
                     Colors.blue.shade100,
-
-                child: const Icon(
-                  Icons.person,
-                  size: 60,
-                ),
+                fallbackIcon: Icons.person,
+                iconColor: Colors.blue.shade700,
               ),
             ),
 

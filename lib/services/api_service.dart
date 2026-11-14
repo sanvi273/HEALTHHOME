@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
@@ -1502,6 +1503,73 @@ class ApiService {
   // ============================================================
   // PROFILE
   // ============================================================
+
+  static Future<Map<String, dynamic>> getMyProfile({
+    required String token,
+  }) async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/profile/me"),
+      headers: {
+        "Authorization": "Bearer ${token.trim()}",
+        "Accept": "application/json",
+      },
+    );
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid profile response.");
+    }
+
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to load your profile.");
+    }
+    return data;
+  }
+
+  static Future<Map<String, dynamic>> uploadMyProfileImage({
+    required String token,
+    required Uint8List bytes,
+    required String filename,
+  }) async {
+    final extension = filename.contains(".")
+        ? filename.split(".").last.toLowerCase()
+        : "";
+    final subtype = switch (extension) {
+      "jpg" || "jpeg" => "jpeg",
+      "png" => "png",
+      "webp" => "webp",
+      _ => throw Exception("Choose a JPG, JPEG, PNG, or WEBP image."),
+    };
+    final request = http.MultipartRequest(
+      "POST",
+      Uri.parse("$baseUrl/api/profile/me/image"),
+    )
+      ..headers["Authorization"] = "Bearer ${token.trim()}"
+      ..files.add(
+        http.MultipartFile.fromBytes(
+          "image",
+          bytes,
+          filename: filename,
+          contentType: MediaType("image", subtype),
+        ),
+      );
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception(
+        "The image server returned an invalid response (${response.statusCode}).",
+      );
+    }
+
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to upload your photo.");
+    }
+    return data;
+  }
 
   static Future<Map<String, dynamic>> saveProfile({
     required String userId,

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../payment/payment_page.dart';
 import '../../widgets/medicine_image.dart';
+import '../../widgets/profile_image.dart';
 
 class MyCartPage extends StatefulWidget {
   const MyCartPage({super.key});
@@ -962,11 +963,21 @@ class _MyCartPageState extends State<MyCartPage> {
           return DropdownMenuItem<String>(
             value: name,
 
-            child: Text(
-              name,
-
-              overflow:
-                  TextOverflow.ellipsis,
+            child: Row(
+              children: [
+                HealthHomeProfileAvatar(
+                  imageUrl: pharmacy["profileImageUrl"]?.toString(),
+                  radius: 16,
+                  fallbackIcon: Icons.local_pharmacy,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    name,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           );
         },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../services/api_service.dart';
+import '../../widgets/profile_image.dart';
 
 class LabOrderTrackingPage extends StatefulWidget {
   final String orderId;
@@ -23,6 +24,7 @@ class _LabOrderTrackingPageState
 
   bool isLoading = true;
   Map<String, dynamic> order = {};
+  String labImageUrl = "";
 
   @override
   void initState() {
@@ -41,8 +43,36 @@ class _LabOrderTrackingPageState
         order = result["order"] is Map
             ? Map<String, dynamic>.from(result["order"])
             : result;
+        labImageUrl = (order["profileImageUrl"] ??
+                order["labProfileImageUrl"] ??
+                "")
+            .toString();
         isLoading = false;
       });
+
+      if (labImageUrl.isEmpty) {
+        final labId = order["labId"]?.toString() ?? "";
+        if (labId.isNotEmpty) {
+          try {
+            final labs = await ApiService.getLabs();
+            for (final rawLab in labs) {
+              if (rawLab is Map && rawLab["_id"]?.toString() == labId) {
+                if (!mounted) return;
+                setState(() {
+                  labImageUrl =
+                      (rawLab["profileImageUrl"] ?? rawLab["image"] ?? "")
+                          .toString();
+                });
+                break;
+              }
+            }
+          } catch (error) {
+            // The order details are still usable when the lab directory is
+            // temporarily unavailable; only the optional avatar is missing.
+            debugPrint("Unable to load lab avatar: $error");
+          }
+        }
+      }
     } catch (e) {
       debugPrint("LAB TRACKING ERROR = $e");
 
@@ -255,18 +285,12 @@ class _LabOrderTrackingPageState
       ),
       child: Row(
         children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: primary.withOpacity(0.10),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.local_hospital_outlined,
-              color: primary,
-              size: 30,
-            ),
+          HealthHomeProfileAvatar(
+            imageUrl: labImageUrl,
+            radius: 29,
+            fallbackIcon: Icons.local_hospital_outlined,
+            backgroundColor: primary.withOpacity(0.10),
+            iconColor: primary,
           ),
 
           const SizedBox(width: 14),

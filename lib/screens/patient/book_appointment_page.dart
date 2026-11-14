@@ -13,6 +13,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 
 import '../../services/api_service.dart';
+import '../../widgets/profile_image.dart';
 import '../../models/patient_report_upload.dart';
 
 
@@ -2273,32 +2274,12 @@ Future<void> _handlePaymentError(
 
         children: [
 
-         CircleAvatar(
-
+         HealthHomeProfileAvatar(
+          imageUrl: widget.doctor["profileImageUrl"]?.toString(),
           radius: 28,
-
-          backgroundColor:
-
-            const Color(
-
-           0xff10BEC4,
-
-          ).withOpacity(0.12),
-
-
-
-          child: const Icon(
-
-           Icons.person,
-
-           color:
-
-             Color(0xff10BEC4),
-
-           size: 30,
-
-          ),
-
+          backgroundColor: const Color(0xff10BEC4).withOpacity(0.12),
+          fallbackIcon: Icons.person,
+          iconColor: const Color(0xff10BEC4),
          ),
 
 

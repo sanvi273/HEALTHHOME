@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../widgets/profile_image.dart';
 
 class PharmacyListPage extends StatefulWidget {
   const PharmacyListPage({super.key});
@@ -57,9 +58,10 @@ class _PharmacyListPageState
 
                 return Card(
                   child: ListTile(
-                    leading:
-                        const Icon(
-                      Icons.local_pharmacy,
+                    leading: HealthHomeProfileAvatar(
+                      imageUrl: pharmacy["profileImageUrl"]?.toString(),
+                      radius: 24,
+                      fallbackIcon: Icons.local_pharmacy,
                     ),
                     title: Text(
                       pharmacy["name"],

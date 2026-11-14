@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
+import '../../widgets/profile_image.dart';
 import '../payment/payment_page.dart';
 
 class LabCartPage extends StatefulWidget {
@@ -619,17 +620,14 @@ debugPrint("✅ LAB ORDER ID = $orderId");
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            width: 45,
-                            height: 45,
-                            decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(.10),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.biotech_outlined,
-                              color: primaryColor,
-                            ),
+                          HealthHomeProfileAvatar(
+                            imageUrl: (labMap["profileImageUrl"] ??
+                                    labMap["image"])
+                                ?.toString(),
+                            radius: 22.5,
+                            fallbackIcon: Icons.biotech_outlined,
+                            backgroundColor: primaryColor.withOpacity(.10),
+                            iconColor: primaryColor,
                           ),
 
                           SizedBox(width: 12),

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../payment/payment_page.dart';
 import '../../widgets/medicine_image.dart';
+import '../../widgets/profile_image.dart';
 
 class OrderMedicinesPage extends StatefulWidget {
   const OrderMedicinesPage({super.key});
@@ -198,6 +199,13 @@ class _OrderMedicinesPageState
     return pharmacy?["_id"]
             ?.toString() ??
         "";
+  }
+
+  String getPharmacyImageUrl(
+    Map<String, dynamic> medicine,
+  ) {
+    final phone = medicine["pharmacyPhone"]?.toString() ?? "";
+    return findPharmacy(phone)?["profileImageUrl"]?.toString() ?? "";
   }
 
   // ============================================================
@@ -426,6 +434,7 @@ class _OrderMedicinesPageState
               getPharmacyId(
             medicine,
           ),
+          pharmacyImageUrl: getPharmacyImageUrl(medicine),
           patientName:
               patientName,
           patientPhone:
@@ -1091,11 +1100,11 @@ class _OrderMedicinesPageState
 
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.local_pharmacy,
-                    color:
-                        primaryColor,
-                    size: 18,
+                  HealthHomeProfileAvatar(
+                    imageUrl: getPharmacyImageUrl(medicine),
+                    radius: 12,
+                    fallbackIcon: Icons.local_pharmacy,
+                    backgroundColor: const Color(0xffE8FAFB),
                   ),
 
                   const SizedBox(
@@ -1282,6 +1291,7 @@ class MedicineDetailPage
 
   final String pharmacyName;
   final String pharmacyId;
+  final String pharmacyImageUrl;
 
   final String patientName;
   final String patientPhone;
@@ -1291,6 +1301,7 @@ class MedicineDetailPage
     required this.medicine,
     required this.pharmacyName,
     required this.pharmacyId,
+    required this.pharmacyImageUrl,
     required this.patientName,
     required this.patientPhone,
   });
@@ -1533,11 +1544,11 @@ class MedicineDetailPage
 
             Row(
               children: [
-                const Icon(
-                  Icons.local_pharmacy,
-                  size: 18,
-                  color:
-                      primaryColor,
+                HealthHomeProfileAvatar(
+                  imageUrl: pharmacyImageUrl,
+                  radius: 12,
+                  fallbackIcon: Icons.local_pharmacy,
+                  backgroundColor: const Color(0xffE8FAFB),
                 ),
                 const SizedBox(
                   width: 6,
@@ -2192,6 +2203,7 @@ class _MedicineCartPageState
         getItemPrice(item);
 
         String pharmacyName = "pharmacy".tr();
+    String pharmacyImageUrl = "";
 
     if (medicine != null) {
       final pharmacy = findPharmacyByPhone(
@@ -2200,6 +2212,7 @@ class _MedicineCartPageState
 
       pharmacyName =
           pharmacy?["name"]?.toString() ?? "pharmacy".tr();
+      pharmacyImageUrl = pharmacy?["profileImageUrl"]?.toString() ?? "";
     }
 
     final itemId =
@@ -2287,13 +2300,11 @@ class _MedicineCartPageState
 
                     Row(
                       children: [
-                        const Icon(
-                          Icons
-                              .local_pharmacy,
-                          size:
-                              14,
-                          color:
-                              primaryColor,
+                        HealthHomeProfileAvatar(
+                          imageUrl: pharmacyImageUrl,
+                          radius: 8,
+                          fallbackIcon: Icons.local_pharmacy,
+                          backgroundColor: const Color(0xffE8FAFB),
                         ),
                         const SizedBox(
                           width:
@@ -2974,6 +2985,8 @@ class _MedicineCheckoutPageState
                   pharmacy["name"]
                           ?.toString() ??
                       "pharmacy".tr(),
+              pharmacyImageUrl:
+                  pharmacy["profileImageUrl"]?.toString() ?? "",
             ),
           ),
         );
@@ -3052,6 +3065,8 @@ class _MedicineCheckoutPageState
                 pharmacy["name"]
                         ?.toString() ??
                     "pharmacy".tr(),
+            pharmacyImageUrl:
+                pharmacy["profileImageUrl"]?.toString() ?? "",
           ),
         ),
       );
@@ -3750,6 +3765,7 @@ class MedicineOrderSuccessPage
   final double total;
   final String paymentMethod;
   final String pharmacyName;
+  final String pharmacyImageUrl;
 
   const MedicineOrderSuccessPage({
     super.key,
@@ -3757,6 +3773,7 @@ class MedicineOrderSuccessPage
     required this.total,
     required this.paymentMethod,
     required this.pharmacyName,
+    this.pharmacyImageUrl = "",
   });
 
   static const Color primaryColor =
@@ -3840,15 +3857,25 @@ class MedicineOrderSuccessPage
                 height: 10,
               ),
 
-              Text(
-                "orderFromPharmacyPlaced".tr(namedArgs: {"pharmacy": pharmacyName}),
-                textAlign:
-                    TextAlign.center,
-                style:
-                    const TextStyle(
-                  color:
-                      Colors.grey,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  HealthHomeProfileAvatar(
+                    imageUrl: pharmacyImageUrl,
+                    radius: 18,
+                    fallbackIcon: Icons.local_pharmacy,
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      "orderFromPharmacyPlaced".tr(
+                        namedArgs: {"pharmacy": pharmacyName},
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(

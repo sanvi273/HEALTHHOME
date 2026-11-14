@@ -7,6 +7,7 @@ import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
+import '../../widgets/profile_image.dart';
 
 import 'lab_order_tracking_page.dart';
 
@@ -595,8 +596,27 @@ Future<void> _showSuccessDialog(String orderId) async {
                               return DropdownMenuItem<
                                   String>(
                                 value: id,
-                                child:
-                                    Text(name),
+                                child: Row(
+                                  children: [
+                                    HealthHomeProfileAvatar(
+                                      imageUrl:
+                                          (lab["profileImageUrl"] ?? lab["image"])
+                                              ?.toString(),
+                                      radius: 16,
+                                      fallbackIcon: Icons.science,
+                                      backgroundColor:
+                                          const Color(0xffE8FAFB),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               );
                             },
                           ).toList(),

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'services/api_service.dart';
 import 'pharmacy_dashboard.dart';
+import 'widgets/profile_image.dart';
 
 class PharmacyProfileSetup extends StatefulWidget {
   const PharmacyProfileSetup({super.key});
@@ -344,18 +345,10 @@ class _PharmacyProfileSetupState
             // ICON
             // ------------------------------------------------
 
-            const CircleAvatar(
-
-              radius: 55,
-
-              backgroundColor:
-                  Color(0xffD1FAF5),
-
-              child: Icon(
-                Icons.medical_services,
-                size: 60,
-                color: Color(0xff14B8A6),
-              ),
+            const ProfileImageEditor(
+              accentColor: Color(0xff14B8A6),
+              backgroundColor: Color(0xffD1FAF5),
+              fallbackIcon: Icons.local_pharmacy,
             ),
 
             const SizedBox(height: 25),

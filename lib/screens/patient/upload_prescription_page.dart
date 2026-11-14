@@ -7,6 +7,7 @@ import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
+import '../../widgets/profile_image.dart';
 
 
 class UploadPrescriptionPage extends StatefulWidget {
@@ -632,9 +633,25 @@ Future<void> submitOrder() async {
                                 value:
                                     name,
 
-                                child:
-                                    Text(
-                                  name,
+                                child: Row(
+                                  children: [
+                                    HealthHomeProfileAvatar(
+                                      imageUrl:
+                                          pharmacy["profileImageUrl"]?.toString(),
+                                      radius: 16,
+                                      fallbackIcon: Icons.local_pharmacy,
+                                      backgroundColor:
+                                          const Color(0xffE8FAFB),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             },

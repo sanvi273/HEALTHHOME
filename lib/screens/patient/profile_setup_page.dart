@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import 'patient_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/profile_image.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -26,21 +27,24 @@ Future<void> loadProfile() async {
   final prefs = await SharedPreferences.getInstance();
 
   String userId = prefs.getString("userPhone") ?? "";
+  final token = prefs.getString("token") ?? "";
 
-  if (userId.isEmpty) return;
+  if (userId.isEmpty || token.isEmpty) return;
 
-  final response = await ApiService.getProfile(userId);
+  final response = await ApiService.getMyProfile(token: token);
 
   if (response["success"] == true) {
     final profile = response["profile"];
+    if (profile is! Map) return;
 
+    if (!mounted) return;
     setState(() {
-      nameController.text = profile["name"] ?? "";
-      ageController.text = profile["age"] ?? "";
-      gender = profile["gender"] ?? "Female";
-      bloodGroup = profile["bloodGroup"] ?? "B+";
-      heightController.text = profile["height"] ?? "";
-      weightController.text = profile["weight"] ?? "";
+      nameController.text = profile["name"]?.toString() ?? "";
+      ageController.text = profile["age"]?.toString() ?? "";
+      gender = profile["gender"]?.toString() ?? "Female";
+      bloodGroup = profile["bloodGroup"]?.toString() ?? "B+";
+      heightController.text = profile["height"]?.toString() ?? "";
+      weightController.text = profile["weight"]?.toString() ?? "";
     });
   } else {
     // New user
@@ -209,22 +213,10 @@ if (result["success"] == true) {
 
             const SizedBox(height: 20),
 
-            const CircleAvatar(
-
-              radius: 55,
-
-              backgroundColor:
-              Color(0xffE6FFFB),
-
-              child: Icon(
-
-                Icons.person,
-
-                size: 60,
-
-                color:
-                Color(0xff14B8A6),
-              ),
+            const ProfileImageEditor(
+              accentColor: Color(0xff14B8A6),
+              backgroundColor: Color(0xffE6FFFB),
+              fallbackIcon: Icons.person,
             ),
 
             const SizedBox(height: 25),

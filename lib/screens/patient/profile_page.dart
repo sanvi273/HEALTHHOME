@@ -7,6 +7,7 @@ import '../../services/api_service.dart';
 import '../../services/incoming_call_service.dart';
 import '../payment/payment_history_page.dart';
 import '../../widgets/help_support_card.dart';
+import '../../widgets/profile_image.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -35,14 +36,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final String userId =
         prefs.getString("userPhone") ?? "";
+    final String token = prefs.getString("token") ?? "";
 
-    if (userId.isEmpty) return;
+    if (userId.isEmpty || token.isEmpty) return;
 
-    final result =
-        await ApiService.getProfile(userId);
+    final result = await ApiService.getMyProfile(token: token);
 
     if (result["success"] == true) {
       final profile = result["profile"];
+      if (profile is! Map) return;
 
       double bmiValue = 0;
 
@@ -71,7 +73,6 @@ class _ProfilePageState extends State<ProfilePage> {
             profile["bloodGroup"] ?? "";
         height = profile["height"] ?? "";
         weight = profile["weight"] ?? "";
-
         bmi = bmiValue == 0
             ? ""
             : bmiValue.toStringAsFixed(1);
@@ -235,20 +236,10 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 children: [
 
-                  const CircleAvatar(
-                    radius: 45,
-
-                    backgroundColor:
-                        Colors.white,
-
-                    child: Icon(
-                      Icons.person,
-
-                      size: 50,
-
-                      color:
-                          Color(0xff14B8A6),
-                    ),
+                  const ProfileImageEditor(
+                    accentColor: Color(0xff075F57),
+                    backgroundColor: Colors.white,
+                    fallbackIcon: Icons.person,
                   ),
 
                   const SizedBox(height: 15),
