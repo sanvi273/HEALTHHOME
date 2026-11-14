@@ -52,6 +52,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> verifyOtp() async {
+    if (widget.purpose == 'reset') {
+      setState(() =>
+          error = 'Password reset now uses the one-time link sent by SMS.');
+      return;
+    }
     final otp = otpController.text.trim();
     if (!RegExp(r'^\d{6}$').hasMatch(otp)) {
       setState(() => error = 'Enter the six-digit code.');
@@ -82,17 +87,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               otp: otp,
               accessToken: accessToken,
             )
-          : widget.purpose == 'reset'
-              ? await ApiService.verifyPasswordResetOtp(
-                  challengeId: widget.challengeId,
-                  otp: otp,
-                  accessToken: accessToken,
-                )
-              : await ApiService.verifyLoginOtp(
-                  challengeId: widget.challengeId,
-                  otp: otp,
-                  accessToken: accessToken,
-                );
+          : await ApiService.verifyLoginOtp(
+              challengeId: widget.challengeId,
+              otp: otp,
+              accessToken: accessToken,
+            );
       if (!mounted) return;
       if (response['success'] == true) {
         if (mounted) Navigator.pop(context, response);
@@ -111,6 +110,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> resendOtp() async {
+    if (widget.purpose == 'reset') {
+      setState(() =>
+          error = 'Password reset now uses the one-time link sent by SMS.');
+      return;
+    }
     if (secondsRemaining > 0 || resendCount >= 2 || isLoading) return;
     setState(() {
       isLoading = true;

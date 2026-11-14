@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
@@ -18,6 +20,9 @@ import 'lab_dashboard.dart';
 import 'pharmacy_dashboard.dart';
 import 'responsive/responsive_wrapper.dart';
 import 'screens/admin/admin_dashboard.dart';
+import 'forgot_password_flow.dart';
+import 'login_screen.dart';
+import 'reset_password_screen.dart';
 
 // ======================================================
 // MAIN
@@ -25,6 +30,19 @@ import 'screens/admin/admin_dashboard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final appLinks = AppLinks();
+  Uri? initialUri;
+  if (kIsWeb) {
+    initialUri = Uri.base;
+  } else {
+    try {
+      initialUri = await appLinks.getInitialLink();
+    } catch (_) {
+      initialUri = null;
+    }
+  }
+  final initialRecoveryLink = PasswordResetDeepLink.parse(initialUri);
 
   // ====================================================
   // EASY LOCALIZATION
@@ -60,9 +78,46 @@ Future<void> main() async {
 
       startLocale: const Locale('en'),
 
-      child: HealthHomeApp(navigatorKey: appNavigatorKey),
+      child: HealthHomeApp(
+        navigatorKey: appNavigatorKey,
+        initialPage: _pageForRecoveryLink(initialRecoveryLink),
+      ),
     ),
   );
+
+  var initialLinkEventSkipped = false;
+  final pendingLinks = <Uri>[];
+  void openIncomingLink(Uri uri) {
+    final link = PasswordResetDeepLink.parse(uri);
+    if (link == null) return;
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) {
+      pendingLinks.add(uri);
+      return;
+    }
+    navigator.pushAndRemoveUntil<void>(
+      MaterialPageRoute<void>(builder: (_) => _pageForRecoveryLink(link)),
+      (_) => false,
+    );
+  }
+
+  appLinks.uriLinkStream.listen(
+    (uri) {
+      if (!initialLinkEventSkipped && initialUri != null && uri == initialUri) {
+        initialLinkEventSkipped = true;
+        return;
+      }
+      initialLinkEventSkipped = true;
+      openIncomingLink(uri);
+    },
+    onError: (_) {},
+  );
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    for (final uri in pendingLinks) {
+      openIncomingLink(uri);
+    }
+    pendingLinks.clear();
+  });
 
   // Start the app before permissions, token registration, or other network
   // notification setup. These services must not block the first visible frame.
@@ -77,16 +132,26 @@ Future<void> main() async {
   });
 }
 
+Widget _pageForRecoveryLink(PasswordResetDeepLink? link) {
+  if (link == null) return const CheckLoginScreen();
+  if (link.isLogin) {
+    return LoginScreen(role: passwordResetRoleLabel(link.role));
+  }
+  return ResetPasswordScreen(role: link.role, resetToken: link.token!);
+}
+
 // ======================================================
 // HEALTHHOME APP
 // ======================================================
 
 class HealthHomeApp extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
+  final Widget initialPage;
 
   const HealthHomeApp({
     super.key,
     required this.navigatorKey,
+    required this.initialPage,
   });
 
   @override
@@ -224,7 +289,7 @@ class HealthHomeApp extends StatelessWidget {
       // INITIAL SCREEN
       // ==================================================
 
-      home: const CheckLoginScreen(),
+      home: initialPage,
     );
   }
 }

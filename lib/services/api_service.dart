@@ -16,6 +16,13 @@ class ApiService {
   static http.Client get termsClient => _termsClient ??= http.Client();
   static set termsClient(http.Client client) => _termsClient = client;
 
+  // Injectable client for the password reset request and completion flow.
+  static http.Client? _passwordResetClient;
+  static http.Client get passwordResetClient =>
+      _passwordResetClient ??= http.Client();
+  static set passwordResetClient(http.Client client) =>
+      _passwordResetClient = client;
+
   // ============================================================
   // BASE URL
   // ============================================================
@@ -264,43 +271,45 @@ class ApiService {
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
-  static Future<Map<String, dynamic>> startPasswordReset(
-      {required String phone}) async {
-    final response = await http.post(
+  static Future<Map<String, dynamic>> startPasswordReset({
+    required String phone,
+    required String role,
+  }) async {
+    final response = await passwordResetClient.post(
       Uri.parse("$baseUrl/api/auth/forgot-password"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"phone": phone}),
+      body: jsonEncode({"phone": phone, "role": role}),
     );
-    return Map<String, dynamic>.from(jsonDecode(response.body));
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        data["message"] ?? "Unable to process the request. Please try again.",
+      );
+    }
+    return data;
   }
 
-  static Future<Map<String, dynamic>> verifyPasswordResetOtp({
-    required String challengeId,
-    required String otp,
-    String? accessToken,
-  }) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/forgot-password/verify"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "challengeId": challengeId,
-        "otp": otp,
-        if (accessToken != null) "accessToken": accessToken
-      }),
-    );
-    return Map<String, dynamic>.from(jsonDecode(response.body));
-  }
-
-  static Future<Map<String, dynamic>> resetPassword({
+  static Future<Map<String, dynamic>> completePasswordReset({
     required String resetToken,
+    required String role,
     required String password,
   }) async {
-    final response = await http.post(
+    final response = await passwordResetClient.post(
       Uri.parse("$baseUrl/api/auth/reset-password"),
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"resetToken": resetToken, "password": password}),
+      body: jsonEncode({
+        "resetToken": resetToken,
+        "role": role,
+        "password": password,
+      }),
     );
-    return Map<String, dynamic>.from(jsonDecode(response.body));
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        data["message"] ?? "Unable to update password. Please request a new link.",
+      );
+    }
+    return data;
   }
 
   // ============================================================

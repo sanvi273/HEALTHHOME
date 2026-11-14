@@ -22,6 +22,8 @@ import 'lab_profile_setup.dart';
 import 'pharmacy_profile_setup.dart';
 import 'professional_verification_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
+import 'forgot_password_flow.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -356,6 +358,31 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: Icons.lock,
                   obscure: true,
                 ),
+
+                if (isLogin &&
+                    passwordResetRole(widget.role) != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: isLoading
+                          ? null
+                          : () => Navigator.push<void>(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => ForgotPasswordScreen(
+                                    role: widget.role,
+                                  ),
+                                ),
+                              ),
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(
+                          color: Color(0xff008F97),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
 
                 const SizedBox(height: 30),
 
