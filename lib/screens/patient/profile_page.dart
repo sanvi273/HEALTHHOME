@@ -3,7 +3,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../login_screen.dart';
-import '../../change_password_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/incoming_call_service.dart';
 import '../payment/payment_history_page.dart';
@@ -334,31 +333,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 15),
 
                   Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment
-                            .spaceBetween,
-
                     children: [
-
-                      healthCard(
-                        'blood'.tr(),
-                        bloodGroup,
-                      ),
-
-                      healthCard(
-                        'height'.tr(),
-                        '$height cm',
-                      ),
-
-                      healthCard(
-                        'weight'.tr(),
-                        '$weight kg',
-                      ),
-
-                      healthCard(
-                        'bmi'.tr(),
-                        bmi,
-                      ),
+                      Expanded(child: healthCard('blood'.tr(), bloodGroup)),
+                      const SizedBox(width: 6),
+                      Expanded(child: healthCard('height'.tr(), '$height cm')),
+                      const SizedBox(width: 6),
+                      Expanded(child: healthCard('weight'.tr(), '$weight kg')),
+                      const SizedBox(width: 6),
+                      Expanded(child: healthCard('bmi'.tr(), bmi)),
                     ],
                   ),
                 ],
@@ -414,7 +396,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
 
             const SizedBox(height: 12),
-            const ChangePasswordEntry(),
 
             const HelpSupportCard(),
 
@@ -540,10 +521,8 @@ class _ProfilePageState extends State<ProfilePage> {
     String value,
   ) {
     return Container(
-      width: 70,
-
-      padding:
-          const EdgeInsets.all(8),
+      constraints: const BoxConstraints(minHeight: 78),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
 
       decoration: BoxDecoration(
         color:
@@ -554,20 +533,32 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
 
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              title,
+              maxLines: 1,
+              softWrap: false,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
 
           const SizedBox(height: 5),
 
-          Text(
-            value.isEmpty ? "-" : value,
-
-            textAlign:
-                TextAlign.center,
-
-            style: const TextStyle(
-              fontWeight:
-                  FontWeight.bold,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value.isEmpty ? "-" : value,
+              maxLines: 1,
+              softWrap: false,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

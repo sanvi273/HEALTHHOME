@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/incoming_call_service.dart';
-import 'change_password_screen.dart';
 import 'package:healthhome/screens/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'upload_lab_report_page.dart';
@@ -4632,10 +4631,6 @@ Widget profilePage() {
               ],
             ),
           ),
-        ),
-
-        const ChangePasswordEntry(
-          margin: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         ),
 
         const HelpSupportCard(horizontalMargin: 20),

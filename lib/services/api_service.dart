@@ -264,30 +264,6 @@ class ApiService {
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 
-  static Future<Map<String, dynamic>> changePassword({
-    required String phone,
-    required String password,
-  }) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/change-password"),
-      headers: await _getAuthHeaders(),
-      body: jsonEncode({"phone": phone, "password": password}),
-    );
-    dynamic decoded;
-    try {
-      decoded = jsonDecode(response.body);
-    } on FormatException {
-      decoded = null;
-    }
-    final data = decoded is Map<String, dynamic>
-        ? decoded
-        : <String, dynamic>{};
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(data["message"] ?? "Unable to update your password.");
-    }
-    return data;
-  }
-
   // ============================================================
   // PROFESSIONAL VERIFICATION
   // ============================================================
