@@ -22,6 +22,7 @@ import 'lab_profile_setup.dart';
 import 'pharmacy_profile_setup.dart';
 import 'professional_verification_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
+import 'forgot_password_preview_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -358,27 +359,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 if (isLogin)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 18,
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ForgotPasswordPreviewScreen(),
+                        ),
+                      ),
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(
                           color: Color(0xff008F97),
+                          fontWeight: FontWeight.w600,
                         ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'To change your password, sign in and open Profile > Change Password.',
-                            style: TextStyle(
-                              color: Color(0xff52616B),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
 
