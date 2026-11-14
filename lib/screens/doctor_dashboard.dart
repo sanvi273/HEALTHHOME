@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/incoming_call_service.dart';
+import '../change_password_screen.dart';
 import '../services/telegram/AgoraVideoCallPage.dart';
 import '../models/patient_report.dart';
 import '../widgets/help_support_card.dart';
@@ -3027,6 +3028,8 @@ if (isVideo) {
             doctorAbout,
 
           ),
+
+          const ChangePasswordEntry(),
 
           const HelpSupportCard(),
 

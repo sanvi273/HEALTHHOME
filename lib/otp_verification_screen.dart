@@ -52,11 +52,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> verifyOtp() async {
-    if (widget.purpose == 'reset') {
-      setState(() =>
-          error = 'Password reset now uses the one-time link sent by SMS.');
-      return;
-    }
     final otp = otpController.text.trim();
     if (!RegExp(r'^\d{6}$').hasMatch(otp)) {
       setState(() => error = 'Enter the six-digit code.');
@@ -110,11 +105,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> resendOtp() async {
-    if (widget.purpose == 'reset') {
-      setState(() =>
-          error = 'Password reset now uses the one-time link sent by SMS.');
-      return;
-    }
     if (secondsRemaining > 0 || resendCount >= 2 || isLoading) return;
     setState(() {
       isLoading = true;

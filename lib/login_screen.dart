@@ -22,8 +22,6 @@ import 'lab_profile_setup.dart';
 import 'pharmacy_profile_setup.dart';
 import 'professional_verification_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
-import 'forgot_password_flow.dart';
-import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -359,28 +357,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscure: true,
                 ),
 
-                if (isLogin &&
-                    passwordResetRole(widget.role) != null)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: isLoading
-                          ? null
-                          : () => Navigator.push<void>(
-                                context,
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ForgotPasswordScreen(
-                                    role: widget.role,
-                                  ),
-                                ),
-                              ),
-                      child: const Text(
-                        'Forgot Password?',
-                        style: TextStyle(
+                if (isLogin)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
                           color: Color(0xff008F97),
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'To change your password, sign in and open Profile > Change Password.',
+                            style: TextStyle(
+                              color: Color(0xff52616B),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 

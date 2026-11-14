@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../login_screen.dart';
+import '../../change_password_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/incoming_call_service.dart';
 import '../payment/payment_history_page.dart';
@@ -411,6 +412,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 },
               ),
             ),
+
+            const SizedBox(height: 12),
+            const ChangePasswordEntry(),
 
             const HelpSupportCard(),
 
