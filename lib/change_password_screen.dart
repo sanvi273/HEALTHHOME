@@ -4,9 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'services/api_service.dart';
 
-const _passwordPrimary = Color(0xff19AE5B);
-const _passwordBackground = Color(0xffEAF7ED);
-const _passwordCard = Color(0xffF8F3F9);
+const _passwordPrimary = Color(0xff18C5C5);
+const _passwordBackground = Color(0xffF5F7FB);
+const _passwordCard = Colors.white;
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -46,7 +46,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   bool _isValidPassword(String value) =>
-      value.length >= 8 &&
+      value.length >= 6 &&
       value.length <= 128 &&
       RegExp(r'[A-Za-z]').hasMatch(value) &&
       RegExp(r'\d').hasMatch(value);
@@ -63,7 +63,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     }
     if (!_isValidPassword(password)) {
       setState(() => _error =
-          'Use at least 8 characters, including a letter and a number.');
+          'Use at least 6 characters, including a letter and a number.');
       return;
     }
 
@@ -228,7 +228,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Use at least 8 characters, including a letter and a number.',
+            'Use at least 6 characters, including a letter and a number.',
             style: TextStyle(color: Colors.black54, fontSize: 13),
           ),
           if (_error != null) ...[

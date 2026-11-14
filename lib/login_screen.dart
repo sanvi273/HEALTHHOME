@@ -22,7 +22,7 @@ import 'lab_profile_setup.dart';
 import 'pharmacy_profile_setup.dart';
 import 'professional_verification_screen.dart';
 import 'screens/admin/admin_dashboard.dart';
-import 'forgot_password_preview_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -365,7 +365,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: () => Navigator.push<void>(
                         context,
                         MaterialPageRoute<void>(
-                          builder: (_) => const ForgotPasswordPreviewScreen(),
+                          builder: (_) => const ForgotPasswordScreen(),
                         ),
                       ),
                       child: const Text(
