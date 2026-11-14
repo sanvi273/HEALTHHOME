@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../services/incoming_call_service.dart';
 import '../services/telegram/AgoraVideoCallPage.dart';
+import '../models/patient_report.dart';
 import '../widgets/help_support_card.dart';
 import 'onboarding_screen.dart';
 import '../prescription_screen.dart';
@@ -1814,24 +1815,11 @@ Widget patientReportsSection(
 
       const SizedBox(height: 10),
 
-      ...reports.map<Widget>((report) {
-        final reportMap = report is Map
-            ? Map<String, dynamic>.from(report)
-            : const <String, dynamic>{};
-        final fileType =
-            reportMap["fileType"]
-                    ?.toString()
-                    .toLowerCase() ??
-                "";
-
-        final rawFileName = reportMap["fileName"]?.toString().trim() ?? "";
-        final fileName = rawFileName.isEmpty ? "Patient Report" : rawFileName;
-        final fileUrl = _patientReportUrl(reportMap);
-
-        final filePath = Uri.tryParse(fileUrl)?.path.toLowerCase() ?? "";
-        final isPdf = fileType.contains("pdf") ||
-            fileName.toLowerCase().endsWith(".pdf") ||
-            filePath.endsWith(".pdf");
+      ...reports.map<Widget>((rawReport) {
+        final report = PatientReport.fromJson(rawReport);
+        final fileName = report.fileName;
+        final fileUrl = report.fileUrl;
+        final isPdf = report.isPdf;
 
         return Container(
           width: double.infinity,
@@ -1858,26 +1846,7 @@ Widget patientReportsSection(
             ),
           ),
 
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () {
-              if (fileUrl.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'This report has no saved file link. Ask the patient to upload it again.',
-                    ),
-                  ),
-                );
-                return;
-              }
-              _openPatientReport(
-                fileUrl: fileUrl,
-                fileName: fileName,
-                isPdf: isPdf,
-              );
-            },
-            child: Row(
+          child: Row(
             children: [
 
               // ==========================================
@@ -1938,60 +1907,57 @@ Widget patientReportsSection(
               // ==========================================
               // VIEW BUTTON
               // ==========================================
-Container(
-  width: 75,
-  height: 40,
-  decoration: BoxDecoration(
-    color: fileUrl.isEmpty ? Colors.grey.shade300 : const Color(0xff14B8A6),
-    borderRadius: BorderRadius.circular(10),
-  ),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Icon(
-        fileUrl.isEmpty ? Icons.link_off : Icons.visibility,
-        size: 17,
-        color: Colors.white,
+if (fileUrl.isEmpty)
+  SizedBox(
+    width: 108,
+    child: Text(
+      "Image unavailable",
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: Colors.grey.shade700,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
       ),
-      const SizedBox(width: 4),
-      Text(
-        fileUrl.isEmpty ? "No link" : "View",
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
+    ),
+  )
+else
+  Tooltip(
+    message: "View $fileName",
+    child: SizedBox(
+      width: 78,
+      height: 40,
+      child: ElevatedButton.icon(
+        onPressed: () => _openPatientReport(
+          fileUrl: fileUrl,
+          fileName: fileName,
+          isPdf: isPdf,
+        ),
+        icon: const Icon(Icons.visibility, size: 16),
+        label: const Text("View"),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xff00C2CB),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
-    ],
+    ),
   ),
-),
 
             ],
           ),
-        ),
       );
       }),
     ],
   );
-}
-
-String _patientReportUrl(Map<String, dynamic> report) {
-  for (final key in const [
-    "fileUrl",
-    "secure_url",
-    "secureUrl",
-    "reportUrl",
-    "url",
-  ]) {
-    final value = report[key]?.toString().trim() ?? "";
-    final uri = Uri.tryParse(value);
-    if (uri != null &&
-        (uri.scheme == "http" || uri.scheme == "https") &&
-        uri.host.isNotEmpty) {
-      return uri.toString();
-    }
-  }
-  return "";
 }
 
 //==================================================
@@ -2060,15 +2026,17 @@ void _openPatientReport({
             foregroundColor: Colors.white,
           ),
 
-          body: Center(
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 5.0,
+          body: LayoutBuilder(
+            builder: (context, constraints) => Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
 
-              child: Image.network(
-                fileUrl,
-
-                fit: BoxFit.contain,
+                child: Image.network(
+                  fileUrl,
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  fit: BoxFit.contain,
 
                 loadingBuilder:
                     (
@@ -2129,6 +2097,7 @@ void _openPatientReport({
                     ),
                   );
                 },
+                ),
               ),
             ),
           ),

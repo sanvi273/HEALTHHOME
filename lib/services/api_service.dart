@@ -1119,6 +1119,7 @@ class ApiService {
           "$baseUrl/api/appointments/patient/"
           "${Uri.encodeComponent(patientPhone)}",
         ),
+        headers: await _getAuthHeaders(),
       );
 
       if (response.statusCode != 200) {
@@ -1152,6 +1153,7 @@ class ApiService {
           "$baseUrl/api/appointments/doctor/"
           "${Uri.encodeComponent(doctorId)}",
         ),
+        headers: await _getAuthHeaders(),
       );
 
       if (response.statusCode != 200) {
