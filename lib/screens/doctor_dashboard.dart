@@ -1200,18 +1200,13 @@ Widget casesPage() {
           Row(
             children: [
 
-              CircleAvatar(
+              HealthHomeProfileAvatar(
+                imageUrl:
+                    appointment["patientProfileImageUrl"]?.toString(),
                 radius: 27,
-
-                backgroundColor:
-                    const Color(0xffE0F7F4),
-
-                child: const Icon(
-                  Icons.person,
-                  color:
-                      Color(0xff14B8A6),
-                  size: 30,
-                ),
+                backgroundColor: const Color(0xffE0F7F4),
+                fallbackIcon: Icons.person,
+                iconColor: const Color(0xff14B8A6),
               ),
 
               const SizedBox(width: 14),
