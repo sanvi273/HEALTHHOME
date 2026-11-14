@@ -1243,9 +1243,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/appointments/status/$id",
       ),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "status": status,
       }),
