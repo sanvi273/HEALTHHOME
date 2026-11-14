@@ -722,6 +722,15 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
         test["description"]?.toString().trim() ?? "";
     final price =
         _toDouble(test["price"]);
+    final testLabImageUrl =
+        test["labProfileImageUrl"]?.toString().trim() ?? "";
+    final selectedLabImageUrl =
+        (selectedLab?["profileImageUrl"] ?? selectedLab?["image"] ?? "")
+            .toString()
+            .trim();
+    final labProfileImageUrl = testLabImageUrl.isNotEmpty
+        ? testLabImageUrl
+        : selectedLabImageUrl;
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(18),
@@ -740,11 +749,31 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
               ),
               borderRadius: BorderRadius.circular(22),
             ),
-            child: Icon(
-              Icons.science,
-              size: 85,
-              color: Color(0xff14B8A6),
-            ),
+            child: labProfileImageUrl.isEmpty
+                ? const Center(
+                    child: Icon(
+                      Icons.science,
+                      size: 85,
+                      color: Color(0xff14B8A6),
+                    ),
+                  )
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.network(
+                      labProfileImageUrl,
+                      width: double.infinity,
+                      height: 190,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Center(
+                        child: Icon(
+                          Icons.science,
+                          size: 85,
+                          color: Color(0xff14B8A6),
+                        ),
+                      ),
+                    ),
+                  ),
           ),
 
           SizedBox(height: 20),
