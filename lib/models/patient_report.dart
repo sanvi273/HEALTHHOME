@@ -1,8 +1,10 @@
 class PatientReport {
   const PatientReport({
+    required this.reportId,
     required this.fileName,
     required this.fileUrl,
     required this.fileType,
+    required this.canView,
   });
 
   factory PatientReport.fromJson(dynamic value) {
@@ -17,9 +19,11 @@ class PatientReport {
       final legacyType =
           fallbackName.toLowerCase().endsWith(".pdf") ? "application/pdf" : "";
       return PatientReport(
+        reportId: "",
         fileName: fallbackName,
         fileUrl: legacyUrl,
         fileType: legacyType,
+        canView: false,
       );
     }
 
@@ -30,15 +34,19 @@ class PatientReport {
     final rawType = report["fileType"]?.toString().trim() ?? "";
 
     return PatientReport(
+      reportId: report["_id"]?.toString().trim() ?? "",
       fileName: rawName.isEmpty ? "Patient Report" : rawName,
       fileUrl: _validReportUrl(report),
       fileType: rawType.toLowerCase(),
+      canView: report["canView"] == true,
     );
   }
 
+  final String reportId;
   final String fileName;
   final String fileUrl;
   final String fileType;
+  final bool canView;
 
   bool get isPdf {
     final path = Uri.tryParse(fileUrl)?.path.toLowerCase() ?? "";

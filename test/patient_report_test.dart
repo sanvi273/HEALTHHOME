@@ -5,12 +5,16 @@ void main() {
   group('PatientReport', () {
     test('reads the stored filename and secure fileUrl', () {
       final report = PatientReport.fromJson({
+        '_id': '507f1f77bcf86cd799439044',
+        'canView': true,
         'fileName': 'blood-test.jpg',
         'fileType': 'image/jpeg',
         'fileUrl': 'https://res.cloudinary.com/healthhome/report.jpg',
       });
 
       expect(report.fileName, 'blood-test.jpg');
+      expect(report.reportId, '507f1f77bcf86cd799439044');
+      expect(report.canView, isTrue);
       expect(
           report.fileUrl, 'https://res.cloudinary.com/healthhome/report.jpg');
       expect(report.isPdf, isFalse);
@@ -18,12 +22,26 @@ void main() {
 
     test('supports older URL key aliases and PDF metadata', () {
       final report = PatientReport.fromJson({
+        '_id': '507f1f77bcf86cd799439044',
+        'canView': true,
         'fileName': 'scan.pdf',
         'secure_url': 'https://res.cloudinary.com/healthhome/scan',
       });
 
       expect(report.fileUrl, 'https://res.cloudinary.com/healthhome/scan');
+      expect(report.canView, isTrue);
       expect(report.isPdf, isTrue);
+    });
+
+    test('requires an authorized report ID before it can be viewed', () {
+      final report = PatientReport.fromJson({
+        'fileName': 'old-report.jpg',
+        'fileUrl': 'https://res.cloudinary.com/healthhome/report.jpg',
+      });
+
+      expect(report.fileUrl, isNotEmpty);
+      expect(report.reportId, isEmpty);
+      expect(report.canView, isFalse);
     });
 
     test('supports legacy string URLs and keeps legacy filenames unavailable',

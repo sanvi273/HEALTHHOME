@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/patient_report_upload.dart';
 
 class ApiService {
   // Injectable client used only by the Terms endpoints and their widget tests.
@@ -1172,6 +1173,42 @@ class ApiService {
     } catch (e) {
       return [];
     }
+  }
+
+  static Future<Uint8List> getDoctorAppointmentReportBytes({
+    required String appointmentId,
+    required String reportId,
+  }) async {
+    if (appointmentId.trim().isEmpty || reportId.trim().isEmpty) {
+      throw Exception("Report reference is missing.");
+    }
+
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/api/appointments/"
+        "${Uri.encodeComponent(appointmentId)}/reports/"
+        "${Uri.encodeComponent(reportId)}/file",
+      ),
+      headers: await _getAuthHeaders(),
+    );
+
+    if (response.statusCode != 200) {
+      var message = "Unable to load this report.";
+      try {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        if (data is Map && data["message"] is String) {
+          message = data["message"] as String;
+        }
+      } catch (_) {
+        // Keep a safe generic error if the backend returned a non-JSON body.
+      }
+      throw Exception(message);
+    }
+
+    if (response.bodyBytes.isEmpty) {
+      throw Exception("The stored report file is empty.");
+    }
+    return Uint8List.fromList(response.bodyBytes);
   }
 
   static Future<Map<String, dynamic>> getAppointmentById(
@@ -3490,7 +3527,7 @@ class ApiService {
     required String consultationType,
     required String appointmentDate,
     required String appointmentTime,
-    required List<File> reports,
+    required List<PatientReportUpload> reports,
   }) async {
     try {
       // Create Dio instance
@@ -3513,24 +3550,16 @@ class ApiService {
         formData.files.add(
           MapEntry(
             "reports",
-            await MultipartFile.fromFile(
-              file.path,
-              filename: file.path.split(RegExp(r'[\\/]')).last,
+            MultipartFile.fromBytes(
+              file.bytes,
+              filename: file.fileName,
+              contentType: MultipartFile.lookupMediaType(file.fileName),
             ),
           ),
         );
       }
 
-      print("========================================");
-      print("CREATE DOCTOR PAYMENT REQUEST");
-      print("PATIENT: $patientName");
-      print("PHONE: $patientPhone");
-      print("DOCTOR ID: $doctorId");
-      print("DOCTOR: $doctorName");
-      print("DATE: $appointmentDate");
-      print("TIME: $appointmentTime");
-      print("REPORTS: ${reports.length}");
-      print("========================================");
+      debugPrint("Uploading ${reports.length} patient report(s)");
 
       final response = await dio.post(
         "$baseUrl/api/payment/create-doctor-order",
@@ -3542,22 +3571,11 @@ class ApiService {
         ),
       );
 
-      print("========================================");
-      print("CREATE DOCTOR PAYMENT STATUS");
-      print(response.statusCode);
-      print("CREATE DOCTOR PAYMENT BODY");
-      print(response.data);
-      print("========================================");
+      debugPrint("Doctor payment order response: ${response.statusCode}");
 
       return Map<String, dynamic>.from(response.data);
     } on DioException catch (e) {
-      print("========================================");
-      print("DOCTOR PAYMENT DIO ERROR");
-      print("STATUS: ${e.response?.statusCode}");
-      print("DATA: ${e.response?.data}");
-      print("MESSAGE: ${e.message}");
-      print("URL: ${e.requestOptions.uri}");
-      print("========================================");
+      debugPrint("Doctor payment order failed: ${e.response?.statusCode}");
 
       final data = e.response?.data;
 
@@ -3574,7 +3592,7 @@ class ApiService {
         "${e.message ?? "Unknown error"}",
       );
     } catch (e) {
-      print("CREATE DOCTOR PAYMENT ERROR: $e");
+      debugPrint("CREATE DOCTOR PAYMENT ERROR: $e");
       rethrow;
     }
   }

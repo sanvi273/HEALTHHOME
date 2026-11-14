@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -1788,6 +1790,9 @@ Widget casesPage() {
 Widget patientReportsSection(
   dynamic appointment,
 ) {
+  final appointmentId = appointment is Map
+      ? appointment["_id"]?.toString().trim() ?? ""
+      : "";
   final reports = appointment["reports"];
 
   if (reports == null ||
@@ -1818,8 +1823,10 @@ Widget patientReportsSection(
       ...reports.map<Widget>((rawReport) {
         final report = PatientReport.fromJson(rawReport);
         final fileName = report.fileName;
-        final fileUrl = report.fileUrl;
         final isPdf = report.isPdf;
+        final canView = report.canView &&
+            appointmentId.isNotEmpty &&
+            report.reportId.isNotEmpty;
 
         return Container(
           width: double.infinity,
@@ -1907,7 +1914,7 @@ Widget patientReportsSection(
               // ==========================================
               // VIEW BUTTON
               // ==========================================
-if (fileUrl.isEmpty)
+if (!canView)
   SizedBox(
     width: 108,
     child: Text(
@@ -1930,9 +1937,8 @@ else
       height: 40,
       child: ElevatedButton.icon(
         onPressed: () => _openPatientReport(
-          fileUrl: fileUrl,
-          fileName: fileName,
-          isPdf: isPdf,
+          appointmentId: appointmentId,
+          report: report,
         ),
         icon: const Icon(Icons.visibility, size: 16),
         label: const Text("View"),
@@ -1965,11 +1971,12 @@ else
 //==================================================
 
 void _openPatientReport({
-  required String fileUrl,
-  required String fileName,
-  required bool isPdf,
+  required String appointmentId,
+  required PatientReport report,
 }) {
-  if (fileUrl.trim().isEmpty) {
+  if (!report.canView ||
+      appointmentId.trim().isEmpty ||
+      report.reportId.trim().isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
@@ -1980,126 +1987,74 @@ void _openPatientReport({
     return;
   }
 
+  final reportFuture = ApiService.getDoctorAppointmentReportBytes(
+    appointmentId: appointmentId,
+    reportId: report.reportId,
+  );
+
   Navigator.push(
     context,
     MaterialPageRoute(
       builder: (_) {
-        if (isPdf) {
-          // ==========================================
-          // PDF VIEWER
-          // ==========================================
-
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(
-                fileName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              backgroundColor:
-                  const Color(0xff14B8A6),
-              foregroundColor: Colors.white,
-            ),
-
-            body: SfPdfViewer.network(
-              fileUrl,
-            ),
-          );
-        }
-
-        // ==========================================
-        // IMAGE VIEWER
-        // ==========================================
-
         return Scaffold(
-          backgroundColor: Colors.black,
-
+          backgroundColor: report.isPdf ? Colors.white : Colors.black,
           appBar: AppBar(
             title: Text(
-              fileName,
+              report.fileName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
 
-            backgroundColor: Colors.black,
-
+            backgroundColor: const Color(0xff14B8A6),
             foregroundColor: Colors.white,
           ),
-
-          body: LayoutBuilder(
-            builder: (context, constraints) => Center(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 5.0,
-
-                child: Image.network(
-                  fileUrl,
-                  width: constraints.maxWidth,
-                  height: constraints.maxHeight,
-                  fit: BoxFit.contain,
-
-                loadingBuilder:
-                    (
-                      context,
-                      child,
-                      loadingProgress,
-                    ) {
-                  if (loadingProgress == null) {
-                    return child;
-                  }
-
-                  return const Center(
-                    child:
-                        CircularProgressIndicator(
-                      color: Colors.white,
-                    ),
-                  );
-                },
-
-                errorBuilder:
-                    (
-                      context,
-                      error,
-                      stackTrace,
-                    ) {
-                  return const Center(
-                    child: Padding(
-                      padding:
-                          EdgeInsets.all(20),
-
-                      child: Column(
-                        mainAxisSize:
-                            MainAxisSize.min,
-
-                        children: [
-
-                          Icon(
-                            Icons
-                                .broken_image_outlined,
-                            color: Colors.white,
-                            size: 60,
-                          ),
-
-                          SizedBox(height: 15),
-
-                          Text(
-                            "Unable to load image",
-                            textAlign:
-                                TextAlign.center,
-
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                            ),
-                          ),
-                        ],
+          body: FutureBuilder<Uint8List>(
+            future: reportFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      snapshot.error?.toString().replaceFirst("Exception: ", "") ??
+                          "Unable to load this report.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: report.isPdf ? Colors.black87 : Colors.white,
                       ),
                     ),
-                  );
-                },
+                  ),
+                );
+              }
+
+              final bytes = snapshot.data!;
+              if (report.isPdf) return SfPdfViewer.memory(bytes);
+
+              return LayoutBuilder(
+                builder: (context, constraints) => Center(
+                  child: InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 5.0,
+                    child: Image.memory(
+                      bytes,
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Center(
+                        child: Text(
+                          "Unable to display this image.",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         );
       },

@@ -1,7 +1,3 @@
-import 'dart:io';
-
-
-
 import 'package:flutter/material.dart';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -17,6 +13,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 
 import '../../services/api_service.dart';
+import '../../models/patient_report_upload.dart';
 
 
 
@@ -112,7 +109,7 @@ class _BookAppointmentPageState
 
 
 
- List<File> reports = [];
+ List<PatientReportUpload> reports = [];
 
 
 
@@ -225,17 +222,18 @@ class _BookAppointmentPageState
 
 
          if (image != null) {
-
-          setState(() {
-
-           reports.add(
-
-            File(image.path),
-
+          final bytes = await image.readAsBytes();
+          if (bytes.isEmpty) {
+           if (!mounted) return;
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not read the selected image.')),
            );
-
+           return;
+          }
+          if (!mounted) return;
+          setState(() {
+           reports.add(PatientReportUpload(fileName: image.name, bytes: bytes));
           });
-
          }
 
         },
@@ -268,36 +266,26 @@ class _BookAppointmentPageState
 
 
 
-         final result =
-
-           await FilePicker.platform.pickFiles(
-
+         final result = await FilePicker.platform.pickFiles(
           type: FileType.custom,
-
           allowedExtensions: ["pdf"],
-
+          withData: true,
          );
 
-
-
-         if (result != null &&
-
-           result.files.single.path != null) {
-
-          setState(() {
-
-           reports.add(
-
-            File(
-
-             result.files.single.path!,
-
-            ),
-
+         if (result != null) {
+          final file = result.files.single;
+          final bytes = file.bytes;
+          if (bytes == null || bytes.isEmpty) {
+           if (!mounted) return;
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not read the selected PDF.')),
            );
-
+           return;
+          }
+          if (!mounted) return;
+          setState(() {
+           reports.add(PatientReportUpload(fileName: file.name, bytes: bytes));
           });
-
          }
 
         },
@@ -3529,11 +3517,7 @@ Future<void> _handlePaymentError(
 
            title: Text(
 
-            entry.value.path
-
-              .split('/')
-
-              .last,
+            entry.value.fileName,
 
            ),
 
