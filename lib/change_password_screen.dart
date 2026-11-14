@@ -73,7 +73,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     });
 
     try {
-      final response = await ApiService.changePassword(password: password);
+      final response = await ApiService.changePassword(
+        phone: _phoneController.text.trim(),
+        password: password,
+      );
       if (!mounted) return;
       if (response['success'] != true) {
         setState(() => _error = response['message']?.toString() ??

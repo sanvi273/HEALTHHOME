@@ -265,12 +265,13 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> changePassword({
+    required String phone,
     required String password,
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/auth/change-password"),
       headers: await _getAuthHeaders(),
-      body: jsonEncode({"password": password}),
+      body: jsonEncode({"phone": phone, "password": password}),
     );
     dynamic decoded;
     try {

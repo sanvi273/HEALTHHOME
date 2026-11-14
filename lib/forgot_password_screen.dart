@@ -38,10 +38,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!mounted) return;
     setState(() {
       _hasSession = (prefs.getString('token') ?? '').trim().isNotEmpty;
-      _phoneController.text = prefs.getString('userPhone') ??
-          prefs.getString('pharmacyPhone') ??
-          prefs.getString('labPhone') ??
-          '';
       _checkingSession = false;
     });
   }
@@ -60,6 +56,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       RegExp(r'[A-Za-z]').hasMatch(value) &&
       RegExp(r'\d').hasMatch(value);
 
+  bool _isValidPhone(String value) =>
+      value.replaceAll(RegExp(r'\D'), '').length >= 8;
+
   Future<void> _updatePassword() async {
     if (!_hasSession) {
       setState(() => _error =
@@ -75,6 +74,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     try {
       final response = await ApiService.changePassword(
+        phone: _phoneController.text.trim(),
         password: _passwordController.text,
       );
       if (!mounted) return;
@@ -162,7 +162,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 label: 'Registered Phone Number',
                                 icon: Icons.phone_android,
                                 keyboardType: TextInputType.phone,
-                                readOnly: true,
+                                validator: (value) =>
+                                    _isValidPhone(value ?? '')
+                                        ? null
+                                        : 'Enter a valid registered phone number.',
                               ),
                               const SizedBox(height: 16),
                               _field(
