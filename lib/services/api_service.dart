@@ -16,6 +16,13 @@ class ApiService {
   static http.Client get termsClient => _termsClient ??= http.Client();
   static set termsClient(http.Client client) => _termsClient = client;
 
+  // Injectable client used by the password reset request and completion flow.
+  static http.Client? _passwordResetClient;
+  static http.Client get passwordResetClient =>
+      _passwordResetClient ??= http.Client();
+  static set passwordResetClient(http.Client client) =>
+      _passwordResetClient = client;
+
   // ============================================================
   // BASE URL
   // ============================================================
@@ -262,6 +269,49 @@ class ApiService {
       }),
     );
     return Map<String, dynamic>.from(jsonDecode(response.body));
+  }
+
+  static Future<Map<String, dynamic>> startPasswordReset({
+    required String phone,
+    required String role,
+  }) async {
+    final response = await passwordResetClient.post(
+      Uri.parse("$baseUrl/api/auth/forgot-password"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"phone": phone, "role": role}),
+    );
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        data["message"] ?? "Unable to process the request. Please try again.",
+      );
+    }
+    return data;
+  }
+
+  static Future<Map<String, dynamic>> completePasswordReset({
+    required String resetToken,
+    required String role,
+    required String phone,
+    required String password,
+  }) async {
+    final response = await passwordResetClient.post(
+      Uri.parse("$baseUrl/api/auth/reset-password"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "resetToken": resetToken,
+        "role": role,
+        "phone": phone,
+        "password": password,
+      }),
+    );
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        data["message"] ?? "Unable to update password. Please request a new link.",
+      );
+    }
+    return data;
   }
 
   static Future<Map<String, dynamic>> changePassword({
