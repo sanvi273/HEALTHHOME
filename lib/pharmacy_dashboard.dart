@@ -1551,6 +1551,8 @@ class OrdersPage extends StatelessWidget {
                         address: order["address"]?.toString() ?? "No Address",
                         notes: order["notes"]?.toString() ?? "",
                         imageUrl: order["prescriptionImage"]?.toString() ?? "",
+                        patientImageUrl:
+                            order["patientProfileImageUrl"]?.toString() ?? "",
                         price: isPendingPrescription
                             ? "Amount pending pharmacy confirmation"
                             : "₹${totalAmount.toStringAsFixed(0)}",
@@ -1597,6 +1599,7 @@ Widget orderCard({
   required String address,
   required String notes,
   required String imageUrl,
+  required String patientImageUrl,
   required String price,
 }) {
   final bool amountPending =
@@ -1625,13 +1628,12 @@ Widget orderCard({
 
         Row(
           children: [
-            const CircleAvatar(
+            HealthHomeProfileAvatar(
+              imageUrl: patientImageUrl,
               radius: 28,
-              backgroundColor: Color(0xff14B8A6),
-              child: Icon(
-                Icons.person,
-                color: Colors.white,
-              ),
+              backgroundColor: const Color(0xff14B8A6),
+              fallbackIcon: Icons.person,
+              iconColor: Colors.white,
             ),
 
             const SizedBox(width: 15),

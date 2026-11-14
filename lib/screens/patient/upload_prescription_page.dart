@@ -7,7 +7,7 @@ import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
-import '../../widgets/profile_image.dart';
+import '../../widgets/provider_picker.dart';
 
 
 class UploadPrescriptionPage extends StatefulWidget {
@@ -53,6 +53,7 @@ class _UploadPrescriptionPageState
 
   bool isLoading = true;
   bool isSubmitting = false;
+  String? pharmaciesLoadError;
 
   File? prescriptionImage;
 
@@ -130,10 +131,14 @@ class _UploadPrescriptionPageState
   // ============================================================
 
   Future<void> loadPharmacies() async {
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+        pharmaciesLoadError = null;
+      });
+    }
     try {
-
-      final data =
-          await ApiService.getPharmacies();
+      final data = await ApiService.getPharmacies();
 
       debugPrint(
         "================================",
@@ -150,25 +155,16 @@ class _UploadPrescriptionPageState
       if (!mounted) return;
 
       setState(() {
-
         pharmacies = data;
-
-        isLoading = false;
-
         if (data.isNotEmpty) {
-
-          selectedPharmacy =
-              data[0]["name"]
-                  ?.toString();
-
-          selectedPharmacyId =
-              data[0]["_id"]
-                  ?.toString();
+          selectedPharmacy = data[0]["name"]?.toString();
+          selectedPharmacyId = data[0]["_id"]?.toString();
+        } else {
+          selectedPharmacy = null;
+          selectedPharmacyId = null;
         }
       });
-
     } catch (e) {
-
       debugPrint(
         "LOAD PHARMACIES ERROR = $e",
       );
@@ -176,13 +172,14 @@ class _UploadPrescriptionPageState
       if (!mounted) return;
 
       setState(() {
-        isLoading = false;
+        pharmacies = [];
+        selectedPharmacy = null;
+        selectedPharmacyId = null;
+        pharmaciesLoadError =
+            "Unable to load pharmacies. Tap refresh to retry.";
       });
-
-      _showMessage(
-        "unableToLoadPharmacies".tr(),
-        isError: true,
-      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -568,128 +565,22 @@ Future<void> submitOrder() async {
                     height: 15,
                   ),
 
-                  isLoading
-
-                      ? const Center(
-                          child:
-                              CircularProgressIndicator(
-                            color:
-                                primary,
-                          ),
-                        )
-
-                      : DropdownButtonFormField<
-                          String>(
-
-                          initialValue:
-                              selectedPharmacy,
-
-                          decoration:
-                              InputDecoration(
-
-                            filled:
-                                true,
-
-                            fillColor:
-                                Colors.grey
-                                    .shade100,
-
-                            prefixIcon:
-                                const Icon(
-                              Icons
-                                  .local_pharmacy,
-                              color:
-                                  primary,
-                            ),
-
-                            border:
-                                OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                15,
-                              ),
-
-                              borderSide:
-                                  BorderSide
-                                      .none,
-                            ),
-                          ),
-
-                          items:
-                              pharmacies.map<
-                                  DropdownMenuItem<
-                                      String>>(
-                            (pharmacy) {
-
-                              final name =
-                                  pharmacy[
-                                          "name"]
-                                      ?.toString() ??
-                                      "pharmacy".tr();
-
-                              return DropdownMenuItem<
-                                  String>(
-                                value:
-                                    name,
-
-                                child: Row(
-                                  children: [
-                                    HealthHomeProfileAvatar(
-                                      imageUrl:
-                                          pharmacy["profileImageUrl"]?.toString(),
-                                      radius: 16,
-                                      fallbackIcon: Icons.local_pharmacy,
-                                      backgroundColor:
-                                          const Color(0xffE8FAFB),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ).toList(),
-
-                          onChanged:
-                              isSubmitting
-                                  ? null
-                                  : (value) {
-
-                                      if (value ==
-                                          null) {
-                                        return;
-                                      }
-
-                                      final pharmacy =
-                                          pharmacies.firstWhere(
-                                        (p) =>
-                                            p[
-                                                    "name"]
-                                                ?.toString() ==
-                                            value,
-                                      );
-
-                                      setState(
-                                        () {
-
-                                          selectedPharmacy =
-                                              value;
-
-                                          selectedPharmacyId =
-                                              pharmacy[
-                                                      "_id"]
-                                                  ?.toString();
-                                        },
-                                      );
-                                    },
-                        ),
+                  ProviderPicker(
+                    providers: pharmacies,
+                    selectedId: selectedPharmacyId,
+                    title: "pharmacy".tr(),
+                    emptyMessage: "No pharmacies are available right now.",
+                    errorMessage: pharmaciesLoadError,
+                    fallbackIcon: Icons.local_pharmacy,
+                    isLoading: isLoading,
+                    onRetry: loadPharmacies,
+                    onSelected: (pharmacy) {
+                      setState(() {
+                        selectedPharmacyId = pharmacy["_id"]?.toString();
+                        selectedPharmacy = pharmacy["name"]?.toString();
+                      });
+                    },
+                  ),
                 ],
               ),
             ),

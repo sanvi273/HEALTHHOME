@@ -7,7 +7,7 @@ import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
-import '../../widgets/profile_image.dart';
+import '../../widgets/provider_picker.dart';
 
 import 'lab_order_tracking_page.dart';
 
@@ -36,6 +36,7 @@ class _UploadLabPrescriptionPageState
 
   bool isSubmitting = false;
   bool isLoading = true;
+  String? labsLoadError;
 
   final TextEditingController addressController =
       TextEditingController();
@@ -110,6 +111,12 @@ class _UploadLabPrescriptionPageState
   // ============================================================
 
   Future<void> loadLabs() async {
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+        labsLoadError = null;
+      });
+    }
     try {
       final data = await ApiService.getLabs();
 
@@ -125,9 +132,17 @@ class _UploadLabPrescriptionPageState
 
         selectedLab =
             labs.first["name"]?.toString();
+      } else {
+        selectedLabId = null;
+        selectedLab = null;
       }
     } catch (e) {
       debugPrint("LOAD LABS ERROR = $e");
+      labs = [];
+      selectedLabId = null;
+      selectedLab = null;
+      labsLoadError =
+          "Unable to load laboratories. Tap refresh to retry.";
     }
 
     if (!mounted) return;
@@ -541,113 +556,22 @@ Future<void> _showSuccessDialog(String orderId) async {
 
                   const SizedBox(height: 15),
 
-                  isLoading
-                      ? const Center(
-                          child:
-                              CircularProgressIndicator(
-                            color: primary,
-                          ),
-                        )
-                      : DropdownButtonFormField<
-                          String>(
-                          initialValue:
-                              selectedLabId,
-
-                          decoration:
-                              InputDecoration(
-                            filled: true,
-                            fillColor:
-                                Colors.grey.shade100,
-
-                            prefixIcon:
-                                const Icon(
-                              Icons
-                                  .local_hospital,
-                              color: primary,
-                            ),
-
-                            border:
-                                OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(
-                                15,
-                              ),
-
-                              borderSide:
-                                  BorderSide.none,
-                            ),
-                          ),
-
-                          items:
-                              labs.map<
-                                  DropdownMenuItem<
-                                      String>>(
-                            (lab) {
-                              final id =
-                                  lab["_id"]
-                                          ?.toString() ??
-                                      "";
-
-                              final name =
-                                  lab["name"]
-                                          ?.toString() ??
-                                      "laboratory".tr();
-
-                              return DropdownMenuItem<
-                                  String>(
-                                value: id,
-                                child: Row(
-                                  children: [
-                                    HealthHomeProfileAvatar(
-                                      imageUrl:
-                                          (lab["profileImageUrl"] ?? lab["image"])
-                                              ?.toString(),
-                                      radius: 16,
-                                      fallbackIcon: Icons.science,
-                                      backgroundColor:
-                                          const Color(0xffE8FAFB),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ).toList(),
-
-                          onChanged:
-                              isSubmitting
-                                  ? null
-                                  : (value) {
-                                      if (value ==
-                                          null) {
-                                        return;
-                                      }
-
-                                      final lab =
-                                          labs.firstWhere(
-                                        (item) =>
-                                            item["_id"]
-                                                ?.toString() ==
-                                            value,
-                                      );
-
-                                      setState(() {
-                                        selectedLabId =
-                                            value;
-
-                                        selectedLab =
-                                            lab["name"]
-                                                ?.toString();
-                                      });
-                                    },
-                        ),
+                  ProviderPicker(
+                    providers: labs,
+                    selectedId: selectedLabId,
+                    title: "laboratory".tr(),
+                    emptyMessage: "No laboratories are available right now.",
+                    errorMessage: labsLoadError,
+                    fallbackIcon: Icons.science,
+                    isLoading: isLoading,
+                    onRetry: loadLabs,
+                    onSelected: (lab) {
+                      setState(() {
+                        selectedLabId = lab["_id"]?.toString();
+                        selectedLab = lab["name"]?.toString();
+                      });
+                    },
+                  ),
                 ],
               ),
             ),

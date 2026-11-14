@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
 import '../../widgets/profile_image.dart';
+import '../../widgets/provider_picker.dart';
 import '../payment/payment_page.dart';
 
 class BookLabTestPage extends StatefulWidget {
@@ -33,6 +34,8 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
   bool isBooking = false;
   bool isLoadingTests = false;
   bool isLoadingAvailableTests = false;
+  bool isLoadingLabs = false;
+  String? labsLoadError;
 
   // Internal workflow inside this SAME file.
   // 0 = Test List
@@ -145,6 +148,12 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
   // =========================================================
 
   Future<void> loadLabs() async {
+    if (mounted) {
+      setState(() {
+        isLoadingLabs = true;
+        labsLoadError = null;
+      });
+    }
     try {
       final data = await ApiService.getLabs();
 
@@ -156,11 +165,22 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
         selectedLabName =
             labs.first["name"]?.toString();
+      } else {
+        selectedLabId = null;
+        selectedLabName = null;
       }
     } catch (e) {
       debugPrint(
         "LOAD LABS ERROR = $e",
       );
+      labs = [];
+      selectedLabId = null;
+      selectedLabName = null;
+      labsLoadError = "Unable to load laboratories. Tap refresh to retry.";
+    } finally {
+      if (mounted) {
+        setState(() => isLoadingLabs = false);
+      }
     }
   }
 
@@ -1150,87 +1170,23 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
             SizedBox(height: 15),
 
-            DropdownButtonFormField<String>(
-              initialValue: selectedLabId,
-
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-
-                prefixIcon: Icon(
-                  Icons.local_hospital,
-                  color: primaryColor,
-                ),
-
-                border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(15),
-                ),
-
-                contentPadding:
-                    EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-              ),
-
-              items:
-                  labs.map<
-                      DropdownMenuItem<String>>(
-                (lab) {
-                  final id =
-                      lab["_id"]?.toString() ??
-                          "";
-
-                  final name =
-                      lab["name"]?.toString() ??
-                          "laboratory".tr();
-
-                  return DropdownMenuItem<String>(
-                    value: id,
-                    child: Row(
-                      children: [
-                        HealthHomeProfileAvatar(
-                          imageUrl: (lab["profileImageUrl"] ?? lab["image"])
-                              ?.toString(),
-                          radius: 16,
-                          fallbackIcon: Icons.science,
-                          backgroundColor: primaryColor.withOpacity(.10),
-                          iconColor: primaryColor,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ).toList(),
-
-              onChanged: (value) async {
-                if (value == null) return;
-
-                final selected =
-                    labs.firstWhere(
-                  (lab) =>
-                      lab["_id"]?.toString() ==
-                      value,
-                );
-
+            ProviderPicker(
+              providers: labs,
+              selectedId: selectedLabId,
+              title: "laboratory".tr(),
+              emptyMessage: "No laboratories are available right now.",
+              errorMessage: labsLoadError,
+              fallbackIcon: Icons.science,
+              isLoading: isLoadingLabs,
+              onRetry: loadLabs,
+              onSelected: (lab) async {
+                final id = lab["_id"]?.toString() ?? "";
+                if (id.isEmpty) return;
                 setState(() {
-                  selectedLabId = value;
-                  selectedLabName =
-                      selected["name"]
-                              ?.toString() ??
-                          "";
+                  selectedLabId = id;
+                  selectedLabName = lab["name"]?.toString() ?? "";
                 });
-
-                await loadLabTests(value);
+                await loadLabTests(id);
               },
             ),
 

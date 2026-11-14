@@ -687,8 +687,21 @@ class ApiService {
     );
 
     final data = jsonDecode(response.body);
+    if (data is! Map) {
+      throw Exception("The server returned an invalid laboratories response.");
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        data["message"]?.toString() ?? "Unable to load laboratories.",
+      );
+    }
+    if (data["success"] != true || data["labs"] is! List) {
+      throw Exception(
+        data["message"]?.toString() ?? "Unable to load laboratories.",
+      );
+    }
 
-    return data["labs"] ?? [];
+    return List<dynamic>.from(data["labs"] as List);
   }
 
   static Future<Map<String, dynamic>> getLabProfile(
@@ -742,8 +755,21 @@ class ApiService {
     );
 
     final data = jsonDecode(response.body);
+    if (data is! Map) {
+      throw Exception("The server returned an invalid pharmacies response.");
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        data["message"]?.toString() ?? "Unable to load pharmacies.",
+      );
+    }
+    if (data["success"] != true || data["pharmacies"] is! List) {
+      throw Exception(
+        data["message"]?.toString() ?? "Unable to load pharmacies.",
+      );
+    }
 
-    return data["pharmacies"] ?? [];
+    return List<dynamic>.from(data["pharmacies"] as List);
   }
 
   static Future<Map<String, dynamic>> getPharmacyProfile(
@@ -1620,6 +1646,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/orders/pharmacy/$pharmacyId",
       ),
+      headers: await _getAuthHeaders(),
     );
 
     return jsonDecode(response.body);
