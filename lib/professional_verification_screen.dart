@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +10,7 @@ import 'lab_dashboard.dart';
 import 'pharmacy_profile_setup.dart';
 import 'pharmacy_dashboard.dart';
 import 'screens/doctor_dashboard.dart';
+import 'role_selection_screen.dart';
 import 'services/api_service.dart';
 import 'services/incoming_call_service.dart';
 
@@ -46,12 +49,22 @@ class _ProfessionalVerificationScreenState
       TextEditingController();
   bool _isSubmitting = false;
   bool _isUploading = false;
+  bool _isCheckingStatus = false;
+  Timer? _statusRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _licenseTypeController.text = _defaultDocumentType;
     loadVerification();
+    _statusRefreshTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) {
+        if (mounted && !_isSubmitting && !_isUploading) {
+          loadVerification();
+        }
+      },
+    );
   }
 
   String get _roleKey => widget.role.trim().toLowerCase();
@@ -112,6 +125,8 @@ class _ProfessionalVerificationScreenState
   // =========================================================
 
   Future<void> loadVerification() async {
+    if (_isCheckingStatus) return;
+    _isCheckingStatus = true;
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -226,6 +241,8 @@ class _ProfessionalVerificationScreenState
           ),
         ),
       );
+    } finally {
+      _isCheckingStatus = false;
     }
   }
 
@@ -375,6 +392,7 @@ class _ProfessionalVerificationScreenState
 
   @override
   void dispose() {
+    _statusRefreshTimer?.cancel();
     _licenseNumberController.dispose();
     _licenseTypeController.dispose();
     _organizationController.dispose();
@@ -421,6 +439,12 @@ class _ProfessionalVerificationScreenState
 
         return "Your verification application was rejected.";
 
+      case "PENDING":
+        if (licenseNumber.trim().isEmpty || documents.isEmpty) {
+          return "Submit your professional license and at least one document. Admin approval is required before you can use this account.";
+        }
+        return "Your verification application is waiting for admin approval.";
+
       default:
         return "Your verification application is waiting for admin approval.";
     }
@@ -456,6 +480,9 @@ class _ProfessionalVerificationScreenState
 
     await IncomingCallService.unregisterCurrentDevice();
     await prefs.remove("token");
+    await prefs.remove("userName");
+    await prefs.remove("userPhone");
+    await prefs.remove("userRole");
 
     await prefs.setBool(
       "isLoggedIn",
@@ -464,9 +491,12 @@ class _ProfessionalVerificationScreenState
 
     if (!mounted) return;
 
-    Navigator.popUntil(
+    Navigator.pushAndRemoveUntil(
       context,
-      (route) => route.isFirst,
+      MaterialPageRoute(
+        builder: (_) => const RoleSelectionScreen(),
+      ),
+      (route) => false,
     );
   }
 

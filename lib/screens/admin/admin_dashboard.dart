@@ -197,6 +197,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
       return;
     }
 
+    final licenseNumber = _value(item, ['licenseNumber'], fallback: '');
+    final documents = item is Map && item['documents'] is List
+        ? List<dynamic>.from(item['documents'] as List)
+        : <dynamic>[];
+    final hasUploadedDocument = documents.any((document) {
+      if (document is! Map) return false;
+      return (document['url']?.toString().trim().isNotEmpty ?? false);
+    });
+    if (licenseNumber.isEmpty || !hasUploadedDocument) {
+      _message(
+        'This application needs a license number and an uploaded document before approval.',
+        error: true,
+      );
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(

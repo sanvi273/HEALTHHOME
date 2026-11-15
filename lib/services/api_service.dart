@@ -801,9 +801,7 @@ class ApiService {
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/pharmacies/add"),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "name": name,
         "shopType": shopType,
@@ -1661,9 +1659,7 @@ class ApiService {
         Uri.parse(
           "$baseUrl/api/orders/status/$orderId",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
         body: jsonEncode({
           "status": status,
         }),
@@ -1696,7 +1692,7 @@ class ApiService {
               "$baseUrl/api/orders/delivery-agent/$orderId",
             ),
             headers: {
-              "Content-Type": "application/json",
+              ...await _getAuthHeaders(),
             },
             body: jsonEncode({
               "deliveryAgentName": deliveryAgentName,
@@ -1736,9 +1732,7 @@ class ApiService {
           "$baseUrl/api/orders/delivery-agent/"
           "remove/$orderId",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
       );
 
       final data = jsonDecode(response.body);
@@ -2199,6 +2193,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/lab-orders/accept/$orderId",
       ),
+      headers: await _getAuthHeaders(),
     );
 
     return Map<String, dynamic>.from(
@@ -2213,6 +2208,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/lab-orders/reject/$orderId",
       ),
+      headers: await _getAuthHeaders(),
     );
 
     return Map<String, dynamic>.from(
@@ -2231,7 +2227,7 @@ class ApiService {
   }) async {
     final response = await http.put(
       Uri.parse("$baseUrl/api/lab-orders/cancel/$orderId"),
-      headers: {"Content-Type": "application/json"},
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "patientId": patientId,
         "cancelledBy": "Patient",
@@ -2304,7 +2300,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/lab-orders/reschedule/$orderId/decision",
       ),
-      headers: {"Content-Type": "application/json"},
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "labId": labId,
         "decision": decision,
@@ -2332,9 +2328,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/lab-orders/assign-collector/$orderId",
       ),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "collectorId": collectorId,
         "collectorName": collectorName,
@@ -2355,6 +2349,7 @@ class ApiService {
         "$baseUrl/api/lab-orders/"
         "collector-on-the-way/$orderId",
       ),
+      headers: await _getAuthHeaders(),
     );
 
     return Map<String, dynamic>.from(
@@ -2375,9 +2370,7 @@ class ApiService {
           "$baseUrl/api/lab-orders/"
           "generate-collection-otp/$orderId",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
       );
 
       return Map<String, dynamic>.from(
@@ -2400,6 +2393,7 @@ class ApiService {
           "$baseUrl/api/lab-orders/"
           "collection-otp/$orderId",
         ),
+        headers: await _getAuthHeaders(),
       );
 
       return Map<String, dynamic>.from(
@@ -2423,9 +2417,7 @@ class ApiService {
           "$baseUrl/api/lab-orders/"
           "verify-collection-otp/$orderId",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
         body: jsonEncode({
           "otp": otp,
         }),
@@ -2450,6 +2442,7 @@ class ApiService {
         "$baseUrl/api/lab-orders/"
         "sample-collected/$orderId",
       ),
+      headers: await _getAuthHeaders(),
     );
 
     return Map<String, dynamic>.from(
@@ -2465,6 +2458,7 @@ class ApiService {
         "$baseUrl/api/lab-orders/"
         "sample-received/$orderId",
       ),
+      headers: await _getAuthHeaders(),
     );
 
     return Map<String, dynamic>.from(
@@ -2480,6 +2474,7 @@ class ApiService {
         "$baseUrl/api/lab-orders/"
         "start-testing/$orderId",
       ),
+      headers: await _getAuthHeaders(),
     );
 
     return Map<String, dynamic>.from(
@@ -2495,9 +2490,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/lab-orders/status/$orderId",
       ),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "status": status,
       }),
@@ -2529,9 +2522,7 @@ class ApiService {
         Uri.parse(
           "$baseUrl/api/lab-orders/report/$orderId",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
         body: jsonEncode({
           "reports": reports,
         }),
@@ -3210,9 +3201,7 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/api/labs/tests/add"),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
         body: jsonEncode({
           "labId": labId,
           "labName": labName,
@@ -3319,9 +3308,7 @@ class ApiService {
     try {
       final response = await http.put(
         Uri.parse("$baseUrl/api/labs/tests/$id"),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
         body: jsonEncode({
           "testName": testName,
           "category": category,
@@ -3349,6 +3336,7 @@ class ApiService {
     try {
       final response = await http.delete(
         Uri.parse("$baseUrl/api/labs/tests/$id"),
+        headers: await _getAuthHeaders(),
       );
 
       return Map<String, dynamic>.from(
@@ -3370,9 +3358,7 @@ class ApiService {
         Uri.parse(
           "$baseUrl/api/labs/tests/toggle/$id",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
       );
 
       return Map<String, dynamic>.from(
@@ -3443,9 +3429,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/orders/delivery-otp/$orderId",
       ),
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "otp": otp,
       }),
@@ -3477,6 +3461,7 @@ class ApiService {
           "$baseUrl/api/pharmacies/"
           "$encodedPhone/delivery-partners",
         ),
+        headers: await _getAuthHeaders(),
       );
 
       final data = jsonDecode(response.body);
@@ -3512,9 +3497,7 @@ class ApiService {
           "$baseUrl/api/pharmacies/"
           "$encodedPhone/delivery-partners",
         ),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await _getAuthHeaders(),
         body: jsonEncode({
           "name": name,
           "phone": phone,
@@ -3554,6 +3537,7 @@ class ApiService {
           "$encodedPhone/delivery-partners/"
           "$encodedPartnerId",
         ),
+        headers: await _getAuthHeaders(),
       );
 
       final data = jsonDecode(response.body);
@@ -3761,7 +3745,7 @@ class ApiService {
       Uri.parse(
         "$baseUrl/api/lab-orders/reschedule/$orderId/propose",
       ),
-      headers: {"Content-Type": "application/json"},
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
         "labId": labId,
         "scheduledAt": scheduledAt.toUtc().toIso8601String(),

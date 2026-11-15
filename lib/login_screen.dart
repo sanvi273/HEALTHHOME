@@ -1399,6 +1399,47 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
+    final roleKey = widget.role.trim().toLowerCase();
+    final isProfessional =
+        ["doctor", "laboratory", "lab", "pharmacy"].contains(roleKey);
+    if (isProfessional) {
+      final user = initiation["user"] is Map
+          ? Map<String, dynamic>.from(initiation["user"] as Map)
+          : <String, dynamic>{};
+      final token = initiation["token"]?.toString().trim() ?? "";
+      if (token.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Account created. Sign in to continue your verification.",
+            ),
+          ),
+        );
+        setState(() {
+          isLogin = true;
+          passwordController.clear();
+        });
+        return;
+      }
+
+      await prefs.setString("token", token);
+      await prefs.setBool("isLoggedIn", true);
+      await prefs.setString("userName", user["name"]?.toString() ?? name);
+      await prefs.setString("userPhone", user["phone"]?.toString() ?? phone);
+      await prefs.setString("userRole", roleKey == "lab" ? "laboratory" : roleKey);
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProfessionalVerificationScreen(
+            role: roleKey == "lab" ? "laboratory" : roleKey,
+          ),
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

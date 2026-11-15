@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'login_screen.dart';
+import 'terms_acceptance_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -210,7 +211,12 @@ class RoleSelectionScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => LoginScreen(role: role),
+                builder: (_) => role.toLowerCase() == 'admin'
+                    ? LoginScreen(role: role)
+                    : TermsAcceptanceScreen(
+                        selectedRole: role.toLowerCase(),
+                        roleLabel: role,
+                      ),
               ),
             );
           },

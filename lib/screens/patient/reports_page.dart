@@ -1,13 +1,114 @@
 import 'dart:io';
+import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:open_filex/open_filex.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../services/api_service.dart';
+
+Future<File> _downloadLabReportFile(
+  String url,
+  String requestedFileName, {
+  bool expectPdf = false,
+}) async {
+  final uri = Uri.tryParse(url.trim());
+  if (uri == null || !const {"http", "https"}.contains(uri.scheme)) {
+    throw Exception("The report link is invalid.");
+  }
+
+  var fileName = requestedFileName.trim();
+  fileName = fileName.split(RegExp(r'[/\\]')).last;
+  fileName = fileName.replaceAll(
+    RegExp(r'[<>:"/\\|?*\x00-\x1F]'),
+    "_",
+  );
+  if (fileName.isEmpty) {
+    fileName = "lab_report_${DateTime.now().millisecondsSinceEpoch}";
+  }
+  if (expectPdf && !fileName.toLowerCase().endsWith(".pdf")) {
+    fileName = "$fileName.pdf";
+  }
+
+  final directory = await getApplicationDocumentsDirectory();
+  final file = File(
+    "${directory.path}${Platform.pathSeparator}$fileName",
+  );
+
+  try {
+    final response = await http
+        .get(
+          uri,
+          headers: {"Accept": expectPdf ? "application/pdf,*/*" : "*/*"},
+        )
+        .timeout(const Duration(seconds: 90));
+
+    final statusCode = response.statusCode;
+    if (statusCode < 200 || statusCode >= 300) {
+      if (statusCode == 401 || statusCode == 403) {
+        throw Exception("The report server denied access (HTTP $statusCode).");
+      }
+      if (statusCode == 404) {
+        throw Exception("The report file was not found on the report server.");
+      }
+      throw Exception("Report download failed (HTTP $statusCode).");
+    }
+
+    if (response.bodyBytes.isEmpty) {
+      throw Exception("The downloaded report file is empty.");
+    }
+
+    if (expectPdf) {
+      final header = String.fromCharCodes(
+        response.bodyBytes.take(1024).toList(),
+      );
+      if (!header.contains("%PDF-")) {
+        throw Exception(
+          "The report link did not return a valid PDF. Ask the laboratory to upload the report again.",
+        );
+      }
+    }
+
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+    return file;
+  } on TimeoutException {
+    if (await file.exists()) await file.delete();
+    throw Exception("Report download timed out. Check your connection and retry.");
+  } on http.ClientException catch (error) {
+    if (await file.exists()) await file.delete();
+    throw Exception("A network error prevented the report download: $error");
+  } catch (error) {
+    if (await file.exists()) {
+      await file.delete();
+    }
+    rethrow;
+  }
+}
+
+class LabPdfReportViewer extends StatelessWidget {
+  final String title;
+  final List<int> bytes;
+
+  const LabPdfReportViewer({
+    super.key,
+    required this.title,
+    required this.bytes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      ),
+      body: SfPdfViewer.memory(bytes),
+    );
+  }
+}
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -202,52 +303,6 @@ class _ReportsPageState extends State<ReportsPage> {
   // DOWNLOAD FILE
   // ============================================================
 
-  Future<File?> downloadFile(
-    String url,
-    String fileName,
-  ) async {
-    try {
-      final Directory dir =
-          await getApplicationDocumentsDirectory();
-
-      String safeFileName =
-          fileName.trim();
-
-      if (safeFileName.isEmpty) {
-        safeFileName =
-            "lab_report_${DateTime.now().millisecondsSinceEpoch}";
-      }
-
-      final String filePath =
-          "${dir.path}/$safeFileName";
-
-      debugPrint(
-        "DOWNLOADING REPORT",
-      );
-
-      debugPrint(
-        "URL = $url",
-      );
-
-      debugPrint(
-        "PATH = $filePath",
-      );
-
-      await Dio().download(
-        url,
-        filePath,
-      );
-
-      return File(filePath);
-    } catch (e) {
-      debugPrint(
-        "DOWNLOAD ERROR = $e",
-      );
-
-      return null;
-    }
-  }
-
   // ============================================================
   // DOWNLOAD ALL REPORT FILES
   // ============================================================
@@ -271,15 +326,12 @@ class _ReportsPageState extends State<ReportsPage> {
 
         if (url.isEmpty) continue;
 
-        final File? file =
-            await downloadFile(
+        await _downloadLabReportFile(
           url,
           fileName,
+          expectPdf: isPdf(report),
         );
-
-        if (file != null) {
-          successCount++;
-        }
+        successCount++;
       }
 
       if (!mounted) return;
@@ -358,20 +410,23 @@ class _ReportsPageState extends State<ReportsPage> {
     }
 
     try {
-      final File? file =
-          await downloadFile(
+      final File file = await _downloadLabReportFile(
         url,
         fileName,
+        expectPdf: true,
       );
-
-      if (file == null) {
-        throw Exception(
-          "unableToDownloadPdf".tr(),
-        );
-      }
-
-      await OpenFilex.open(
-        file.path,
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LabPdfReportViewer(
+            title: report["reportName"]?.toString().trim().isNotEmpty == true
+                ? report["reportName"].toString().trim()
+                : fileName,
+            bytes: bytes,
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -379,7 +434,7 @@ class _ReportsPageState extends State<ReportsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "${"unableToOpenPdf".tr()} $e",
+            "${"unableToOpenPdf".tr()} ${e.toString().replaceFirst("Exception: ", "")}",
           ),
           backgroundColor:
               Colors.red,
@@ -1026,19 +1081,23 @@ class _ReportViewerPageState
     if (url.isEmpty) return;
 
     try {
-      final Directory dir =
-          await getApplicationDocumentsDirectory();
-
-      final String path =
-          "${dir.path}/$fileName";
-
-      await Dio().download(
+      final File file = await _downloadLabReportFile(
         url,
-        path,
+        fileName,
+        expectPdf: true,
       );
-
-      await OpenFilex.open(
-        path,
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LabPdfReportViewer(
+            title: report["reportName"]?.toString().trim().isNotEmpty == true
+                ? report["reportName"].toString().trim()
+                : fileName,
+            bytes: bytes,
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -1046,8 +1105,9 @@ class _ReportViewerPageState
       ScaffoldMessenger.of(context)
           .showSnackBar(
         SnackBar(
-          content:
-              Text("${"unableToOpenPdf".tr()} $e"),
+          content: Text(
+            "${"unableToOpenPdf".tr()} ${e.toString().replaceFirst("Exception: ", "")}",
+          ),
         ),
       );
     }

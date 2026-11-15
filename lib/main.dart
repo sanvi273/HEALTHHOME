@@ -18,6 +18,7 @@ import 'lab_dashboard.dart';
 import 'pharmacy_dashboard.dart';
 import 'responsive/responsive_wrapper.dart';
 import 'screens/admin/admin_dashboard.dart';
+import 'professional_verification_screen.dart';
 
 // ======================================================
 // MAIN
@@ -306,6 +307,8 @@ class _CheckLoginScreenState
             ) ??
             "";
 
+    final String token = prefs.getString("token") ?? "";
+
     // ==================================================
     // DEBUG
     // ==================================================
@@ -353,6 +356,20 @@ class _CheckLoginScreenState
 
     final normalizedRole =
         role.trim().toLowerCase();
+
+    // Provider sessions must always re-check the server's latest review
+    // status before opening a dashboard. The verification screen redirects
+    // approved accounts to their dashboard and keeps the others in review.
+    if (["doctor", "lab", "laboratory", "pharmacy"]
+            .contains(normalizedRole)) {
+      if (token.trim().isEmpty) {
+        await _clearSession();
+        _openOnboarding();
+        return;
+      }
+      _openPage(ProfessionalVerificationScreen(role: normalizedRole));
+      return;
+    }
 
     debugPrint(
       "✅ ACTIVE SESSION FOUND",
