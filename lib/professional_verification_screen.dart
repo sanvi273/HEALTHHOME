@@ -50,6 +50,7 @@ class _ProfessionalVerificationScreenState
   bool _isSubmitting = false;
   bool _isUploading = false;
   bool _isCheckingStatus = false;
+  bool _hasUnsavedApplicationChanges = false;
   Timer? _statusRefreshTimer;
 
   @override
@@ -179,21 +180,23 @@ class _ProfessionalVerificationScreenState
                       .toUpperCase() ??
                   "PENDING";
 
-          licenseNumber =
-              verification["licenseNumber"]
-                      ?.toString() ??
-                  "";
-          _licenseNumberController.text = licenseNumber;
+          if (!_hasUnsavedApplicationChanges) {
+            licenseNumber =
+                verification["licenseNumber"]
+                        ?.toString() ??
+                    "";
+            _licenseNumberController.text = licenseNumber;
 
-          organizationName =
-              verification["organizationName"]
-                      ?.toString() ??
-                  "";
-          _organizationController.text = organizationName;
-          _registrationNumberController.text =
-              verification["registrationNumber"]?.toString() ?? "";
-          if (_licenseTypeController.text.trim().isEmpty) {
-            _licenseTypeController.text = _defaultDocumentType;
+            organizationName =
+                verification["organizationName"]
+                        ?.toString() ??
+                    "";
+            _organizationController.text = organizationName;
+            _registrationNumberController.text =
+                verification["registrationNumber"]?.toString() ?? "";
+            if (_licenseTypeController.text.trim().isEmpty) {
+              _licenseTypeController.text = _defaultDocumentType;
+            }
           }
 
           address =
@@ -309,6 +312,7 @@ class _ProfessionalVerificationScreenState
       if (response["success"] != true) {
         throw Exception(response["message"] ?? "Unable to submit documents.");
       }
+      _hasUnsavedApplicationChanges = false;
       await loadVerification();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -346,6 +350,10 @@ class _ProfessionalVerificationScreenState
 
       setState(() => _isUploading = true);
       final prefs = await SharedPreferences.getInstance();
+      final submittedLicenseNumber = _licenseNumberController.text.trim();
+      final submittedOrganizationName = _organizationController.text.trim();
+      final submittedRegistrationNumber =
+          _registrationNumberController.text.trim();
       final result = await ApiService.uploadVerificationDocument(
         token: prefs.getString("token") ?? "",
         bytes: file.bytes!,
@@ -353,6 +361,9 @@ class _ProfessionalVerificationScreenState
         documentType: _licenseTypeController.text.trim().isEmpty
             ? _defaultDocumentType
             : _licenseTypeController.text.trim(),
+        licenseNumber: submittedLicenseNumber,
+        organizationName: submittedOrganizationName,
+        registrationNumber: submittedRegistrationNumber,
       );
       if (result["success"] != true || result["document"] is! Map) {
         throw Exception(result["message"] ?? "Document upload failed.");
@@ -370,6 +381,12 @@ class _ProfessionalVerificationScreenState
               uploadedUrl.isNotEmpty,
         );
         if (!alreadyListed) documents = [...documents, uploadedDocument];
+        if (_licenseNumberController.text.trim() == submittedLicenseNumber &&
+            _organizationController.text.trim() == submittedOrganizationName &&
+            _registrationNumberController.text.trim() ==
+                submittedRegistrationNumber) {
+          _hasUnsavedApplicationChanges = false;
+        }
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -707,6 +724,8 @@ class _ProfessionalVerificationScreenState
                             const SizedBox(height: 12),
                             TextField(
                               controller: _licenseNumberController,
+                              onChanged: (_) =>
+                                  _hasUnsavedApplicationChanges = true,
                               decoration: InputDecoration(
                                 labelText: _licenseNumberLabel,
                                 border: OutlineInputBorder(),
@@ -734,12 +753,15 @@ class _ProfessionalVerificationScreenState
                               onChanged: (value) {
                                 if (value != null) {
                                   _licenseTypeController.text = value;
+                                  _hasUnsavedApplicationChanges = true;
                                 }
                               },
                             ),
                             const SizedBox(height: 10),
                             TextField(
                               controller: _organizationController,
+                              onChanged: (_) =>
+                                  _hasUnsavedApplicationChanges = true,
                               decoration: const InputDecoration(
                                 labelText: "Organization name (optional)",
                                 border: OutlineInputBorder(),
@@ -748,6 +770,8 @@ class _ProfessionalVerificationScreenState
                             const SizedBox(height: 10),
                             TextField(
                               controller: _registrationNumberController,
+                              onChanged: (_) =>
+                                  _hasUnsavedApplicationChanges = true,
                               decoration: const InputDecoration(
                                 labelText: "Registration number (optional)",
                                 border: OutlineInputBorder(),

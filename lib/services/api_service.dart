@@ -313,6 +313,9 @@ class ApiService {
     required List<int> bytes,
     required String filename,
     required String documentType,
+    String licenseNumber = "",
+    String organizationName = "",
+    String registrationNumber = "",
   }) async {
     try {
       final extension = filename.split('.').last.toLowerCase();
@@ -335,6 +338,9 @@ class ApiService {
       )
         ..headers["Authorization"] = "Bearer $token"
         ..fields["type"] = documentType
+        ..fields["licenseNumber"] = licenseNumber
+        ..fields["organizationName"] = organizationName
+        ..fields["registrationNumber"] = registrationNumber
         ..files.add(
           http.MultipartFile.fromBytes(
             "document",
