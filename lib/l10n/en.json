@@ -320,6 +320,7 @@
   "foodLabel": "Food",
   "instructionsLabel": "Instructions",
   "ordered": "Ordered",
+  "notOrdered": "Not ordered",
   "labTest": "Lab Test",
   "priorityLabel": "Priority",
   "noteLabel": "Note",

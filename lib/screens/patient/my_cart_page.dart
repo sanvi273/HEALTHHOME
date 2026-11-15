@@ -193,9 +193,82 @@ class _MyCartPageState extends State<MyCartPage> {
   }
 
   // ============================================================
+  // INVENTORY RESOLUTION BY SELECTED PHARMACY
+  // ============================================================
+  String _normalizePhone(Object? value) {
+    final digits = (value?.toString() ?? "").replaceAll(RegExp(r"\D"), "");
+    return digits.length > 10 ? digits.substring(digits.length - 10) : digits;
+  }
+
+  Map<String, dynamic>? _inventoryMedicineForPharmacy(
+    String pharmacyPhone,
+    String medicineName,
+  ) {
+    final normalizedPhone = _normalizePhone(pharmacyPhone);
+    final normalizedName =
+        medicineName.trim().replaceAll(RegExp(r"\s+"), " ").toLowerCase();
+    if (normalizedPhone.isEmpty || normalizedName.isEmpty) return null;
+
+    for (final rawMedicine in medicineRecords.whereType<Map>()) {
+      final medicine = Map<String, dynamic>.from(rawMedicine);
+      final sameName = medicine["medicineName"]
+              ?.toString()
+              .trim()
+              .replaceAll(RegExp(r"\s+"), " ")
+              .toLowerCase() ==
+          normalizedName;
+      final samePharmacy =
+          _normalizePhone(medicine["pharmacyPhone"]) == normalizedPhone;
+      final stock = int.tryParse(medicine["stock"]?.toString() ?? "0") ?? 0;
+      final status = medicine["status"]?.toString().trim().toLowerCase() ?? "";
+
+      if (sameName &&
+          samePharmacy &&
+          stock > 0 &&
+          (status.isEmpty || status == "available")) {
+        return medicine;
+      }
+    }
+    return null;
+  }
+
+  void selectPharmacy(String? pharmacyId) {
+    if (pharmacyId == null) return;
+    final pharmacy = pharmacies.whereType<Map>().firstWhere(
+          (item) => item["_id"]?.toString() == pharmacyId,
+          orElse: () => <String, dynamic>{},
+        );
+    final pharmacyPhone = pharmacy["phone"]?.toString() ?? "";
+
+    setState(() {
+      selectedPharmacyId = pharmacyId;
+      if (pharmacyPhone.trim().isEmpty) return;
+
+      cartItems = cartItems.map((rawItem) {
+        if (rawItem is! Map) return rawItem;
+        final item = Map<String, dynamic>.from(rawItem);
+        final medicineName = item["medicine"]?.toString() ??
+            item["medicineName"]?.toString() ??
+            "";
+        final inventory = _inventoryMedicineForPharmacy(
+          pharmacyPhone,
+          medicineName,
+        );
+        if (inventory == null) return item;
+
+        final quantity = int.tryParse(item["quantity"]?.toString() ?? "1") ?? 1;
+        final price = double.tryParse(inventory["price"]?.toString() ?? "0") ?? 0;
+        item["medicineId"] = inventory["_id"]?.toString() ?? item["medicineId"];
+        item["price"] = price;
+        item["subtotal"] = price * quantity;
+        return item;
+      }).toList();
+    });
+  }
+
+  // ============================================================
   // BUILD
   // ============================================================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -931,11 +1004,14 @@ class _MyCartPageState extends State<MyCartPage> {
   // ============================================================
 
   Widget buildPharmacyDropdown() {
-    final pharmacyOptions = pharmacies
-        .whereType<Map>()
-        .where((pharmacy) =>
-            pharmacy["_id"]?.toString().trim().isNotEmpty == true)
-        .toList();
+    final pharmacyOptions = <Map>[];
+    final seenPharmacyIds = <String>{};
+    for (final pharmacy in pharmacies.whereType<Map>()) {
+      final id = pharmacy["_id"]?.toString().trim() ?? "";
+      if (id.isNotEmpty && seenPharmacyIds.add(id)) {
+        pharmacyOptions.add(pharmacy);
+      }
+    }
 
     return DropdownButtonFormField<String>(
       initialValue:
@@ -967,6 +1043,32 @@ class _MyCartPageState extends State<MyCartPage> {
           ),
         ),
       ),
+
+      // The closed field has a strict height. Keep its selected value to
+      // one line; the menu below can still show the address and phone.
+      selectedItemBuilder: (context) => pharmacyOptions.map((pharmacy) {
+        final name = pharmacy["name"]?.toString().trim() ?? "pharmacy".tr();
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Row(
+            children: [
+              HealthHomeProfileAvatar(
+                imageUrl: pharmacy["profileImageUrl"]?.toString(),
+                radius: 13,
+                fallbackIcon: Icons.local_pharmacy,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
 
       items: pharmacyOptions.map(
         (pharmacy) {
@@ -1021,15 +1123,7 @@ class _MyCartPageState extends State<MyCartPage> {
         },
       ).toList(),
 
-      onChanged:
-          isPlacingOrder
-              ? null
-              : (value) {
-                  setState(() {
-                    selectedPharmacyId =
-                        value;
-                  });
-                },
+      onChanged: isPlacingOrder ? null : selectPharmacy,
     );
   }
 
@@ -1257,14 +1351,21 @@ class _MyCartPageState extends State<MyCartPage> {
           cartItems.map<
               Map<String, dynamic>>(
         (item) {
+          final medicineName = item["medicine"]?.toString() ??
+              item["medicineName"]?.toString() ??
+              "";
+          final inventoryMedicine = _inventoryMedicineForPharmacy(
+            pharmacy["phone"]?.toString() ?? "",
+            medicineName,
+          );
           final medicineId =
-              item["medicineId"]
-                      ?.toString() ??
-                  "";
+              inventoryMedicine?["_id"]?.toString() ??
+              item["medicineId"]?.toString() ??
+              "";
 
-          if (medicineId.isEmpty) {
+          if (medicineId.isEmpty && medicineName.trim().isEmpty) {
             throw Exception(
-              "Medicine ID is missing for ${item["medicine"] ?? "medicine"}.",
+              "Medicine information is missing for this cart item.",
             );
           }
 
@@ -1276,33 +1377,20 @@ class _MyCartPageState extends State<MyCartPage> {
                   ) ??
                   1;
 
-          final price =
-              double.tryParse(
-                    item["price"]?.toString() ?? "0",
-                  ) ??
-                  0;
-
-          if (price <= 0) {
-            throw Exception(
-              "Invalid price for ${item["medicine"] ?? item["medicineName"] ?? "medicine"}.",
-            );
-          }
+          final price = double.tryParse(
+                inventoryMedicine?["price"]?.toString() ??
+                    item["price"]?.toString() ??
+                    "0",
+              ) ??
+              0;
 
           final itemSubtotal = price * quantity;
-
-          if (itemSubtotal <= 0) {
-            throw Exception(
-              "Unable to calculate subtotal for ${item["medicine"] ?? item["medicineName"] ?? "medicine"}.",
-            );
-          }
 
           return {
             "medicineId": medicineId,
 
-            "medicineName":
-                item["medicine"]?.toString() ??
-                item["medicineName"]?.toString() ??
-                "medicine".tr(),
+            "medicineName": inventoryMedicine?["medicineName"]?.toString() ??
+                medicineName,
 
             "quantity": quantity,
 
@@ -1314,6 +1402,10 @@ class _MyCartPageState extends State<MyCartPage> {
             // IMPORTANT:
             // Never send a hardcoded zero subtotal.
             "subtotal": itemSubtotal,
+            "prescriptionId":
+                item["prescriptionId"]?.toString().trim() ?? "",
+            "prescriptionMedicineId":
+                item["prescriptionMedicineId"]?.toString().trim() ?? "",
           };
         },
       ).toList();
@@ -1395,6 +1487,7 @@ class _MyCartPageState extends State<MyCartPage> {
         // Backend determines the real payment state.
         paymentStatus:
             "Pending",
+
       );
 
       debugPrint(

@@ -880,45 +880,56 @@ class ApiService {
 
     final data = jsonDecode(response.body);
 
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = data is Map ? data["message"] : null;
+      throw Exception(message?.toString() ?? "Unable to load pharmacy inventory.");
+    }
+
+    if (data is! Map || data["medicines"] is! List) {
+      throw Exception("The pharmacy inventory response was invalid.");
+    }
+
     return data["medicines"] ?? [];
   }
 
   static Future<List<dynamic>> findMedicinesByName(
     String medicineName,
   ) async {
-    try {
-      final allMedicines = await getMedicines();
+    final allMedicines = await getMedicines();
 
-      final searchName = medicineName.trim().toLowerCase();
+    final searchName =
+        medicineName.trim().replaceAll(RegExp(r"\s+"), " ").toLowerCase();
 
-      if (searchName.isEmpty) {
-        return [];
-      }
-
-      final matchedMedicines = allMedicines.where((item) {
-        if (item is! Map) {
-          return false;
-        }
-
-        final inventoryName =
-            item["medicineName"]?.toString().trim().toLowerCase() ?? "";
-
-        final stock = int.tryParse(
-              item["stock"]?.toString() ?? "0",
-            ) ??
-            0;
-
-        final status = item["status"]?.toString().trim().toLowerCase() ?? "";
-
-        return inventoryName == searchName &&
-            stock > 0 &&
-            (status.isEmpty || status == "available");
-      }).toList();
-
-      return matchedMedicines;
-    } catch (e) {
+    if (searchName.isEmpty) {
       return [];
     }
+
+    final matchedMedicines = allMedicines.where((item) {
+      if (item is! Map) {
+        return false;
+      }
+
+      final inventoryName =
+          item["medicineName"]
+                  ?.toString()
+                  .trim()
+                  .replaceAll(RegExp(r"\s+"), " ")
+                  .toLowerCase() ??
+              "";
+
+      final stock = double.tryParse(
+            item["stock"]?.toString() ?? "0",
+          ) ??
+          0;
+
+      final status = item["status"]?.toString().trim().toLowerCase() ?? "";
+
+      return inventoryName == searchName &&
+          stock > 0 &&
+          (status.isEmpty || status == "available");
+    }).toList();
+
+    return matchedMedicines;
   }
 
   static Future<Map<String, dynamic>> getInventoryStats() async {
@@ -1773,6 +1784,8 @@ class ApiService {
     required String food,
     required String instruction,
     required int quantity,
+    String prescriptionId = "",
+    String prescriptionMedicineId = "",
   }) async {
     final response = await http.post(
       Uri.parse("$baseUrl/api/cart/add"),
@@ -1789,6 +1802,8 @@ class ApiService {
         "food": food,
         "instruction": instruction,
         "quantity": quantity,
+        "prescriptionId": prescriptionId,
+        "prescriptionMedicineId": prescriptionMedicineId,
       }),
     );
 

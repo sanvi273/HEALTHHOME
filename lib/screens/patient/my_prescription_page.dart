@@ -56,8 +56,8 @@ class _MyPrescriptionPageState
   // - Patient orders medicines only -> lab tests remain available.
   // - Patient books lab tests only -> medicines remain available.
   // - Both branches are completed -> prescription moves to Past.
-  final Set<String> completedMedicinePrescriptionIds = {};
   final Set<String> completedLabPrescriptionIds = {};
+  final Set<String> orderedPrescriptionMedicineKeys = {};
 
   @override
   void initState() {
@@ -142,38 +142,57 @@ class _MyPrescriptionPageState
 
   Future<void> loadPrescriptionCompletionState() async {
     final prefs = await SharedPreferences.getInstance();
-
-    final savedMedicine =
-        prefs.getStringList("completedMedicinePrescriptionIds") ?? [];
-
     final savedLab =
         prefs.getStringList("completedLabPrescriptionIds") ?? [];
-
-    completedMedicinePrescriptionIds
-      ..clear()
-      ..addAll(savedMedicine);
 
     completedLabPrescriptionIds
       ..clear()
       ..addAll(savedLab);
-  }
 
-  Future<void> markMedicinePrescriptionCompleted(
-    String id,
-  ) async {
-    if (id.isEmpty) return;
+    // A prescription can contain several medicines and the patient may
+    // order only some of them. Read the medicine references from actual
+    // saved orders instead of treating the whole prescription as ordered.
+    orderedPrescriptionMedicineKeys.clear();
+    if (patientId.trim().isEmpty) return;
 
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final orders = await ApiService.getPatientMedicineOrders(patientId);
+      for (final rawOrder in orders) {
+        if (rawOrder is! Map) continue;
+        final order = Map<String, dynamic>.from(rawOrder);
+        final status = order["status"]?.toString().trim().toLowerCase() ?? "";
+        if (status == "cancelled" || status == "rejected") continue;
+        final paymentMethod =
+            order["paymentMethod"]?.toString().trim().toLowerCase() ?? "";
+        final paymentStatus =
+            order["paymentStatus"]?.toString().trim().toLowerCase() ?? "";
+        if (paymentMethod == "online" && paymentStatus != "paid") continue;
 
-    completedMedicinePrescriptionIds.add(id);
+        final orderPrescriptionId =
+            order["prescriptionId"]?.toString().trim() ?? "";
+        final rawMedicines = order["medicines"];
+        if (rawMedicines is! List) continue;
 
-    await prefs.setStringList(
-      "completedMedicinePrescriptionIds",
-      completedMedicinePrescriptionIds.toList(),
-    );
-
-    if (mounted) {
-      setState(() {});
+        for (final rawMedicine in rawMedicines) {
+          if (rawMedicine is! Map) continue;
+          final medicine = Map<String, dynamic>.from(rawMedicine);
+          final linePrescriptionId =
+              medicine["prescriptionId"]?.toString().trim() ??
+              orderPrescriptionId;
+          final prescriptionMedicineId =
+              medicine["prescriptionMedicineId"]?.toString().trim() ?? "";
+          if (linePrescriptionId.isEmpty || prescriptionMedicineId.isEmpty) {
+            continue;
+          }
+          orderedPrescriptionMedicineKeys.add(
+            _orderedMedicineKey(linePrescriptionId, prescriptionMedicineId),
+          );
+        }
+      }
+    } catch (error) {
+      // If order history is temporarily unavailable, keep prescriptions
+      // active and selectable rather than showing unverified items as ordered.
+      debugPrint("Unable to load prescribed medicine order status: $error");
     }
   }
 
@@ -204,7 +223,43 @@ class _MyPrescriptionPageState
       return true;
     }
 
-    return completedMedicinePrescriptionIds.contains(id);
+    return medicines.asMap().entries.every(
+      (entry) => isMedicineOrdered(id, entry.value, entry.key),
+    );
+  }
+
+  String _orderedMedicineKey(String prescriptionId, String medicineId) =>
+      "$prescriptionId::$medicineId";
+
+  String _prescriptionMedicineId(
+    Map<String, dynamic> medicine,
+    int medicineIndex,
+  ) {
+    final subdocumentId =
+        medicine["prescriptionMedicineId"]?.toString().trim() ??
+        medicine["_id"]?.toString().trim() ??
+        medicine["id"]?.toString().trim() ??
+        "";
+    if (subdocumentId.isNotEmpty) return subdocumentId;
+
+    // Legacy prescriptions may not have a subdocument ID. This stable
+    // fallback is sent with the cart item and lets the order reference the
+    // exact prescription row rather than every medicine with the same name.
+    final name = medicine["medicine"]?.toString().trim().toLowerCase() ?? "";
+    final dose = medicine["dose"]?.toString().trim().toLowerCase() ?? "";
+    final duration = medicine["duration"]?.toString().trim().toLowerCase() ?? "";
+    return "legacy_${medicineIndex}_${name}_${dose}_${duration}";
+  }
+
+  bool isMedicineOrdered(
+    String prescriptionId,
+    Map<String, dynamic> medicine,
+    int medicineIndex,
+  ) {
+    final medicineId = _prescriptionMedicineId(medicine, medicineIndex);
+    return orderedPrescriptionMedicineKeys.contains(
+      _orderedMedicineKey(prescriptionId, medicineId),
+    );
   }
 
   bool isLabBranchCompleted(
@@ -341,6 +396,12 @@ class _MyPrescriptionPageState
     Map<String, dynamic> medicine,
     int medicineIndex,
   ) {
+    final prescriptionMedicineId =
+        medicine["_id"]?.toString().trim() ?? "";
+    if (prescriptionMedicineId.isNotEmpty) {
+      return "prescription_$prescriptionMedicineId";
+    }
+
     final medicineId =
         medicine["medicineId"]
                 ?.toString()
@@ -435,6 +496,8 @@ class _MyPrescriptionPageState
         // local selected copy.
         medicineCopy["_selectionKey"] =
             medicineKey;
+        medicineCopy["prescriptionMedicineId"] =
+            _prescriptionMedicineId(medicine, medicineIndex);
 
         list.add(medicineCopy);
       }
@@ -516,7 +579,9 @@ class _MyPrescriptionPageState
 
     // Keep this before clearing the selection after a successful
     // cart/checkout flow.
-    final selectedMedicineCount = selected.length;
+    final selectedForCheckout = selected
+        .map((medicine) => Map<String, dynamic>.from(medicine))
+        .toList();
 
     if (selected.isEmpty) {
       showMessage(
@@ -534,6 +599,9 @@ class _MyPrescriptionPageState
       return;
     }
 
+    var cartWasClearedForThisPrescription = false;
+    var selectedItemsAddedSuccessfully = false;
+
     try {
       showLoadingDialog(
         "checkingPharmacyInventory".tr(),
@@ -546,31 +614,8 @@ class _MyPrescriptionPageState
       final List<Map<String, dynamic>> medicinesToAdd = [];
 
       for (final medicine in selected) {
-        String medicineId =
-            medicine["medicineId"]?.toString().trim() ?? "";
-
         final medicineName =
             medicine["medicine"]?.toString().trim() ?? "";
-
-        // ------------------------------------------------------
-        // CASE 1:
-        // Prescription already contains a real medicine ID.
-        // ------------------------------------------------------
-
-        if (medicineId.isNotEmpty) {
-          medicinesToAdd.add({
-            ...Map<String, dynamic>.from(medicine),
-            "medicineId": medicineId,
-          });
-
-          continue;
-        }
-
-        // ------------------------------------------------------
-        // CASE 2:
-        // Prescription does not contain medicineId.
-        // Search pharmacy inventory by medicine name.
-        // ------------------------------------------------------
 
         if (medicineName.isEmpty) {
           throw Exception(
@@ -594,15 +639,16 @@ class _MyPrescriptionPageState
           );
         }
 
-        // ------------------------------------------------------
-        // One or more pharmacies have the medicine.
-        //
-        // For the current flow, use the first available
-        // inventory record. The real medicine _id is used.
-        // ------------------------------------------------------
-
-        final inventoryMedicine =
-            Map<String, dynamic>.from(matches.first);
+        // Prefer the prescription's inventory ID only when it is an
+        // available exact-name match. Otherwise resolve by name so a stale
+        // ID from another pharmacy cannot insert the wrong product.
+        final originalMedicineId =
+            medicine["medicineId"]?.toString().trim() ?? "";
+        final inventoryRecord = matches.cast<Map>().firstWhere(
+          (item) => item["_id"]?.toString() == originalMedicineId,
+          orElse: () => matches.first as Map,
+        );
+        final inventoryMedicine = Map<String, dynamic>.from(inventoryRecord);
 
         final realId =
             inventoryMedicine["_id"]?.toString().trim() ?? "";
@@ -650,6 +696,7 @@ class _MyPrescriptionPageState
               "unableToClearPreviousCart".tr(),
         );
       }
+      cartWasClearedForThisPrescription = true;
 
       debugPrint(
         "✅ PREVIOUS CART CLEARED SUCCESSFULLY",
@@ -669,7 +716,7 @@ class _MyPrescriptionPageState
           );
         }
 
-        await ApiService.addMedicineToCart(
+        final addResult = await ApiService.addMedicineToCart(
           patientId: patientId,
 
           patientName:
@@ -704,9 +751,22 @@ class _MyPrescriptionPageState
                       ?.toString() ??
                   "",
 
+          prescriptionId: id,
+
+          prescriptionMedicineId:
+              medicine["prescriptionMedicineId"]?.toString() ?? "",
+
           quantity: 1,
         );
+
+        if (addResult["success"] != true) {
+          throw Exception(
+            addResult["message"]?.toString() ??
+                "unableToAddMedicineToCart".tr(),
+          );
+        }
       }
+      selectedItemsAddedSuccessfully = true;
 
       debugPrint(
         "✅ ONLY CURRENT PRESCRIPTION MEDICINES ADDED TO CART",
@@ -721,10 +781,6 @@ class _MyPrescriptionPageState
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
-
-      // Clear selected medicines only after all medicines
-      // have been successfully added to the cart.
-      selectedMedicines[id]?.clear();
 
       showMessage(
         "selectedMedicinesAddedToCart".tr(),
@@ -743,27 +799,33 @@ class _MyPrescriptionPageState
       );
 
       // ========================================================
-      // COMPLETE ONLY THE MEDICINE BRANCH
+      // Mark only the exact medicine rows that were checked out
+      // successfully. Other medicines remain available to order.
       // ========================================================
       //
-      // If the patient selected all prescribed medicines and the
-      // cart flow completed successfully, mark only the medicine
-      // branch as completed.
-      //
-      // Lab tests remain independently available until the lab
-      // branch is also completed.
-      //
-
       if (result == true) {
-        final totalMedicines =
-            getMedicines(prescription).length;
-
-        if (selectedMedicineCount >= totalMedicines &&
-            totalMedicines > 0) {
-          await markMedicinePrescriptionCompleted(id);
+        for (final medicine in selectedForCheckout) {
+          final medicineId =
+              medicine["prescriptionMedicineId"]?.toString().trim() ?? "";
+          if (medicineId.isEmpty) continue;
+          orderedPrescriptionMedicineKeys.add(
+            _orderedMedicineKey(id, medicineId),
+          );
         }
+
+        selectedMedicines[id]?.clear();
+        if (mounted) setState(() {});
       }
     } catch (e) {
+      if (cartWasClearedForThisPrescription &&
+          !selectedItemsAddedSuccessfully) {
+        try {
+          await ApiService.clearCart(patientId);
+        } catch (cleanupError) {
+          debugPrint("Unable to remove incomplete prescription cart: $cleanupError");
+        }
+      }
+
       // Close loading dialog if it is open.
       if (mounted && Navigator.canPop(context)) {
         Navigator.pop(context);
@@ -1356,33 +1418,28 @@ class _MyPrescriptionPageState
                 height: 10,
               ),
 
-              if (!isPast && !medicinesCompleted)
-                ...medicines
-                    .asMap()
-                    .entries
-                    .map(
-                  (entry) {
-                    final medicineIndex =
-                        entry.key;
+              ...medicines.asMap().entries.map((entry) {
+                final medicineIndex = entry.key;
+                final medicine = entry.value;
+                final ordered = isMedicineOrdered(
+                  id,
+                  medicine,
+                  medicineIndex,
+                );
 
-                    final medicine =
-                        entry.value;
+                if (isPast || ordered) {
+                  return buildPastMedicineTile(
+                    medicine,
+                    ordered: ordered,
+                  );
+                }
 
-                    return buildMedicineTile(
-                      id,
-                      medicine,
-                      medicineIndex,
-                    );
-                  },
-                )
-              else
-                ...medicines.map(
-                  (medicine) {
-                    return buildPastMedicineTile(
-                      medicine,
-                    );
-                  },
-                ),
+                return buildMedicineTile(
+                  id,
+                  medicine,
+                  medicineIndex,
+                );
+              }),
 
               if (!isPast &&
                   !medicinesCompleted &&
@@ -1769,7 +1826,9 @@ class _MyPrescriptionPageState
 
   Widget buildPastMedicineTile(
     Map<String, dynamic> medicine,
-  ) {
+    {
+    required bool ordered,
+  }) {
     final name =
         medicine["medicine"]
                 ?.toString() ??
@@ -1800,9 +1859,9 @@ class _MyPrescriptionPageState
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.check_circle,
-            color: Colors.green,
+          Icon(
+            ordered ? Icons.check_circle : Icons.schedule,
+            color: ordered ? Colors.green : Colors.orange,
           ),
           const SizedBox(
             width: 10,
@@ -1817,11 +1876,10 @@ class _MyPrescriptionPageState
               ),
             ),
           ),
-           Text(
-            "ordered".tr(),
+          Text(
+            ordered ? "ordered".tr() : "notOrdered".tr(),
             style: TextStyle(
-              color:
-                  Colors.green,
+              color: ordered ? Colors.green : Colors.orange.shade800,
               fontSize: 12,
               fontWeight:
                   FontWeight.bold,
