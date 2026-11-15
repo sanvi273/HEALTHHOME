@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -90,7 +91,7 @@ Future<File> _downloadLabReportFile(
 
 class LabPdfReportViewer extends StatelessWidget {
   final String title;
-  final List<int> bytes;
+  final Uint8List bytes;
 
   const LabPdfReportViewer({
     super.key,
