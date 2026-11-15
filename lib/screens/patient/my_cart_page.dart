@@ -38,7 +38,8 @@ class _MyCartPageState extends State<MyCartPage> {
 
   String? selectedPharmacy;
 
-  String selectedPaymentMethod = "online".tr();
+  // Persist/send a stable code. UI text is localized separately below.
+  String selectedPaymentMethod = "ONLINE";
 
   final TextEditingController addressController =
       TextEditingController();
@@ -420,7 +421,7 @@ class _MyCartPageState extends State<MyCartPage> {
                                     )
                                   : Icon(
                                       selectedPaymentMethod ==
-                                              "online".tr()
+                                              "ONLINE"
                                           ? Icons
                                               .payment
                                           : Icons
@@ -431,7 +432,7 @@ class _MyCartPageState extends State<MyCartPage> {
                             isPlacingOrder
                                 ? "processing".tr()
                                 : selectedPaymentMethod ==
-                                        "online".tr()
+                                        "ONLINE"
                                     ? "proceedToPayment".tr()
                                     : "placeCodOrder".tr(),
 
@@ -1035,7 +1036,7 @@ class _MyCartPageState extends State<MyCartPage> {
             ),
 
             RadioListTile<String>(
-              value: "online".tr(),
+              value: "ONLINE",
 
               groupValue:
                   selectedPaymentMethod,
@@ -1072,7 +1073,7 @@ class _MyCartPageState extends State<MyCartPage> {
             ),
 
             RadioListTile<String>(
-              value: "cod".tr(),
+              value: "COD",
 
               groupValue:
                   selectedPaymentMethod,
@@ -1428,8 +1429,7 @@ class _MyCartPageState extends State<MyCartPage> {
       // COD
       // ========================================================
 
-      if (selectedPaymentMethod ==
-          "cod".tr()) {
+      if (selectedPaymentMethod == "COD") {
 
         if (!mounted) {
           return;

@@ -1947,6 +1947,7 @@ class ApiService {
           "confirm/$orderId",
         ),
         headers: {
+          ...await _getAuthHeaders(),
           "Content-Type": "application/json",
         },
         body: jsonEncode({
@@ -2264,7 +2265,9 @@ class ApiService {
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "patientId": patientId,
-        "scheduledAt": scheduledAt.toIso8601String(),
+        // Send an explicit UTC instant; the server stores dates in UTC and
+        // a local timestamp without an offset is otherwise interpreted as UTC.
+        "scheduledAt": scheduledAt.toUtc().toIso8601String(),
         "reason": reason,
       }),
     );

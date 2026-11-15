@@ -1115,6 +1115,227 @@ int calculateRevenue() {
   return totalRevenue;
 }
 
+Future<List<Map<String, dynamic>>?> _selectPrescriptionMedicines(
+  Map<String, dynamic> order,
+) async {
+  final inventory = medicines
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .where((item) {
+        final id = _mongoIdFrom(item["_id"]).isNotEmpty
+            ? _mongoIdFrom(item["_id"])
+            : _mongoIdFrom(item["id"]);
+        final name = item["medicineName"]?.toString().trim() ?? "";
+        final price = num.tryParse(item["price"]?.toString() ?? "");
+        final stock = int.tryParse(item["stock"]?.toString() ?? "") ?? 0;
+        return id.isNotEmpty &&
+            name.isNotEmpty &&
+            price != null &&
+            price.isFinite &&
+            price >= 0 &&
+            stock > 0;
+      })
+      .toList();
+
+  if (inventory.isEmpty) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Add medicines with valid prices and stock to your inventory before confirming this prescription.",
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+    return null;
+  }
+
+  final selectedQuantities = <String, int>{};
+  final inventoryById = <String, Map<String, dynamic>>{};
+  for (final item in inventory) {
+    final id = _mongoIdFrom(item["_id"]).isNotEmpty
+        ? _mongoIdFrom(item["_id"])
+        : _mongoIdFrom(item["id"]);
+    inventoryById[id] = item;
+  }
+
+  return showDialog<List<Map<String, dynamic>>>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (dialogContext, setDialogState) {
+        final selectedTotal = selectedQuantities.entries.fold<double>(
+          0,
+          (total, entry) {
+            final price = num.tryParse(
+                  inventoryById[entry.key]?["price"]?.toString() ?? "",
+                )?.toDouble() ??
+                0;
+            return total + price * entry.value;
+          },
+        );
+
+        return AlertDialog(
+          title: const Text("Review Prescription & Medicines"),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: MediaQuery.of(context).size.height * 0.54,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Select the medicines that match ${order["patientName"]?.toString() ?? "the patient's"} prescription. Saved inventory prices and stock will be used.",
+                  style: TextStyle(color: Colors.grey.shade700),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Payment method: Cash on Delivery",
+                  style: TextStyle(
+                    color: Color(0xff078B72),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: inventory.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 6),
+                    itemBuilder: (context, index) {
+                      final item = inventory[index];
+                      final id = _mongoIdFrom(item["_id"]).isNotEmpty
+                          ? _mongoIdFrom(item["_id"])
+                          : _mongoIdFrom(item["id"]);
+                      final name = item["medicineName"]?.toString() ?? "Medicine";
+                      final price = num.tryParse(
+                            item["price"]?.toString() ?? "",
+                          )?.toDouble() ??
+                          0;
+                      final stock = int.tryParse(
+                            item["stock"]?.toString() ?? "",
+                          ) ??
+                          0;
+                      final quantity = selectedQuantities[id] ?? 0;
+
+                      return Card(
+                        margin: EdgeInsets.zero,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          leading: Checkbox(
+                            value: quantity > 0,
+                            activeColor: const Color(0xff14B8A6),
+                            onChanged: (checked) {
+                              setDialogState(() {
+                                if (checked == true) {
+                                  selectedQuantities[id] = 1;
+                                } else {
+                                  selectedQuantities.remove(id);
+                                }
+                              });
+                            },
+                          ),
+                          title: Text(
+                            name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            "₹${price.toStringAsFixed(2)} • $stock in stock",
+                          ),
+                          trailing: quantity == 0
+                              ? null
+                              : SizedBox(
+                                  width: 104,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      IconButton(
+                                        visualDensity: VisualDensity.compact,
+                                        icon: const Icon(Icons.remove_circle_outline),
+                                        onPressed: () {
+                                          setDialogState(() {
+                                            if (quantity <= 1) {
+                                              selectedQuantities.remove(id);
+                                            } else {
+                                              selectedQuantities[id] = quantity - 1;
+                                            }
+                                          });
+                                        },
+                                      ),
+                                      Text("$quantity"),
+                                      IconButton(
+                                        visualDensity: VisualDensity.compact,
+                                        icon: const Icon(Icons.add_circle_outline),
+                                        onPressed: quantity >= stock
+                                            ? null
+                                            : () {
+                                                setDialogState(() {
+                                                  selectedQuantities[id] = quantity + 1;
+                                                });
+                                              },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xffE6FAF8),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "Total from selected inventory: ₹${selectedTotal.toStringAsFixed(2)}",
+                    style: const TextStyle(
+                      color: Color(0xff078B72),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: selectedQuantities.isEmpty
+                  ? null
+                  : () => Navigator.of(dialogContext).pop(
+                        selectedQuantities.entries
+                            .map(
+                              (entry) => <String, dynamic>{
+                                "medicineId": entry.key,
+                                "quantity": entry.value,
+                              },
+                            )
+                            .toList(),
+                      ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff14B8A6),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Confirm & Accept"),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
   // ============================================================
   // INIT
   // ============================================================
@@ -1180,7 +1401,8 @@ int calculateRevenue() {
             onAccept: (index) async {
               if (index < 0 || index >= orders.length) return;
 
-              final orderId = orders[index]["_id"]?.toString() ?? "";
+              final order = Map<String, dynamic>.from(orders[index]);
+              final orderId = order["_id"]?.toString() ?? "";
               if (orderId.isEmpty) {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1192,10 +1414,28 @@ int calculateRevenue() {
                 return;
               }
 
-              final result = await ApiService.updateOrderStatus(
-                orderId: orderId,
-                status: "Accepted",
-              );
+              final orderType =
+                  order["orderType"]?.toString().trim().toUpperCase() ?? "";
+              final rawMedicines = order["medicines"];
+              final hasMedicines = rawMedicines is List && rawMedicines.isNotEmpty;
+
+              final Map<String, dynamic> result;
+              if (orderType == "PRESCRIPTION" && !hasMedicines) {
+                final selectedMedicines =
+                    await _selectPrescriptionMedicines(order);
+                if (selectedMedicines == null || selectedMedicines.isEmpty) {
+                  return;
+                }
+                result = await ApiService.confirmPrescriptionOrder(
+                  orderId: orderId,
+                  medicines: selectedMedicines,
+                );
+              } else {
+                result = await ApiService.updateOrderStatus(
+                  orderId: orderId,
+                  status: "Accepted",
+                );
+              }
 
               if (!mounted) return;
 
@@ -1532,8 +1772,22 @@ class OrdersPage extends StatelessWidget {
                       final orderType =
                           order["orderType"]?.toString().toUpperCase() ?? "";
 
+                      final rawMedicines = order["medicines"];
+                      final hasConfirmedMedicines =
+                          rawMedicines is List && rawMedicines.isNotEmpty;
                       final isPendingPrescription =
-                          orderType == "PRESCRIPTION" && totalAmount <= 0;
+                          orderType == "PRESCRIPTION" &&
+                          !hasConfirmedMedicines;
+                      final medicineSummary = isPendingPrescription
+                          ? "Prescription upload — review and select medicines"
+                          : rawMedicines is List
+                              ? rawMedicines
+                                  .whereType<Map>()
+                                  .map((item) =>
+                                      item["medicineName"]?.toString() ?? "")
+                                  .where((name) => name.isNotEmpty)
+                                  .join(", ")
+                              : "Prescription Order";
 
                       return orderCard(
                         index: index,
@@ -1541,21 +1795,21 @@ class OrdersPage extends StatelessWidget {
                         patientPhone: order["patientPhone"]?.toString() ??
                             order["patientId"]?.toString() ??
                             "",
-                        medicine: order["medicines"] != null
-                            ? (order["medicines"] as List)
-                                .map(
-                                  (e) => e["medicineName"],
-                                )
-                                .join(", ")
-                            : "Prescription Order",
+                        medicine: medicineSummary,
                         address: order["address"]?.toString() ?? "No Address",
                         notes: order["notes"]?.toString() ?? "",
                         imageUrl: order["prescriptionImage"]?.toString() ?? "",
                         patientImageUrl:
                             order["patientProfileImageUrl"]?.toString() ?? "",
+                        paymentStatus:
+                            order["paymentStatus"]?.toString() ?? "Pending",
+                        paymentMethod: isPendingPrescription
+                            ? "COD"
+                            : order["paymentMethod"]?.toString() ?? "",
                         price: isPendingPrescription
                             ? "Amount pending pharmacy confirmation"
                             : "₹${totalAmount.toStringAsFixed(0)}",
+                        requiresPrescriptionReview: isPendingPrescription,
                       );
                     },
                   ),
@@ -1600,10 +1854,49 @@ Widget orderCard({
   required String notes,
   required String imageUrl,
   required String patientImageUrl,
+  required String paymentStatus,
+  required String paymentMethod,
   required String price,
+  required bool requiresPrescriptionReview,
 }) {
   final bool amountPending =
       price == "Amount pending pharmacy confirmation";
+  final normalizedPaymentStatus = paymentStatus.trim().toLowerCase();
+  final bool paymentComplete = const {
+    "paid",
+    "success",
+    "successful",
+    "completed",
+    "captured",
+  }.contains(normalizedPaymentStatus);
+  final bool paymentFailed = const {
+    "failed",
+    "failure",
+    "cancelled",
+    "canceled",
+  }.contains(normalizedPaymentStatus);
+  final String paymentStatusLabel = paymentComplete
+      ? "Completed"
+      : paymentFailed
+          ? "Failed"
+          : "Pending";
+  final Color paymentStatusColor = paymentComplete
+      ? const Color(0xff15803d)
+      : paymentFailed
+          ? Colors.red.shade700
+          : Colors.orange.shade800;
+  final String paymentMethodLabel = switch (
+    paymentMethod.trim().toUpperCase()
+  ) {
+    "ONLINE" || "ONLINE PAYMENT" => "Online Payment",
+    "COD" || "CASH ON DELIVERY" => "Cash on Delivery",
+    "UPI" => "UPI",
+    "CARD" => "Card",
+    "NET BANKING" || "NETBANKING" => "Net Banking",
+    "WALLET" => "Wallet",
+    "" => "Not specified",
+    _ => paymentMethod.trim(),
+  };
 
   return Container(
     margin: const EdgeInsets.only(bottom: 18),
@@ -1783,6 +2076,82 @@ Widget orderCard({
           ),
         ),
 
+        const SizedBox(height: 12),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+          decoration: BoxDecoration(
+            color: const Color(0xffF8FAFC),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xffE2E8F0)),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    paymentComplete
+                        ? Icons.check_circle_outline
+                        : paymentFailed
+                            ? Icons.error_outline
+                            : Icons.schedule,
+                    color: paymentStatusColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 9),
+                  const Expanded(
+                    child: Text(
+                      "Payment Status",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      paymentStatusLabel,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        color: paymentStatusColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 9),
+                child: Divider(height: 1),
+              ),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.payments_outlined,
+                    color: Color(0xff14B8A6),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 9),
+                  const Expanded(
+                    child: Text(
+                      "Payment Method",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      paymentMethodLabel,
+                      textAlign: TextAlign.end,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
         // =====================================================
         // NOTES
         // =====================================================
@@ -1945,9 +2314,9 @@ Widget orderCard({
                   await onAccept(index);
                 },
 
-                child: const Text(
-                  "Accept",
-                  style: TextStyle(
+                child: Text(
+                  requiresPrescriptionReview ? "Review & Accept" : "Accept",
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),

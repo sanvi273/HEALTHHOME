@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'services/api_service.dart';
@@ -37,7 +36,7 @@ class _UploadLabReportPageState
   // STATE
   // ============================================================
 
-  final List<File> selectedFiles = [];
+  final List<PlatformFile> selectedFiles = [];
 
   // User-entered name for every uploaded report.
   // Example: CBC Report, Blood Pressure Report, Blood Sugar Report.
@@ -60,6 +59,7 @@ class _UploadLabReportPageState
           await FilePicker.platform.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
+        withData: kIsWeb,
         allowedExtensions: [
           'jpg',
           'jpeg',
@@ -72,17 +72,22 @@ class _UploadLabReportPageState
         return;
       }
 
-      final List<File> files = [];
-
-      for (final pickedFile in result.files) {
-        if (pickedFile.path != null) {
-          files.add(
-            File(pickedFile.path!),
-          );
+      final files = result.files.where((pickedFile) {
+        if (kIsWeb) {
+          return pickedFile.bytes != null && pickedFile.bytes!.isNotEmpty;
         }
-      }
+        return pickedFile.path != null ||
+            (pickedFile.bytes != null && pickedFile.bytes!.isNotEmpty);
+      }).toList();
 
       if (files.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("The selected files could not be read. Please select them again."),
+            ),
+          );
+        }
         return;
       }
 
@@ -116,7 +121,7 @@ class _UploadLabReportPageState
           i++) {
         debugPrint(
           "PAGE ${i + 1} = "
-          "${selectedFiles[i].path.split(Platform.pathSeparator).last}",
+          "${selectedFiles[i].name}",
         );
       }
 
@@ -180,20 +185,16 @@ class _UploadLabReportPageState
   // FILE NAME
   // ============================================================
 
-  String getFileName(File file) {
-    return file.path
-        .split(Platform.pathSeparator)
-        .last;
+  String getFileName(PlatformFile file) {
+    return file.name;
   }
 
   // ============================================================
   // CHECK PDF
   // ============================================================
 
-  bool isPdf(File file) {
-    return file.path
-        .toLowerCase()
-        .endsWith('.pdf');
+  bool isPdf(PlatformFile file) {
+    return file.name.toLowerCase().endsWith('.pdf');
   }
 
   // ============================================================
@@ -275,7 +276,7 @@ class _UploadLabReportPageState
           i < selectedFiles.length;
           i++) {
 
-        final File file = selectedFiles[i];
+        final PlatformFile file = selectedFiles[i];
 
         final String fileName =
             getFileName(file);
@@ -316,12 +317,27 @@ class _UploadLabReportPageState
         // UPLOAD
         // ------------------------------------------------------
 
-        final CloudinaryResponse response =
-            await cloudinary.uploadFile(
-          CloudinaryFile.fromFile(
-            file.path,
+        final CloudinaryFile cloudinaryFile;
+        if (file.bytes != null && file.bytes!.isNotEmpty) {
+          cloudinaryFile = CloudinaryFile.fromBytesData(
+            file.bytes!,
+            identifier: fileName,
             resourceType: resourceType,
-          ),
+          );
+        } else if (!kIsWeb && file.path != null) {
+          cloudinaryFile = CloudinaryFile.fromFile(
+            file.path!,
+            identifier: fileName,
+            resourceType: resourceType,
+          );
+        } else {
+          throw Exception(
+            "File data is unavailable for $fileName. Please select the file again.",
+          );
+        }
+
+        final CloudinaryResponse response = await cloudinary.uploadFile(
+          cloudinaryFile,
         );
 
         final String fileUrl =
@@ -780,7 +796,7 @@ class _UploadLabReportPageState
                 itemBuilder:
                     (context, index) {
 
-                  final File file =
+                  final PlatformFile file =
                       selectedFiles[index];
 
                   final bool pdf =

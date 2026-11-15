@@ -279,21 +279,12 @@ final rejectedOrders =
 }).toList();
 
     // ========================================================
-    // PATIENT RESCHEDULE REQUESTS
+    // PENDING RESCHEDULE REQUESTS
     // ========================================================
 
-    final patientRescheduleRequests = labOrders.where((order) {
+    final pendingRescheduleRequests = labOrders.where((order) {
       final rescheduleStatus =
           order["rescheduleStatus"]?.toString().trim().toLowerCase() ?? "";
-      final proposedBy =
-          order["rescheduleProposedBy"]?.toString().trim().toLowerCase() ?? "";
-
-      // Older records / responses may not include rescheduleProposedBy.
-      // Treat an unspecified proposer as a patient request, but never show
-      // requests explicitly proposed by the laboratory.
-      final isPatientRequest =
-          proposedBy.isEmpty || proposedBy == "patient";
-
       final isPending = rescheduleStatus == "pending";
       if (isPending) {
         debugPrint(
@@ -304,7 +295,9 @@ final rejectedOrders =
         );
       }
 
-      return isPending && isPatientRequest;
+      // Patient requests need a lab decision; lab proposals need to remain
+      // visible until the patient responds. Show both so neither time vanishes.
+      return isPending;
     }).toList();
 
     // ========================================================
@@ -319,7 +312,7 @@ final rejectedOrders =
       newBookings;
 
   rescheduleRequests =
-      patientRescheduleRequests;
+      pendingRescheduleRequests;
 
   collectionOrders =
       collection;
@@ -922,7 +915,7 @@ const SizedBox(height: 20),
   }
 
 // ============================================================
-// PATIENT RESCHEDULE REQUESTS
+// PENDING RESCHEDULE REQUESTS
 // ============================================================
 
 Widget _buildRescheduleRequestsSection() {
@@ -981,7 +974,7 @@ Widget _buildRescheduleRequestsSection() {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  "No pending patient reschedule requests.",
+                  "No pending reschedule requests.",
                   style: TextStyle(color: Colors.grey),
                 ),
               ),
@@ -999,8 +992,13 @@ Widget _buildRescheduleRequestsSection() {
           final reason =
               item["rescheduleReason"]?.toString().trim() ?? "";
           final requestedAt = item["requestedScheduledAt"];
-          final isCounterRequest = requestedAt == null ||
-              requestedAt.toString().trim().isEmpty;
+          final isLabProposal = item["rescheduleProposedBy"]
+                  ?.toString()
+                  .trim()
+                  .toLowerCase() ==
+              "laboratory";
+          final isCounterRequest = !isLabProposal &&
+              (requestedAt == null || requestedAt.toString().trim().isEmpty);
 
           return Container(
             width: double.infinity,
@@ -1081,9 +1079,11 @@ Widget _buildRescheduleRequestsSection() {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        isCounterRequest
-                            ? "Patient's response"
-                            : "Requested new time",
+                        isLabProposal
+                            ? "Your proposed new time"
+                            : isCounterRequest
+                                ? "Patient's response"
+                                : "Requested new time",
                         style: const TextStyle(
                           color: Colors.grey,
                           fontSize: 12,
@@ -1124,6 +1124,22 @@ Widget _buildRescheduleRequestsSection() {
                       padding: EdgeInsets.all(8),
                       child: CircularProgressIndicator(
                         color: Color(0xFF20C6D3),
+                      ),
+                    ),
+                  )
+                else if (isLabProposal)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFFBFA),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      "Waiting for the patient to respond to this time.",
+                      style: TextStyle(
+                        color: Color(0xFF078B91),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   )
@@ -1207,6 +1223,83 @@ Widget _rescheduleInfoRow(IconData icon, String text) {
             text,
             style: const TextStyle(color: Colors.black87),
           ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _labScheduleDetails(Map<String, dynamic> item) {
+  final isReschedulePending =
+      item["rescheduleStatus"]?.toString().trim().toLowerCase() == "pending";
+  final requestedAt = item["requestedScheduledAt"];
+  final scheduledAt = item["scheduledAt"];
+  final scheduledLabel = scheduledAt == null ||
+          scheduledAt.toString().trim().isEmpty
+      ? "Not scheduled yet"
+      : _formatSchedule(scheduledAt);
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _rescheduleInfoRow(
+        Icons.event_available_outlined,
+        "Scheduled: $scheduledLabel",
+      ),
+      if (isReschedulePending && requestedAt != null)
+        _rescheduleInfoRow(
+          Icons.event_repeat,
+          "Requested new time: ${_formatSchedule(requestedAt)}",
+        ),
+    ],
+  );
+}
+
+Widget _labPaymentDetails(Map<String, dynamic> item) {
+  final method = item["paymentMethod"]?.toString().trim().toUpperCase() ?? "";
+  final rawStatus = item["paymentStatus"]?.toString().trim().toLowerCase() ?? "";
+  final amount = num.tryParse(item["totalAmount"]?.toString() ?? "") ?? 0;
+  final isPaid = const {"paid", "success", "successful", "completed"}
+      .contains(rawStatus);
+  final isFailed = const {"failed", "failure", "cancelled", "canceled"}
+      .contains(rawStatus);
+  final statusLabel = isPaid ? "Completed" : isFailed ? "Failed" : "Pending";
+  final statusColor = isPaid
+      ? const Color(0xFF15803D)
+      : isFailed
+          ? Colors.red.shade700
+          : const Color(0xFFB76E00);
+  final methodLabel = switch (method) {
+    "ONLINE" => "Online Payment",
+    "COD" => "Cash on Collection",
+    "" => "Not specified",
+    _ => method,
+  };
+
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(top: 14),
+    padding: const EdgeInsets.all(13),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEFFBFA),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: const Color(0xFFD7F3F2)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Payment Details", style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 7),
+        Wrap(
+          spacing: 16,
+          runSpacing: 6,
+          children: [
+            Text("Method: $methodLabel"),
+            Text("Status: $statusLabel", style: TextStyle(color: statusColor, fontWeight: FontWeight.w600)),
+            Text(amount > 0
+                ? "Amount: ₹${amount.toStringAsFixed(2)}"
+                : "Amount: Pending lab review"),
+          ],
         ),
       ],
     ),
@@ -1426,6 +1519,9 @@ Widget sampleCollectionPage() {
                   ),
                 ],
               ),
+
+              _labScheduleDetails(item),
+              _labPaymentDetails(item),
 
               const SizedBox(height: 15),
 
@@ -2586,6 +2682,10 @@ Widget bookingCard({
       ),
     ),
 
+    const SizedBox(height: 10),
+    _labScheduleDetails(item),
+    _labPaymentDetails(item),
+
   const SizedBox(height: 15),
 
 const Row(
@@ -2936,6 +3036,9 @@ Widget progressCard({
         ),
 
         const SizedBox(height: 12),
+
+        _labScheduleDetails(item),
+        _labPaymentDetails(item),
 
         // COLLECTOR
 
@@ -3295,6 +3398,9 @@ Widget reportsPage() {
                   ),
                 ],
               ),
+
+              _labScheduleDetails(item),
+              _labPaymentDetails(item),
 
               const SizedBox(height: 12),
 
