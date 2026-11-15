@@ -45,12 +45,7 @@ class _UploadLabReportPageState
   bool isUploading = false;
 
   // ============================================================
-  // PICK MULTIPLE REPORT FILES
-  // Supports:
-  // JPG
-  // JPEG
-  // PNG
-  // PDF
+  // PICK MULTIPLE PHOTO REPORTS
   // ============================================================
 
   Future<void> pickReports() async {
@@ -58,14 +53,8 @@ class _UploadLabReportPageState
       final FilePickerResult? result =
           await FilePicker.platform.pickFiles(
         allowMultiple: true,
-        type: FileType.custom,
+        type: FileType.image,
         withData: kIsWeb,
-        allowedExtensions: [
-          'jpg',
-          'jpeg',
-          'png',
-          'pdf',
-        ],
       );
 
       if (result == null) {
@@ -73,18 +62,23 @@ class _UploadLabReportPageState
       }
 
       final files = result.files.where((pickedFile) {
-        if (kIsWeb) {
-          return pickedFile.bytes != null && pickedFile.bytes!.isNotEmpty;
-        }
-        return pickedFile.path != null ||
-            (pickedFile.bytes != null && pickedFile.bytes!.isNotEmpty);
+        final extension = pickedFile.extension?.toLowerCase() ?? '';
+        final isSupportedPhoto =
+            const {'jpg', 'jpeg', 'png'}.contains(extension);
+        final hasReadableData = kIsWeb
+            ? pickedFile.bytes != null && pickedFile.bytes!.isNotEmpty
+            : pickedFile.path != null ||
+                (pickedFile.bytes != null && pickedFile.bytes!.isNotEmpty);
+        return isSupportedPhoto && hasReadableData;
       }).toList();
 
       if (files.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("The selected files could not be read. Please select them again."),
+              content: Text(
+                "Select readable JPG, JPEG, or PNG photo files.",
+              ),
             ),
           );
         }
@@ -96,12 +90,12 @@ class _UploadLabReportPageState
       }
 
       setState(() {
-        selectedFiles.addAll(files);
+        // Keep the most recently selected photos at the top and preserve
+        // that order when the reports are uploaded.
+        selectedFiles.insertAll(0, files.reversed);
 
         // Every file gets its own editable report name.
-        for (int i = 0; i < files.length; i++) {
-          reportNames.add("");
-        }
+        reportNames.insertAll(0, List<String>.filled(files.length, ""));
       });
 
       debugPrint(
@@ -190,13 +184,6 @@ class _UploadLabReportPageState
   }
 
   // ============================================================
-  // CHECK PDF
-  // ============================================================
-
-  bool isPdf(PlatformFile file) {
-    return file.name.toLowerCase().endsWith('.pdf');
-  }
-
   // ============================================================
   // UPLOAD REPORT
   // ============================================================
@@ -281,9 +268,6 @@ class _UploadLabReportPageState
         final String fileName =
             getFileName(file);
 
-        final bool pdf =
-            isPdf(file);
-
         debugPrint(
           "================================",
         );
@@ -297,7 +281,7 @@ class _UploadLabReportPageState
         );
 
         debugPrint(
-          "FILE TYPE = ${pdf ? "PDF" : "IMAGE"}",
+          "FILE TYPE = IMAGE",
         );
 
         debugPrint(
@@ -308,10 +292,8 @@ class _UploadLabReportPageState
         // CLOUDINARY RESOURCE TYPE
         // ------------------------------------------------------
 
-        final CloudinaryResourceType resourceType =
-            pdf
-                ? CloudinaryResourceType.Raw
-                : CloudinaryResourceType.Image;
+        const CloudinaryResourceType resourceType =
+            CloudinaryResourceType.Image;
 
         // ------------------------------------------------------
         // UPLOAD
@@ -351,23 +333,10 @@ class _UploadLabReportPageState
         // DETERMINE FILE TYPE
         // ------------------------------------------------------
 
-        String fileType;
-
-        if (pdf) {
-          fileType = "application/pdf";
-        } else {
-          final String lowerName =
-              fileName.toLowerCase();
-
-          if (lowerName.endsWith(".png")) {
-            fileType = "image/png";
-          } else if (lowerName.endsWith(".jpg") ||
-              lowerName.endsWith(".jpeg")) {
-            fileType = "image/jpeg";
-          } else {
-            fileType = "image";
-          }
-        }
+        final String lowerName = fileName.toLowerCase();
+        final String fileType = lowerName.endsWith(".png")
+            ? "image/png"
+            : "image/jpeg";
 
         // ------------------------------------------------------
         // ADD TO REPORT LIST
@@ -714,7 +683,7 @@ class _UploadLabReportPageState
                     ),
 
                     Text(
-                      "Select multiple pages or a complete PDF",
+                      "Select one or more report photos",
                       textAlign:
                           TextAlign.center,
                       style:
@@ -729,7 +698,7 @@ class _UploadLabReportPageState
                     ),
 
                     Text(
-                      "JPG • PNG • PDF",
+                      "JPG • JPEG • PNG photos only",
                       style:
                           TextStyle(
                         color:
@@ -799,9 +768,6 @@ class _UploadLabReportPageState
                   final PlatformFile file =
                       selectedFiles[index];
 
-                  final bool pdf =
-                      isPdf(file);
-
                   return Container(
                     margin:
                         const EdgeInsets.only(
@@ -849,14 +815,7 @@ class _UploadLabReportPageState
 
                               decoration:
                                   BoxDecoration(
-                                color: pdf
-                                    ? Colors.red
-                                        .withOpacity(
-                                        0.10,
-                                      )
-                                    : const Color(
-                                        0xffE8FAF8,
-                                      ),
+                                color: const Color(0xffE8FAF8),
 
                                 borderRadius:
                                     BorderRadius
@@ -865,18 +824,9 @@ class _UploadLabReportPageState
                                 ),
                               ),
 
-                              child: Icon(
-                                pdf
-                                    ? Icons
-                                        .picture_as_pdf
-                                    : Icons
-                                        .image_outlined,
-
-                                color: pdf
-                                    ? Colors.red
-                                    : const Color(
-                                        0xff14B8A6,
-                                      ),
+                              child: const Icon(
+                                Icons.image_outlined,
+                                color: Color(0xff14B8A6),
                               ),
                             ),
 
