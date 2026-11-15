@@ -36,7 +36,9 @@ class _MyCartPageState extends State<MyCartPage> {
   List<dynamic> pharmacies = [];
   List<dynamic> medicineRecords = [];
 
-  String? selectedPharmacy;
+  // Use the MongoDB ID as the dropdown value. Pharmacy display names are
+  // not unique, so using a name here can create duplicate DropdownMenuItems.
+  String? selectedPharmacyId;
 
   // Persist/send a stable code. UI text is localized separately below.
   String selectedPaymentMethod = "ONLINE";
@@ -929,9 +931,21 @@ class _MyCartPageState extends State<MyCartPage> {
   // ============================================================
 
   Widget buildPharmacyDropdown() {
+    final pharmacyOptions = pharmacies
+        .whereType<Map>()
+        .where((pharmacy) =>
+            pharmacy["_id"]?.toString().trim().isNotEmpty == true)
+        .toList();
+
     return DropdownButtonFormField<String>(
       initialValue:
-          selectedPharmacy,
+          selectedPharmacyId != null &&
+                  pharmacyOptions.any(
+                    (pharmacy) =>
+                        pharmacy["_id"]?.toString() == selectedPharmacyId,
+                  )
+              ? selectedPharmacyId
+              : null,
 
       isExpanded: true,
 
@@ -954,15 +968,21 @@ class _MyCartPageState extends State<MyCartPage> {
         ),
       ),
 
-      items: pharmacies.map(
+      items: pharmacyOptions.map(
         (pharmacy) {
           final name =
               pharmacy["name"]
                       ?.toString() ??
                   "pharmacy".tr();
+          final pharmacyId = pharmacy["_id"].toString();
+          final address = pharmacy["address"]?.toString().trim() ?? "";
+          final phone = pharmacy["phone"]?.toString().trim() ?? "";
+          final details = [address, phone]
+              .where((value) => value.isNotEmpty)
+              .join(" • ");
 
           return DropdownMenuItem<String>(
-            value: name,
+            value: pharmacyId,
 
             child: Row(
               children: [
@@ -973,9 +993,26 @@ class _MyCartPageState extends State<MyCartPage> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    name,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (details.isNotEmpty)
+                        Text(
+                          details,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -989,7 +1026,7 @@ class _MyCartPageState extends State<MyCartPage> {
               ? null
               : (value) {
                   setState(() {
-                    selectedPharmacy =
+                    selectedPharmacyId =
                         value;
                   });
                 },
@@ -1134,9 +1171,9 @@ class _MyCartPageState extends State<MyCartPage> {
       return;
     }
 
-    if (selectedPharmacy ==
+    if (selectedPharmacyId ==
             null ||
-        selectedPharmacy!
+        selectedPharmacyId!
             .trim()
             .isEmpty) {
       showMessage(
@@ -1185,8 +1222,8 @@ class _MyCartPageState extends State<MyCartPage> {
       dynamic pharmacy;
 
       for (final p in pharmacies) {
-        if (p["name"]?.toString() ==
-            selectedPharmacy) {
+        if (p is Map &&
+            p["_id"]?.toString() == selectedPharmacyId) {
           pharmacy = p;
           break;
         }
