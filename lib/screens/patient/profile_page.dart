@@ -497,10 +497,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
             const SizedBox(height: 20),
 
-            myCartCard(),
-
-            const SizedBox(height: 20),
-
             // =========================================
             // HEALTH OVERVIEW
             // =========================================
@@ -551,6 +547,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            myCartCard(),
 
             const SizedBox(height: 20),
 
