@@ -1672,13 +1672,19 @@ Widget casesPage() {
     if (enabledDays.isEmpty) return '$label: select at least one working day.';
 
     bool isValidTime(String value) => RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').hasMatch(value);
+    int minutesOfDay(String value) {
+      final parts = value.split(':');
+      return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    }
+
     for (final entry in enabledDays) {
       final day = entry['day'].toString();
       final start = entry['startTime'].toString();
       final end = entry['endTime'].toString();
       final breakStart = entry['breakStart'].toString();
       final breakEnd = entry['breakEnd'].toString();
-      if (!isValidTime(start) || !isValidTime(end) || start >= end) {
+      if (!isValidTime(start) || !isValidTime(end) ||
+          (isValidTime(start) && isValidTime(end) && minutesOfDay(start) >= minutesOfDay(end))) {
         return '$label: set valid start and end times for $day.';
       }
       if (breakStart.isEmpty != breakEnd.isEmpty) {
@@ -1686,7 +1692,10 @@ Widget casesPage() {
       }
       if (breakStart.isNotEmpty &&
           (!isValidTime(breakStart) || !isValidTime(breakEnd) ||
-              breakStart >= breakEnd || breakStart < start || breakEnd > end)) {
+              (isValidTime(breakStart) && isValidTime(breakEnd) &&
+                  (minutesOfDay(breakStart) >= minutesOfDay(breakEnd) ||
+                      minutesOfDay(breakStart) < minutesOfDay(start) ||
+                      minutesOfDay(breakEnd) > minutesOfDay(end))))) {
         return '$label: the $day break must fit within working hours.';
       }
     }

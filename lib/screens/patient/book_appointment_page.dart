@@ -202,8 +202,16 @@ class _BookAppointmentPageState
 
  bool _slotStartsInFuture(String slotTime) {
   final now = _indiaNow;
-  if (selectedDateApi > _todayApiDate) return true;
-  if (selectedDateApi < _todayApiDate) return false;
+  final dateParts = selectedDateApi.split('-');
+  if (dateParts.length != 3) return false;
+  final selectedDate = DateTime(
+   int.tryParse(dateParts[0]) ?? 0,
+   int.tryParse(dateParts[1]) ?? 0,
+   int.tryParse(dateParts[2]) ?? 0,
+  );
+  final today = DateTime(now.year, now.month, now.day);
+  if (selectedDate.isAfter(today)) return true;
+  if (selectedDate.isBefore(today)) return false;
 
   final match = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)$', caseSensitive: false)
     .firstMatch(slotTime.trim());
