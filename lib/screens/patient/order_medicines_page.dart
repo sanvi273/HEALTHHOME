@@ -8,9 +8,7 @@ import '../../widgets/medicine_image.dart';
 import '../../widgets/profile_image.dart';
 
 class OrderMedicinesPage extends StatefulWidget {
-  const OrderMedicinesPage({super.key, this.familyMember});
-
-  final Map<String, dynamic>? familyMember;
+  const OrderMedicinesPage({super.key});
 
   @override
   State<OrderMedicinesPage> createState() =>
@@ -58,8 +56,7 @@ class _OrderMedicinesPageState
           await SharedPreferences.getInstance();
 
       patientName =
-          widget.familyMember?['name']?.toString() ??
-              prefs.getString("patientName") ??
+          prefs.getString("patientName") ??
               prefs.getString("userName") ??
               "patient".tr();
 
@@ -322,8 +319,6 @@ class _OrderMedicinesPageState
         builder: (_) => MedicineCartPage(
           patientName: patientName,
           patientPhone: patientPhone,
-          familyMemberId: widget.familyMember?['_id']?.toString() ?? "",
-          familyMember: widget.familyMember,
           medicines: allMedicines,
           pharmacies: pharmacies,
         ),
@@ -375,7 +370,6 @@ class _OrderMedicinesPageState
         food: "",
         instruction: "",
         quantity: 1,
-        familyMemberId: widget.familyMember?['_id']?.toString() ?? "",
       );
 
       if (!mounted) return;
@@ -445,7 +439,6 @@ class _OrderMedicinesPageState
               patientName,
           patientPhone:
               patientPhone,
-          familyMemberId: widget.familyMember?['_id']?.toString() ?? "",
         ),
       ),
     );
@@ -1302,7 +1295,6 @@ class MedicineDetailPage
 
   final String patientName;
   final String patientPhone;
-  final String familyMemberId;
 
   const MedicineDetailPage({
     super.key,
@@ -1312,7 +1304,6 @@ class MedicineDetailPage
     required this.pharmacyImageUrl,
     required this.patientName,
     required this.patientPhone,
-    this.familyMemberId = "",
   });
 
   static const Color primaryColor =
@@ -1342,7 +1333,6 @@ class MedicineDetailPage
         food: "",
         instruction: "",
         quantity: 1,
-        familyMemberId: familyMemberId,
       );
 
       if (!context.mounted) return;
@@ -1769,8 +1759,6 @@ class MedicineCartPage
     extends StatefulWidget {
   final String patientName;
   final String patientPhone;
-  final String familyMemberId;
-  final Map<String, dynamic>? familyMember;
 
   final List<dynamic> medicines;
   final List<dynamic> pharmacies;
@@ -1779,8 +1767,6 @@ class MedicineCartPage
     super.key,
     required this.patientName,
     required this.patientPhone,
-    this.familyMemberId = "",
-    this.familyMember,
     required this.medicines,
     required this.pharmacies,
   });
@@ -1814,7 +1800,6 @@ class _MedicineCartPageState
       final items =
           await ApiService.getCartItems(
         widget.patientPhone,
-        familyMemberId: widget.familyMemberId,
       );
 
       if (!mounted) return;
@@ -2067,8 +2052,6 @@ class _MedicineCartPageState
               widget.patientName,
           patientPhone:
               widget.patientPhone,
-          familyMemberId: widget.familyMemberId,
-          familyMember: widget.familyMember,
           cartItems:
               cartItems,
           medicines:
@@ -2695,8 +2678,6 @@ class MedicineCheckoutPage
     extends StatefulWidget {
   final String patientName;
   final String patientPhone;
-  final String familyMemberId;
-  final Map<String, dynamic>? familyMember;
 
   final List<dynamic> cartItems;
   final List<dynamic> medicines;
@@ -2710,8 +2691,6 @@ class MedicineCheckoutPage
     super.key,
     required this.patientName,
     required this.patientPhone,
-    this.familyMemberId = "",
-    this.familyMember,
     required this.cartItems,
     required this.medicines,
     required this.pharmacies,
@@ -2742,13 +2721,6 @@ class _MedicineCheckoutPageState
   String paymentMethod = "COD";
 
   bool isSubmitting = false;
-
-  @override
-  void initState() {
-    super.initState();
-    addressController.text =
-        widget.familyMember?['address']?.toString() ?? "";
-  }
 
   // ============================================================
   // FIND MEDICINE
@@ -2959,7 +2931,6 @@ class _MedicineCheckoutPageState
             paymentMethod,
 
         paymentStatus: "Pending",
-        familyMemberId: widget.familyMemberId,
       );
 
       final success =
@@ -2991,7 +2962,6 @@ class _MedicineCheckoutPageState
       if (paymentMethod == "COD") {
         await ApiService.clearCart(
           widget.patientPhone,
-          familyMemberId: widget.familyMemberId,
         );
 
         if (!mounted) return;
@@ -3072,7 +3042,6 @@ class _MedicineCheckoutPageState
 
       await ApiService.clearCart(
         widget.patientPhone,
-        familyMemberId: widget.familyMemberId,
       );
 
       if (!mounted) return;

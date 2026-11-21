@@ -11,9 +11,7 @@ import '../../widgets/provider_picker.dart';
 
 
 class UploadPrescriptionPage extends StatefulWidget {
-  const UploadPrescriptionPage({super.key, this.familyMember});
-
-  final Map<String, dynamic>? familyMember;
+  const UploadPrescriptionPage({super.key});
 
   @override
   State<UploadPrescriptionPage> createState() =>
@@ -94,7 +92,7 @@ class _UploadPrescriptionPageState
           await SharedPreferences
               .getInstance();
 
-      patientName = widget.familyMember?['name']?.toString() ??
+      patientName =
           prefs.getString(
                 "patientName",
               ) ??
@@ -111,9 +109,6 @@ class _UploadPrescriptionPageState
                 "userPhone",
               ) ??
               "";
-
-      addressController.text =
-          widget.familyMember?['address']?.toString() ?? "";
 
       await loadPharmacies();
 
@@ -316,7 +311,6 @@ Future<void> submitOrder() async {
       address: addressController.text.trim(),
       notes: notesController.text.trim(),
       prescriptionImage: imageUrl,
-      familyMemberId: widget.familyMember?['_id']?.toString() ?? "",
     );
 
     debugPrint(

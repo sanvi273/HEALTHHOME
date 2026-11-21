@@ -4,9 +4,7 @@ import 'upload_prescription_page.dart';
 import 'order_medicines_page.dart';
 
 class PharmacyPage extends StatelessWidget {
-  const PharmacyPage({super.key, this.familyMember});
-
-  final Map<String, dynamic>? familyMember;
+  const PharmacyPage({super.key});
 
   static const Color primaryColor =
       Color(0xff00C2CB);
@@ -89,7 +87,7 @@ class PharmacyPage extends StatelessWidget {
   Navigator.push(
     context,
     MaterialPageRoute(
-      builder: (_) => OrderMedicinesPage(familyMember: familyMember),
+      builder: (_) => const OrderMedicinesPage(),
     ),
   );
 },
@@ -115,7 +113,7 @@ class PharmacyPage extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (_) =>
-                              UploadPrescriptionPage(familyMember: familyMember),
+                              const UploadPrescriptionPage(),
                         ),
                       );
                     },

@@ -1106,16 +1106,12 @@ class ApiService {
 
   static Future<List<dynamic>> getPatientAppointments(
     String patientPhone,
-    {String? familyMemberId}
   ) async {
     try {
-      final query = familyMemberId?.trim().isNotEmpty == true
-          ? "?familyMemberId=${Uri.encodeQueryComponent(familyMemberId!.trim())}"
-          : "";
       final response = await http.get(
         Uri.parse(
           "$baseUrl/api/appointments/patient/"
-          "${Uri.encodeComponent(patientPhone)}$query",
+          "${Uri.encodeComponent(patientPhone)}",
         ),
         headers: await _getAuthHeaders(),
       );
@@ -1696,98 +1692,6 @@ class ApiService {
     return data;
   }
 
-  static Future<List<Map<String, dynamic>>> getMyFamilyMembers() async {
-    final response = await http.get(
-      Uri.parse("$baseUrl/api/family-members"),
-      headers: await _getAuthHeaders(),
-    );
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map) {
-      throw Exception("The server returned an invalid family members response.");
-    }
-    final data = Map<String, dynamic>.from(decoded);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(data["message"] ?? "Unable to load family members.");
-    }
-    final rawMembers = data["members"];
-    if (rawMembers is! List) return <Map<String, dynamic>>[];
-    return rawMembers
-        .whereType<Map>()
-        .map((member) => Map<String, dynamic>.from(member))
-        .toList();
-  }
-
-  static Future<Map<String, dynamic>> getFamilyMemberOverview({
-    required String memberId,
-  }) async {
-    final response = await http.get(
-      Uri.parse(
-        "$baseUrl/api/family-members/${Uri.encodeComponent(memberId)}/overview",
-      ),
-      headers: await _getAuthHeaders(),
-    );
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map) {
-      throw Exception("The server returned an invalid family member response.");
-    }
-    final data = Map<String, dynamic>.from(decoded);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(data["message"] ?? "Unable to load this family member.");
-    }
-    return data;
-  }
-
-  static Future<Map<String, dynamic>> createFamilyMember({
-    required Map<String, dynamic> member,
-  }) async {
-    return _sendFamilyMemberMutation(
-      http.post(
-        Uri.parse("$baseUrl/api/family-members"),
-        headers: await _getAuthHeaders(),
-        body: jsonEncode(member),
-      ),
-    );
-  }
-
-  static Future<Map<String, dynamic>> updateFamilyMember({
-    required String memberId,
-    required Map<String, dynamic> member,
-  }) async {
-    return _sendFamilyMemberMutation(
-      http.put(
-        Uri.parse("$baseUrl/api/family-members/${Uri.encodeComponent(memberId)}"),
-        headers: await _getAuthHeaders(),
-        body: jsonEncode(member),
-      ),
-    );
-  }
-
-  static Future<Map<String, dynamic>> deleteFamilyMember({
-    required String memberId,
-  }) async {
-    return _sendFamilyMemberMutation(
-      http.delete(
-        Uri.parse("$baseUrl/api/family-members/${Uri.encodeComponent(memberId)}"),
-        headers: await _getAuthHeaders(),
-      ),
-    );
-  }
-
-  static Future<Map<String, dynamic>> _sendFamilyMemberMutation(
-    Future<http.Response> responseFuture,
-  ) async {
-    final response = await responseFuture;
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map) {
-      throw Exception("The server returned an invalid family member response.");
-    }
-    final data = Map<String, dynamic>.from(decoded);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception(data["message"] ?? "Unable to save family member details.");
-    }
-    return data;
-  }
-
   static Future<Map<String, dynamic>> uploadMyProfileImage({
     required String token,
     required Uint8List bytes,
@@ -2067,16 +1971,12 @@ class ApiService {
     required int quantity,
     String prescriptionId = "",
     String prescriptionMedicineId = "",
-    String familyMemberId = "",
   }) async {
-    final hasFamilyMember = familyMemberId.trim().isNotEmpty;
-    final headers = <String, String>{"Content-Type": "application/json"};
-    if (hasFamilyMember) headers.addAll(await _getAuthHeaders());
     final response = await http.post(
-      Uri.parse(hasFamilyMember
-          ? "$baseUrl/api/cart/family-member/add"
-          : "$baseUrl/api/cart/add"),
-      headers: headers,
+      Uri.parse("$baseUrl/api/cart/add"),
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: jsonEncode({
         "patientPhone": patientId,
         "patientName": patientName,
@@ -2089,7 +1989,6 @@ class ApiService {
         "quantity": quantity,
         "prescriptionId": prescriptionId,
         "prescriptionMedicineId": prescriptionMedicineId,
-        "familyMemberId": familyMemberId,
       }),
     );
 
@@ -2098,14 +1997,9 @@ class ApiService {
 
   static Future<List<dynamic>> getCartItems(
     String phone,
-    {String familyMemberId = ""}
   ) async {
-    final isFamilyCart = familyMemberId.trim().isNotEmpty;
     final response = await http.get(
-      Uri.parse(isFamilyCart
-          ? "$baseUrl/api/cart/family-member/${Uri.encodeComponent(familyMemberId.trim())}"
-          : "$baseUrl/api/cart/$phone"),
-      headers: isFamilyCart ? await _getAuthHeaders() : null,
+      Uri.parse("$baseUrl/api/cart/$phone"),
     );
 
     final data = jsonDecode(response.body);
@@ -2145,16 +2039,11 @@ class ApiService {
 
   static Future<Map<String, dynamic>> clearCart(
     String patientPhone,
-    {String familyMemberId = ""}
   ) async {
-    final isFamilyCart = familyMemberId.trim().isNotEmpty;
     final response = await http.delete(
       Uri.parse(
-        isFamilyCart
-            ? "$baseUrl/api/cart/family-member/clear/${Uri.encodeComponent(familyMemberId.trim())}"
-            : "$baseUrl/api/cart/clear/$patientPhone",
+        "$baseUrl/api/cart/clear/$patientPhone",
       ),
-      headers: isFamilyCart ? await _getAuthHeaders() : null,
     );
 
     return jsonDecode(response.body);
@@ -2232,16 +2121,12 @@ class ApiService {
     required double totalAmount,
     required String paymentMethod,
     required String paymentStatus,
-    String familyMemberId = "",
   }) async {
-    final isFamilyOrder = familyMemberId.trim().isNotEmpty;
-    final headers = <String, String>{"Content-Type": "application/json"};
-    if (isFamilyOrder) headers.addAll(await _getAuthHeaders());
     final response = await http.post(
-      Uri.parse(isFamilyOrder
-          ? "$baseUrl/api/orders/family-member/place"
-          : "$baseUrl/api/orders/place"),
-      headers: headers,
+      Uri.parse("$baseUrl/api/orders/place"),
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: jsonEncode({
         "patientId": patientId,
         "patientName": patientName,
@@ -2256,7 +2141,6 @@ class ApiService {
         "paymentMethod": paymentMethod,
         "paymentStatus": paymentStatus,
         "status": "Pending",
-        if (isFamilyOrder) "familyMemberId": familyMemberId.trim(),
       }),
     );
 
@@ -2275,18 +2159,13 @@ class ApiService {
     required String address,
     required String notes,
     required String prescriptionImage,
-    String familyMemberId = "",
   }) async {
     try {
-      final headers = <String, String>{"Content-Type": "application/json"};
-      if (familyMemberId.trim().isNotEmpty) {
-        headers.addAll(await _getAuthHeaders());
-      }
       final response = await http.post(
-        Uri.parse(familyMemberId.trim().isEmpty
-            ? "$baseUrl/api/orders/prescription"
-            : "$baseUrl/api/orders/family-member/prescription"),
-        headers: headers,
+        Uri.parse("$baseUrl/api/orders/prescription"),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: jsonEncode({
           "patientId": patientPhone,
           "patientName": patientName,
@@ -2296,8 +2175,6 @@ class ApiService {
           "address": address,
           "notes": notes,
           "prescriptionImage": prescriptionImage,
-          if (familyMemberId.trim().isNotEmpty)
-            "familyMemberId": familyMemberId.trim(),
         }),
       );
 
@@ -2506,7 +2383,6 @@ class ApiService {
     required String collectionMode,
     String bookingType = "TEST",
     String paymentMethod = "ONLINE",
-    String familyMemberId = "",
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final patientId = await getAuthenticatedUserId();
@@ -2542,8 +2418,6 @@ class ApiService {
         "collectionMode": collectionMode,
         "bookingType": bookingType,
         "paymentMethod": paymentMethod,
-        if (familyMemberId.trim().isNotEmpty)
-          "familyMemberId": familyMemberId.trim(),
         "status": "Pending",
       }),
     );
@@ -3956,7 +3830,6 @@ class ApiService {
     required String appointmentDate,
     required String appointmentTime,
     required List<PatientReportUpload> reports,
-    String? familyMemberId,
   }) async {
     try {
       // Create Dio instance
@@ -3972,8 +3845,6 @@ class ApiService {
         "consultationType": consultationType,
         "appointmentDate": appointmentDate,
         "appointmentTime": appointmentTime,
-        if (familyMemberId?.trim().isNotEmpty == true)
-          "familyMemberId": familyMemberId!.trim(),
       });
 
       // Attach reports

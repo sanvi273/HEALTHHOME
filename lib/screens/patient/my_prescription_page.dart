@@ -160,9 +160,6 @@ class _MyPrescriptionPageState
       for (final rawOrder in orders) {
         if (rawOrder is! Map) continue;
         final order = Map<String, dynamic>.from(rawOrder);
-        if ((order["familyMemberId"]?.toString().trim() ?? "").isNotEmpty) {
-          continue;
-        }
         final status = order["status"]?.toString().trim().toLowerCase() ?? "";
         if (status == "cancelled" || status == "rejected") continue;
         final paymentMethod =

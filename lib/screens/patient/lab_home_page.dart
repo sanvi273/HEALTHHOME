@@ -4,9 +4,7 @@ import 'upload_lab_prescription_page.dart';
 import 'book_lab_test_page.dart';
 
 class LabHomePage extends StatelessWidget {
-  const LabHomePage({super.key, this.familyMember});
-
-  final Map<String, dynamic>? familyMember;
+  const LabHomePage({super.key});
 
   static const Color primaryColor =
       Color(0xff00C2CB);
@@ -70,7 +68,6 @@ class LabHomePage extends StatelessWidget {
                           builder: (_) =>
                               BookLabTestPage(
                             selectedTests: [],
-                            familyMember: familyMember,
                           ),
                         ),
                       );
@@ -163,7 +160,7 @@ class LabHomePage extends StatelessWidget {
 
                         MaterialPageRoute(
                           builder: (_) =>
-                              UploadLabPrescriptionPage(familyMember: familyMember),
+                              const UploadLabPrescriptionPage(),
                         ),
                       );
                     },

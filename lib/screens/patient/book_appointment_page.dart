@@ -27,7 +27,6 @@ import '../../models/patient_report_upload.dart';
 class BookAppointmentPage extends StatefulWidget {
 
  final Map doctor;
- final Map<String, dynamic>? familyMember;
 
 
 
@@ -36,7 +35,6 @@ class BookAppointmentPage extends StatefulWidget {
   super.key,
 
   required this.doctor,
-  this.familyMember,
 
  });
 
@@ -710,8 +708,7 @@ if (selectedDateApi.isEmpty ||
 
   final String patientName =
 
-    widget.familyMember?['name']?.toString() ??
-      prefs.getString("patientName") ??
+    prefs.getString("patientName") ??
 
       "Patient";
 
@@ -1053,7 +1050,6 @@ if (selectedDateApi.isEmpty ||
 
    
         reports: reports,
-        familyMemberId: widget.familyMember?['_id']?.toString(),
       );
 
 

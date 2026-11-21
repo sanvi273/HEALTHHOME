@@ -12,9 +12,7 @@ import '../../widgets/provider_picker.dart';
 import 'lab_order_tracking_page.dart';
 
 class UploadLabPrescriptionPage extends StatefulWidget {
-  const UploadLabPrescriptionPage({super.key, this.familyMember});
-
-  final Map<String, dynamic>? familyMember;
+  const UploadLabPrescriptionPage({super.key});
 
   @override
   State<UploadLabPrescriptionPage> createState() =>
@@ -87,12 +85,9 @@ class _UploadLabPrescriptionPageState
       final prefs = await SharedPreferences.getInstance();
 
       patientName =
-          widget.familyMember?['name']?.toString() ??
-              prefs.getString("patientName") ??
+          prefs.getString("patientName") ??
           prefs.getString("userName") ??
           "patient".tr();
-      addressController.text =
-          widget.familyMember?['address']?.toString() ?? "";
 
       patientPhone =
           prefs.getString("patientPhone") ??
@@ -318,7 +313,6 @@ class _UploadLabPrescriptionPageState
       tests: const [],
       collectionMode: collectionMode,
       bookingType: "PRESCRIPTION",
-      familyMemberId: widget.familyMember?['_id']?.toString() ?? "",
     );
 
     debugPrint(
