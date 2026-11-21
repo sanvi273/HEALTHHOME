@@ -733,6 +733,14 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
       (appointment["consultationStatus"] ?? "").toString().trim();
 
+  final String paymentStatus =
+      (appointment["paymentStatus"] ?? "Pending").toString().trim();
+
+  final String paymentMethod =
+      (appointment["paymentMethod"] ?? "ONLINE").toString().trim();
+
+  final String paymentAmount = (appointment["fees"] ?? "").toString().trim();
+
   final String appointmentId =
 
       (appointment["_id"] ?? "").toString();
@@ -952,6 +960,32 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
               ),
 
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(
+                    consultationType == "Video Consultation"
+                        ? Icons.video_call
+                        : Icons.local_hospital,
+                    color: const Color(0xff007F7A),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      consultationType == "Video Consultation"
+                          ? "Video consultation • $paymentStatus online"
+                          : paymentMethod == "AT_HOSPITAL" && paymentStatus != "Paid"
+                              ? "Hospital visit • Pay at the hospital during your visit${paymentAmount.isEmpty ? "" : " • ₹$paymentAmount"}"
+                              : "Hospital visit • Payment $paymentStatus",
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xff555555),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               // FULL-WIDTH RESCHEDULE PROPOSAL
 
               if (_hasDoctorRescheduleProposal(appointment))

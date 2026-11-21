@@ -617,25 +617,13 @@ class ApiService {
 
   static Future<Map<String, dynamic>> updateDoctorSchedule({
     required String doctorId,
-    required List<String> workingDays,
-    required String startTime,
-    required String endTime,
-    required String breakStart,
-    required String breakEnd,
-    required int slotDurationMinutes,
-    required int maxAppointmentsPerDay,
+    required Map<String, dynamic> consultationSchedules,
   }) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/doctors/schedule/$doctorId'),
-      headers: {'Content-Type': 'application/json'},
+      headers: await _getAuthHeaders(),
       body: jsonEncode({
-        'workingDays': workingDays,
-        'startTime': startTime,
-        'endTime': endTime,
-        'breakStart': breakStart,
-        'breakEnd': breakEnd,
-        'slotDurationMinutes': slotDurationMinutes,
-        'maxAppointmentsPerDay': maxAppointmentsPerDay,
+        'consultationSchedules': consultationSchedules,
       }),
     );
 
@@ -1073,6 +1061,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getAvailableSlots({
     required String doctorId,
     required String date,
+    String consultationType = 'Hospital Visit',
   }) async {
     try {
       if (doctorId.isEmpty) {
@@ -1087,7 +1076,8 @@ class ApiService {
         Uri.parse(
           "$baseUrl/api/appointments/available-slots/"
           "${Uri.encodeComponent(doctorId)}/"
-          "${Uri.encodeComponent(date)}",
+          "${Uri.encodeComponent(date)}?consultationType="
+          "${Uri.encodeComponent(consultationType)}",
         ),
       );
 
@@ -1275,6 +1265,27 @@ class ApiService {
 
     return Map<String, dynamic>.from(
       jsonDecode(response.body),
+    );
+  }
+
+  static Future<Map<String, dynamic>> collectHospitalVisitPayment({
+    required String appointmentId,
+  }) async {
+    final response = await http.post(
+      Uri.parse(
+        "$baseUrl/api/appointments/payment/collect-at-hospital/"
+        "${Uri.encodeComponent(appointmentId)}",
+      ),
+      headers: await _getAuthHeaders(),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return Map<String, dynamic>.from(data);
+    }
+    throw Exception(
+      data is Map
+          ? (data["message"] ?? "Unable to record hospital visit payment")
+          : "Unable to record hospital visit payment",
     );
   }
 

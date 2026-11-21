@@ -1868,6 +1868,7 @@ Widget orderCard({
     "successful",
     "completed",
     "captured",
+    "collected",
   }.contains(normalizedPaymentStatus);
   final bool paymentFailed = const {
     "failed",
@@ -1885,9 +1886,17 @@ Widget orderCard({
       : paymentFailed
           ? Colors.red.shade700
           : Colors.orange.shade800;
-  final String paymentMethodLabel = switch (
-    paymentMethod.trim().toUpperCase()
-  ) {
+  final normalizedPaymentMethod = paymentMethod.trim().toUpperCase();
+  final onlinePaymentMethod = const {
+    "ONLINE",
+    "ONLINE PAYMENT",
+    "UPI",
+    "CARD",
+    "NET BANKING",
+    "NETBANKING",
+    "WALLET",
+  }.contains(normalizedPaymentMethod);
+  final basePaymentMethodLabel = switch (normalizedPaymentMethod) {
     "ONLINE" || "ONLINE PAYMENT" => "Online Payment",
     "COD" || "CASH ON DELIVERY" => "Cash on Delivery",
     "UPI" => "UPI",
@@ -1897,6 +1906,11 @@ Widget orderCard({
     "" => "Not specified",
     _ => paymentMethod.trim(),
   };
+  final String paymentMethodLabel = onlinePaymentMethod && !paymentComplete
+      ? paymentFailed
+          ? "$basePaymentMethodLabel (Failed)"
+          : "$basePaymentMethodLabel (Awaiting payment)"
+      : basePaymentMethodLabel;
 
   return Container(
     margin: const EdgeInsets.only(bottom: 18),

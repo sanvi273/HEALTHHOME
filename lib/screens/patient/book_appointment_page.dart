@@ -97,6 +97,7 @@ class _BookAppointmentPageState
  bool loading = false;
 
  bool loadingSlots = false;
+ int _slotRequestId = 0;
 
  String _doctorPaymentMethod = "upi";
 
@@ -322,6 +323,8 @@ class _BookAppointmentPageState
  ) async {
 
   if (date.isEmpty) return;
+  final requestId = ++_slotRequestId;
+  final requestedConsultationType = consultationType;
 
 
 
@@ -396,12 +399,14 @@ class _BookAppointmentPageState
     doctorId: doctorId,
 
     date: date,
+    consultationType: requestedConsultationType,
 
    );
 
 
 
-   if (!mounted) return;
+   if (!mounted || requestId != _slotRequestId ||
+       consultationType != requestedConsultationType) return;
 
 
 
@@ -441,7 +446,8 @@ class _BookAppointmentPageState
 
 
 
-   if (!mounted) return;
+   if (!mounted || requestId != _slotRequestId ||
+       consultationType != requestedConsultationType) return;
 
 
 
@@ -475,7 +481,7 @@ class _BookAppointmentPageState
 
   } finally {
 
-   if (mounted) {
+   if (mounted && requestId == _slotRequestId) {
 
     setState(() {
 
@@ -1040,6 +1046,64 @@ if (selectedDateApi.isEmpty ||
 
 
    // ========================================================
+
+   if (consultationType == "Hospital Visit") {
+    final legacyOrder = orderResponse["order"] is Map ||
+        (orderResponse["razorpayOrderId"]?.toString().trim().isNotEmpty ?? false);
+    if (orderResponse["paymentRequired"] == true || legacyOrder) {
+      final appointmentId = orderResponse["appointmentId"]?.toString() ??
+          orderResponse["appointment"]?["_id"]?.toString() ?? "";
+      final razorpayOrderId = orderResponse["razorpayOrderId"]?.toString() ??
+          orderResponse["order"]?["id"]?.toString() ?? "";
+      if (appointmentId.isNotEmpty && razorpayOrderId.isNotEmpty) {
+        try {
+          await ApiService.cancelDoctorPayment(
+            appointmentId: appointmentId,
+            razorpayOrderId: razorpayOrderId,
+            patientPhone: patientPhone,
+          );
+        } catch (cancelError) {
+          debugPrint("Unable to release hospital visit reservation: $cancelError");
+        }
+      }
+      throw Exception(
+        "Hospital visit booking is not configured for pay-at-hospital yet. Please try again shortly.",
+      );
+    }
+    if (mounted) setState(() => loading = false);
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 30),
+            SizedBox(width: 10),
+            Expanded(child: Text("Appointment request sent")),
+          ],
+        ),
+        content: Text(
+          "Your hospital visit with $doctorName is requested for "
+          "${dateController.text} at ${timeController.text}. "
+          "Please pay ₹${consultationFee.toStringAsFixed(2)} at the hospital during your visit. "
+          "No online payment is needed.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("ok".tr()),
+          ),
+        ],
+      ),
+    );
+    if (mounted) Navigator.pop(context, true);
+    return;
+   }
+
+   if (orderResponse["paymentRequired"] != true) {
+    throw Exception("Online payment is required to book a video consultation.");
+   }
 
    // GET APPOINTMENT ID
 
@@ -2532,7 +2596,7 @@ Future<void> _handlePaymentError(
 
           onChanged:
 
-            (value) {
+            (value) async {
 
            if (value == null) {
 
@@ -2549,6 +2613,9 @@ Future<void> _handlePaymentError(
               value;
 
            });
+           if (selectedDateApi.isNotEmpty) {
+            await loadAvailableSlots(selectedDateApi);
+           }
 
           },
 
@@ -2626,7 +2693,7 @@ Future<void> _handlePaymentError(
 
           onChanged:
 
-            (value) {
+            (value) async {
 
            if (value == null) {
 
@@ -2643,6 +2710,9 @@ Future<void> _handlePaymentError(
               value;
 
            });
+           if (selectedDateApi.isNotEmpty) {
+            await loadAvailableSlots(selectedDateApi);
+           }
 
           },
 
@@ -3688,18 +3758,11 @@ Future<void> _handlePaymentError(
 
 
 
-            const Text(
-
-             "Secure payment through Razorpay",
-
-             style:
-
-               TextStyle(
-
-              fontSize: 13,
-
-             ),
-
+            Text(
+             consultationType == "Video Consultation"
+                 ? "Online payment is required for video consultation."
+                 : "Pay at the hospital during your visit. No online payment is needed.",
+             style: const TextStyle(fontSize: 13),
             ),
 
 
@@ -3712,7 +3775,7 @@ Future<void> _handlePaymentError(
 
 
 
-            Wrap(
+            if (consultationType == "Video Consultation") Wrap(
              spacing: 10,
              runSpacing: 8,
              children: [
@@ -3737,7 +3800,9 @@ Future<void> _handlePaymentError(
 
             Text(
 
-             "${_doctorPaymentMethod == "upi" ? "UPI" : "Net Banking"} • ₹$fees",
+             consultationType == "Video Consultation"
+                 ? "${_doctorPaymentMethod == "upi" ? "UPI" : "Net Banking"} • ₹$fees"
+                 : "Pay ₹$fees at the hospital",
 
              style:
 
@@ -3878,10 +3943,9 @@ Future<void> _handlePaymentError(
 
 
           : Text(
-
-            "confirmBooking"
-
-              .tr(),
+            consultationType == "Video Consultation"
+                ? "Pay ₹$fees & Confirm"
+                : "Request Hospital Visit",
 
 
 

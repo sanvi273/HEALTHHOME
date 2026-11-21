@@ -41,22 +41,48 @@ class _DoctorDashboardState
 bool isUpdatingAvailability = false;
 bool isSavingSchedule = false;
 
-List<String> workingDays = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-];
+static Map<String, dynamic> _defaultSchedule() => {
+  'workingDays': <String>[
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+  ],
+  'startTime': '10:00',
+  'endTime': '19:30',
+  'breakStart': '13:00',
+  'breakEnd': '14:00',
+  'slotDurationMinutes': 30,
+  'maxAppointmentsPerDay': 10,
+};
 
-String startTime = '10:00';
-String endTime = '19:30';
-String breakStart = '13:00';
-String breakEnd = '14:00';
+Map<String, dynamic> hospitalVisitSchedule = _defaultSchedule();
+Map<String, dynamic> videoConsultationSchedule = _defaultSchedule();
+String selectedScheduleType = 'Hospital Visit';
 
-int slotDurationMinutes = 30;
-int maxAppointmentsPerDay = 10;
+Map<String, dynamic> get _activeSchedule =>
+    selectedScheduleType == 'Video Consultation'
+        ? videoConsultationSchedule
+        : hospitalVisitSchedule;
+
+Map<String, dynamic> _readSchedule(dynamic saved, dynamic legacy) {
+  final defaults = _defaultSchedule();
+  final savedMap = saved is Map ? saved : const <dynamic, dynamic>{};
+  final legacyMap = legacy is Map ? legacy : const <dynamic, dynamic>{};
+  final days = savedMap['workingDays'] ?? legacyMap['workingDays'];
+  return {
+    'workingDays': days is List && days.isNotEmpty
+        ? days.map((day) => day.toString()).toList()
+        : List<String>.from(defaults['workingDays'] as List),
+    'startTime': (savedMap['startTime'] ?? legacyMap['startTime'] ?? defaults['startTime']).toString(),
+    'endTime': (savedMap['endTime'] ?? legacyMap['endTime'] ?? defaults['endTime']).toString(),
+    'breakStart': (savedMap['breakStart'] ?? legacyMap['breakStart'] ?? defaults['breakStart']).toString(),
+    'breakEnd': (savedMap['breakEnd'] ?? legacyMap['breakEnd'] ?? defaults['breakEnd']).toString(),
+    'slotDurationMinutes': int.tryParse(
+          (savedMap['slotDurationMinutes'] ?? legacyMap['slotDurationMinutes'] ?? defaults['slotDurationMinutes']).toString(),
+        ) ?? 30,
+    'maxAppointmentsPerDay': int.tryParse(
+          (savedMap['maxAppointmentsPerDay'] ?? legacyMap['maxAppointmentsPerDay'] ?? defaults['maxAppointmentsPerDay']).toString(),
+        ) ?? 10,
+  };
+}
 
 
   //==========================================
@@ -217,28 +243,18 @@ Future<void> loadDoctor() async {
           ? doctor["isAvailable"] as bool
           : true;
 
-      final dynamic scheduleData = doctor["schedule"] is Map
+      final dynamic legacySchedule = doctor["schedule"] is Map
           ? doctor["schedule"]
           : doctor;
-
-      if (scheduleData is Map) {
-        final days = scheduleData["workingDays"];
-        if (days is List && days.isNotEmpty) {
-          workingDays = days.map((day) => day.toString()).toList();
-        }
-        startTime = scheduleData["startTime"]?.toString() ?? startTime;
-        endTime = scheduleData["endTime"]?.toString() ?? endTime;
-        breakStart = scheduleData["breakStart"]?.toString() ?? breakStart;
-        breakEnd = scheduleData["breakEnd"]?.toString() ?? breakEnd;
-        slotDurationMinutes = int.tryParse(
-              scheduleData["slotDurationMinutes"]?.toString() ?? "",
-            ) ??
-            slotDurationMinutes;
-        maxAppointmentsPerDay = int.tryParse(
-              scheduleData["maxAppointmentsPerDay"]?.toString() ?? "",
-            ) ??
-            maxAppointmentsPerDay;
-      }
+      final dynamic savedSchedules = doctor["consultationSchedules"];
+      hospitalVisitSchedule = _readSchedule(
+        savedSchedules is Map ? savedSchedules["hospitalVisit"] : null,
+        legacySchedule,
+      );
+      videoConsultationSchedule = _readSchedule(
+        savedSchedules is Map ? savedSchedules["videoConsultation"] : null,
+        legacySchedule,
+      );
 
 
       // =================================================
@@ -655,6 +671,26 @@ Future<void> loadAppointments() async {
     );
 
     await loadAppointments();
+  }
+
+  Future<void> recordHospitalPayment(dynamic appointment) async {
+    final appointmentId = appointment["_id"]?.toString() ?? "";
+    if (appointmentId.isEmpty) return;
+    try {
+      await ApiService.collectHospitalVisitPayment(
+        appointmentId: appointmentId,
+      );
+      await loadAppointments();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Hospital visit payment recorded.")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Unable to record payment: $e")),
+      );
+    }
   }
 
   //==========================================
@@ -1169,6 +1205,8 @@ Widget casesPage() {
               ?.toString()
               .trim() ??
           "Pending";
+  final paymentMethod =
+      appointment["paymentMethod"]?.toString().trim() ?? "ONLINE";
 
   return Card(
     margin: const EdgeInsets.only(
@@ -1390,7 +1428,9 @@ Widget casesPage() {
               const SizedBox(width: 10),
 
               Text(
-                "Payment: $paymentStatus",
+                paymentMethod == "AT_HOSPITAL"
+                    ? "Payment at hospital: $paymentStatus"
+                    : "Online payment: $paymentStatus",
                 style:
                     const TextStyle(
                   fontSize: 14,
@@ -1537,20 +1577,14 @@ Widget casesPage() {
   //==================================================
 
   Future<void> _pickScheduleTime(String field) async {
-    String current;
-    switch (field) {
-      case 'start':
-        current = startTime;
-        break;
-      case 'end':
-        current = endTime;
-        break;
-      case 'breakStart':
-        current = breakStart;
-        break;
-      default:
-        current = breakEnd;
-    }
+    final scheduleField = field == 'start'
+        ? 'startTime'
+        : field == 'end'
+            ? 'endTime'
+            : field;
+    final current = (_activeSchedule[scheduleField]?.toString().isNotEmpty == true
+            ? _activeSchedule[scheduleField].toString()
+            : '10:00');
 
     final parts = current.split(':');
     final initial = TimeOfDay(
@@ -1568,20 +1602,7 @@ Widget casesPage() {
         '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
 
     setState(() {
-      switch (field) {
-        case 'start':
-          startTime = formatted;
-          break;
-        case 'end':
-          endTime = formatted;
-          break;
-        case 'breakStart':
-          breakStart = formatted;
-          break;
-        case 'breakEnd':
-          breakEnd = formatted;
-          break;
-      }
+      _activeSchedule[scheduleField] = formatted;
     });
   }
 
@@ -1592,9 +1613,10 @@ Widget casesPage() {
       );
       return;
     }
-    if (workingDays.isEmpty) {
+    if ((hospitalVisitSchedule['workingDays'] as List).isEmpty ||
+        (videoConsultationSchedule['workingDays'] as List).isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one working day.')),
+        const SnackBar(content: Text('Select at least one working day for both schedules.')),
       );
       return;
     }
@@ -1603,13 +1625,10 @@ Widget casesPage() {
     try {
       final response = await ApiService.updateDoctorSchedule(
         doctorId: doctorId,
-        workingDays: workingDays,
-        startTime: startTime,
-        endTime: endTime,
-        breakStart: breakStart,
-        breakEnd: breakEnd,
-        slotDurationMinutes: slotDurationMinutes,
-        maxAppointmentsPerDay: maxAppointmentsPerDay,
+        consultationSchedules: {
+          'hospitalVisit': hospitalVisitSchedule,
+          'videoConsultation': videoConsultationSchedule,
+        },
       );
 
       if (!mounted) return;
@@ -1660,6 +1679,28 @@ Widget casesPage() {
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
             const SizedBox(height: 20),
+            Wrap(
+              spacing: 10,
+              children: [
+                for (final type in ['Hospital Visit', 'Video Consultation'])
+                  ChoiceChip(
+                    avatar: Icon(
+                      type == 'Hospital Visit' ? Icons.local_hospital : Icons.video_call,
+                      size: 18,
+                    ),
+                    label: Text(type),
+                    selected: selectedScheduleType == type,
+                    selectedColor: const Color(0xffD9F7F3),
+                    onSelected: (_) => setState(() => selectedScheduleType = type),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Choose a consultation type to edit its own working days, hours, breaks and appointment limits.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
             Card(
               color: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -1668,7 +1709,7 @@ Widget casesPage() {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Working Days', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text('$selectedScheduleType • Working Days', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
@@ -1680,14 +1721,15 @@ Widget casesPage() {
                         ])
                           FilterChip(
                             label: Text(day.substring(0, 3)),
-                            selected: workingDays.contains(day),
+                            selected: (_activeSchedule['workingDays'] as List<String>).contains(day),
                             selectedColor: const Color(0xffD9F7F3),
                             onSelected: (selected) {
                               setState(() {
+                                final days = _activeSchedule['workingDays'] as List<String>;
                                 if (selected) {
-                                  if (!workingDays.contains(day)) workingDays.add(day);
+                                  if (!days.contains(day)) days.add(day);
                                 } else {
-                                  workingDays.remove(day);
+                                  days.remove(day);
                                 }
                               });
                             },
@@ -1696,15 +1738,15 @@ Widget casesPage() {
                     ),
                     const Divider(height: 28),
                     const Text('Consultation Hours', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    _timeSettingTile('Start time', startTime, 'start'),
-                    _timeSettingTile('End time', endTime, 'end'),
+                    _timeSettingTile('Start time', _activeSchedule['startTime'].toString(), 'start'),
+                    _timeSettingTile('End time', _activeSchedule['endTime'].toString(), 'end'),
                     const Divider(height: 24),
                     const Text('Break Time', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    _timeSettingTile('Break starts', breakStart, 'breakStart'),
-                    _timeSettingTile('Break ends', breakEnd, 'breakEnd'),
+                    _timeSettingTile('Break starts', _activeSchedule['breakStart'].toString(), 'breakStart'),
+                    _timeSettingTile('Break ends', _activeSchedule['breakEnd'].toString(), 'breakEnd'),
                     const Divider(height: 24),
                     DropdownButtonFormField<int>(
-                      initialValue: slotDurationMinutes,
+                      initialValue: _activeSchedule['slotDurationMinutes'] as int,
                       decoration: const InputDecoration(
                         labelText: 'Appointment slot duration',
                         border: OutlineInputBorder(),
@@ -1716,12 +1758,12 @@ Widget casesPage() {
                               ))
                           .toList(),
                       onChanged: (value) {
-                        if (value != null) setState(() => slotDurationMinutes = value);
+                        if (value != null) setState(() => _activeSchedule['slotDurationMinutes'] = value);
                       },
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
-                      initialValue: maxAppointmentsPerDay,
+                      initialValue: _activeSchedule['maxAppointmentsPerDay'] as int,
                       decoration: const InputDecoration(
                         labelText: 'Maximum appointments per day',
                         border: OutlineInputBorder(),
@@ -1733,7 +1775,7 @@ Widget casesPage() {
                               ))
                           .toList(),
                       onChanged: (value) {
-                        if (value != null) setState(() => maxAppointmentsPerDay = value);
+                        if (value != null) setState(() => _activeSchedule['maxAppointmentsPerDay'] = value);
                       },
                     ),
                     const SizedBox(height: 18),
@@ -2069,6 +2111,8 @@ Widget scheduleCard(dynamic appointment) {
 
 final isVideo =
     consultationType.toLowerCase() == "video consultation";
+final paymentStatus = appointment["paymentStatus"]?.toString() ?? "Pending";
+final paymentMethod = appointment["paymentMethod"]?.toString() ?? "ONLINE";
 debugPrint("================================");
 debugPrint("CONSULTATION TYPE = [$consultationType]");
 debugPrint("IS VIDEO = $isVideo");
@@ -2240,6 +2284,42 @@ debugPrint("================================");
               ],
             ),
           ),
+
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.payment, color: Color(0xff14B8A6), size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isVideo
+                      ? "Online payment: $paymentStatus"
+                      : paymentMethod == "AT_HOSPITAL"
+                          ? "Payment at hospital: $paymentStatus"
+                          : "Online payment: $paymentStatus",
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          if (!isVideo && paymentMethod == "AT_HOSPITAL" && paymentStatus != "Paid") ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => recordHospitalPayment(appointment),
+                icon: const Icon(Icons.payments_outlined),
+                label: Text(
+                  "Record hospital payment received"
+                  "${appointment["fees"] == null ? "" : " • ₹${appointment["fees"]}"}",
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xff0F9D91),
+                  side: const BorderSide(color: Color(0xff14B8A6)),
+                ),
+              ),
+            ),
+          ],
 
           // ================= PATIENT REPORTS =================
 

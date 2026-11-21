@@ -3783,6 +3783,15 @@ class MedicineOrderSuccessPage
   Widget build(
     BuildContext context,
   ) {
+    final normalizedPaymentMethod = paymentMethod
+        .trim()
+        .toUpperCase()
+        .replaceAll(RegExp(r"[_-]+"), " ");
+    final isCashOnDelivery = const {
+      "COD",
+      "CASH ON DELIVERY",
+    }.contains(normalizedPaymentMethod);
+
     return Scaffold(
       backgroundColor:
           const Color(0xffF7F8FA),
@@ -3917,8 +3926,7 @@ class MedicineOrderSuccessPage
                     ),
                     _infoRow(
                       "payment".tr(),
-                      paymentMethod ==
-                              "cod".tr()
+                      isCashOnDelivery
                           ? "cashOnDelivery".tr()
                           : "onlinePaid".tr(),
                     ),
