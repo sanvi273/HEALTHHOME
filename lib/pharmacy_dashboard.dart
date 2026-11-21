@@ -3486,18 +3486,13 @@ class _PharmacyReturnRequestsPageState
     return result;
   }
 
-  Future<void> _decideRequest(
-    Map<String, dynamic> order,
-    String decision,
-  ) async {
+  Future<void> _approveRequest(Map<String, dynamic> order) async {
     final orderId = order["_id"]?.toString() ?? "";
     if (orderId.isEmpty) return;
     final note = await _askForNote(
-      title: decision == "APPROVED" ? "Approve medicine return" : "Decline medicine return",
-      hint: decision == "APPROVED"
-          ? "Return instructions for the patient (optional)"
-          : "Reason for declining this return",
-      requiredNote: decision == "REJECTED",
+      title: "Approve medicine return",
+      hint: "Return instructions for the patient (optional)",
+      requiredNote: false,
     );
     if (note == null || !mounted) return;
 
@@ -3505,7 +3500,7 @@ class _PharmacyReturnRequestsPageState
     try {
       final result = await ApiService.decideMedicineReturn(
         orderId: orderId,
-        decision: decision,
+        decision: "APPROVED",
         note: note,
       );
       if (!mounted) return;
@@ -3661,6 +3656,33 @@ class _PharmacyReturnRequestsPageState
             ),
             Text("Order #$orderIdLabel"),
             Text("Phone: ${order["patientPhone"] ?? "—"}"),
+            const SizedBox(height: 8),
+            const Text(
+              "Delivery address",
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 3),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(
+                    Icons.location_on_outlined,
+                    size: 18,
+                    color: Color(0xff0F766E),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: SelectableText(
+                    (order["address"]?.toString().trim().isNotEmpty ?? false)
+                        ? order["address"].toString().trim()
+                        : "Address not provided",
+                  ),
+                ),
+              ],
+            ),
             if (_dateText(order["returnRequestedAt"]).isNotEmpty)
               Text("Requested: ${_dateText(order["returnRequestedAt"])}"),
             if (status == "RECEIVED" &&
@@ -3697,28 +3719,17 @@ class _PharmacyReturnRequestsPageState
             ],
             const SizedBox(height: 14),
             if (status == "REQUESTED")
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: isBusy ? null : () => _decideRequest(order, "REJECTED"),
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                      child: const Text("Decline"),
-                    ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isBusy ? null : () => _approveRequest(order),
+                  icon: const Icon(Icons.check),
+                  label: const Text("Approve return"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff0F766E),
+                    foregroundColor: Colors.white,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: isBusy ? null : () => _decideRequest(order, "APPROVED"),
-                      icon: const Icon(Icons.check),
-                      label: const Text("Approve return"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff0F766E),
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             if (status == "APPROVED")
               SizedBox(
