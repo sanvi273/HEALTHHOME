@@ -366,11 +366,6 @@ class _AgoraVideoCallPageState
       }
 
       _engine = null;
-
-      // Complete consultation in backend
-      await ApiService.completeConsultation(
-        widget.appointmentId,
-      );
     } catch (e) {
       debugPrint(
         "END AGORA CALL ERROR: $e",

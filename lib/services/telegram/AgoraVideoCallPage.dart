@@ -459,27 +459,8 @@ class _AgoraVideoCallPageState extends State<AgoraVideoCallPage> {
         }
       }
 
-      // Only doctor should complete the consultation.
-      //
-      // Patient leaving the call should NOT mark the
-      // appointment as Completed.
-
-      if (widget.isDoctor) {
-        try {
-          final response = await ApiService.completeConsultation(
-            widget.appointmentId,
-          );
-
-          debugPrint(
-            "DOCTOR COMPLETE CONSULTATION:"
-            " $response",
-          );
-        } catch (e) {
-          debugPrint(
-            "COMPLETE CONSULTATION ERROR = $e",
-          );
-        }
-      }
+      // Ending the call alone does not complete the appointment. The doctor
+      // can complete it from Schedule after confirming the consultation.
     } catch (e) {
       debugPrint(
         "END AGORA CALL ERROR = $e",

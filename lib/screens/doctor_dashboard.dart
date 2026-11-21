@@ -761,6 +761,39 @@ Future<void> loadAppointments() async {
     }
   }
 
+  Future<void> completeVideoAppointment(dynamic appointment) async {
+    final appointmentId = appointment["_id"]?.toString().trim() ?? "";
+    if (appointmentId.isEmpty) return;
+
+    try {
+      final response = await ApiService.completeConsultation(appointmentId);
+      final completedAppointment = response["appointment"] is Map
+          ? Map<String, dynamic>.from(response["appointment"] as Map)
+          : Map<String, dynamic>.from(appointment as Map);
+
+      await loadAppointments();
+      if (!mounted) return;
+
+      final refresh = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PrescriptionScreen(
+            appointment: completedAppointment,
+          ),
+        ),
+      );
+
+      if (refresh == true && mounted) {
+        await loadAppointments();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Unable to complete consultation: $e")),
+      );
+    }
+  }
+
   //==========================================
   // REJECT
   //==========================================
@@ -2292,6 +2325,10 @@ final isVideo =
     consultationType.toLowerCase() == "video consultation";
 final paymentStatus = appointment["paymentStatus"]?.toString() ?? "Pending";
 final paymentMethod = appointment["paymentMethod"]?.toString() ?? "ONLINE";
+final consultationStatus =
+    appointment["consultationStatus"]?.toString().trim().toLowerCase() ?? "";
+final canCompleteVideoAppointment = isVideo &&
+    (consultationStatus == "ready" || consultationStatus == "joined");
 debugPrint("================================");
 debugPrint("CONSULTATION TYPE = [$consultationType]");
 debugPrint("IS VIDEO = $isVideo");
@@ -2529,6 +2566,26 @@ debugPrint("================================");
           ),
           const SizedBox(height: 12),
 
+          if (canCompleteVideoAppointment) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () => completeVideoAppointment(appointment),
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text("Complete"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff0F9D91),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
           // ================= ACTION =================
 
           SizedBox(
@@ -2672,15 +2729,8 @@ if (isVideo) {
       ),
     );
 
-    // =================================================
-    // 4. REFRESH AFTER CALL
-    //
-    // AgoraVideoCallPage already calls
-    // completeConsultation() for the doctor.
-    //
-    // Therefore DO NOT call updateAppointmentStatus()
-    // here again.
-    // =================================================
+    // Refresh after the doctor returns from the call. The doctor can
+    // complete the appointment separately from Schedule.
 
     if (result == true && mounted) {
       debugPrint(

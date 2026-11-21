@@ -1516,11 +1516,16 @@ class ApiService {
         "$baseUrl/api/appointments/"
         "complete/$appointmentId",
       ),
+      headers: await _getAuthHeaders(),
     );
 
-    return Map<String, dynamic>.from(
-      jsonDecode(response.body),
-    );
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true) {
+      throw Exception(data["message"] ?? "Unable to complete consultation");
+    }
+    return data;
   }
 
   static Future<Map<String, dynamic>?> checkReadyConsultation(
