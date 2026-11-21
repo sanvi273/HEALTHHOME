@@ -8,6 +8,7 @@ import '../pharmacy/add_medicine_page.dart';
 import '../pharmacy/my_medicines_page.dart';
 import 'widgets/help_support_card.dart';
 import 'widgets/profile_image.dart';
+import 'screens/edit_profile_screen.dart';
 
 class PharmacyDashboard extends StatefulWidget {
   const PharmacyDashboard({super.key});
@@ -5160,6 +5161,30 @@ extension PharmacyProfileExtension on _PharmacyDashboardState {
               const SizedBox(height: 25),
             ],
           ),
+
+          Center(
+            child: EditProfileButton(
+              role: 'pharmacy',
+              initialProfile: {
+                'name': name,
+                'shopType': pharmacy['shopType'] ?? '',
+                'experience': pharmacy['experience'] ?? '',
+                'address': pharmacy['address'] ?? '',
+              },
+              onProfileUpdated: (profile) async {
+                if (!mounted) return;
+                final updatedPharmacy = Map<String, dynamic>.from(
+                  pharmacyData ?? <String, dynamic>{},
+                )..addAll(profile);
+                setState(() {
+                  pharmacyData = updatedPharmacy;
+                  pharmacyName = profile['name']?.toString() ?? pharmacyName;
+                });
+              },
+            ),
+          ),
+
+          const SizedBox(height: 16),
 
           // =================================================
           // PHONE

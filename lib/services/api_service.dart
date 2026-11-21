@@ -1671,6 +1671,27 @@ class ApiService {
     return data;
   }
 
+  static Future<Map<String, dynamic>> updateMyProfile({
+    required Map<String, dynamic> profile,
+  }) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/api/profile/me"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode(profile),
+    );
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid profile response.");
+    }
+
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to update your profile.");
+    }
+    return data;
+  }
+
   static Future<Map<String, dynamic>> uploadMyProfileImage({
     required String token,
     required Uint8List bytes,

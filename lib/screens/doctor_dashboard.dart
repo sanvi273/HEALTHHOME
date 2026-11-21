@@ -9,6 +9,7 @@ import '../services/telegram/AgoraVideoCallPage.dart';
 import '../models/patient_report.dart';
 import '../widgets/help_support_card.dart';
 import '../widgets/profile_image.dart';
+import 'edit_profile_screen.dart';
 import 'onboarding_screen.dart';
 import '../prescription_screen.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -3287,6 +3288,36 @@ if (isVideo) {
 
             ),
 
+          ),
+
+          const SizedBox(height: 16),
+
+          Center(
+            child: EditProfileButton(
+              role: 'doctor',
+              initialProfile: {
+                'name': doctorName,
+                'specialization': doctorSpecialization,
+                'experience': doctorExperience,
+                'fees': doctorFees,
+                'hospital': doctorHospital,
+                'about': doctorAbout,
+              },
+              onProfileUpdated: (profile) async {
+                if (!mounted) return;
+                setState(() {
+                  doctorName = profile['name']?.toString() ?? doctorName;
+                  doctorSpecialization =
+                      profile['specialization']?.toString() ?? doctorSpecialization;
+                  doctorExperience =
+                      profile['experience']?.toString() ?? doctorExperience;
+                  doctorFees = profile['fees']?.toString() ?? doctorFees;
+                  doctorHospital =
+                      profile['hospital']?.toString() ?? doctorHospital;
+                  doctorAbout = profile['about']?.toString() ?? doctorAbout;
+                });
+              },
+            ),
           ),
 
           const SizedBox(height: 30),

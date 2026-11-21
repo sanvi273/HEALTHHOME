@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'upload_lab_report_page.dart';
 import 'widgets/help_support_card.dart';
 import 'widgets/profile_image.dart';
+import 'screens/edit_profile_screen.dart';
 
 
 class LaboratoryDashboard extends StatefulWidget {
@@ -3943,6 +3944,30 @@ Widget profilePage() {
                 ),
               ),
             ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        Center(
+          child: EditProfileButton(
+            role: 'laboratory',
+            initialProfile: {
+              'name': name,
+              'labType': safeLabData['labType'] ?? '',
+              'experience': safeLabData['experience'] ?? '',
+              'address': safeLabData['address'] ?? '',
+            },
+            onProfileUpdated: (profile) async {
+              if (!mounted) return;
+              final updatedLab = Map<String, dynamic>.from(
+                labData ?? <String, dynamic>{},
+              )..addAll(profile);
+              setState(() {
+                labData = updatedLab;
+                labName = profile['name']?.toString() ?? labName;
+              });
+            },
           ),
         ),
 

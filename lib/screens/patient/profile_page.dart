@@ -8,6 +8,7 @@ import '../../services/incoming_call_service.dart';
 import '../payment/payment_history_page.dart';
 import '../../widgets/help_support_card.dart';
 import '../../widgets/profile_image.dart';
+import '../edit_profile_screen.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -283,6 +284,40 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ],
               ),
+            ),
+
+            const SizedBox(height: 20),
+
+            EditProfileButton(
+              role: 'patient',
+              initialProfile: {
+                'name': userName,
+                'age': age,
+                'gender': gender,
+                'bloodGroup': bloodGroup,
+                'height': height,
+                'weight': weight,
+              },
+              onProfileUpdated: (profile) async {
+                final updatedHeight = profile['height']?.toString() ?? '';
+                final updatedWeight = profile['weight']?.toString() ?? '';
+                final heightMeters =
+                    (double.tryParse(updatedHeight) ?? 0) / 100;
+                final weightKg = double.tryParse(updatedWeight) ?? 0;
+                final bmiValue = heightMeters > 0 && weightKg > 0
+                    ? weightKg / (heightMeters * heightMeters)
+                    : 0.0;
+                if (!mounted) return;
+                setState(() {
+                  userName = profile['name']?.toString() ?? userName;
+                  age = profile['age']?.toString() ?? '';
+                  gender = profile['gender']?.toString() ?? '';
+                  bloodGroup = profile['bloodGroup']?.toString() ?? '';
+                  height = updatedHeight;
+                  weight = updatedWeight;
+                  bmi = bmiValue == 0 ? '' : bmiValue.toStringAsFixed(1);
+                });
+              },
             ),
 
             const SizedBox(height: 20),
