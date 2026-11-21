@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 
@@ -67,10 +69,9 @@ class LabOrdersPage extends StatefulWidget {
 
 
 class _LabOrdersPageState
-
-
-
     extends State<LabOrdersPage> {
+  Timer? _collectionOtpPollingTimer;
+  bool _isPollingOrders = false;
 
 
 
@@ -255,21 +256,46 @@ class _LabOrdersPageState
 
 
   void initState() {
-
-
-
     super.initState();
-
-
-
-
-
-
-
     loadOrders();
+    _collectionOtpPollingTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => unawaited(_pollOrdersForCollectionOtp()),
+    );
+  }
 
+  @override
+  void dispose() {
+    _collectionOtpPollingTimer?.cancel();
+    super.dispose();
+  }
 
+  Future<void> _pollOrdersForCollectionOtp() async {
+    if (!mounted || isLoading || _isPollingOrders) return;
 
+    const activeStatuses = {
+      'pending',
+      'accepted',
+      'collector assigned',
+      'on the way',
+    };
+    final hasActiveHomeCollectionOrder = myOrders.any((rawOrder) {
+      if (rawOrder is! Map) return false;
+      final order = Map<String, dynamic>.from(rawOrder);
+      final collectionMode = order['collectionMode']?.toString() ?? '';
+      final status = order['status']?.toString() ?? '';
+      return isHomeCollection(collectionMode) &&
+          activeStatuses.contains(status.trim().toLowerCase());
+    });
+
+    if (!hasActiveHomeCollectionOrder) return;
+
+    _isPollingOrders = true;
+    try {
+      await loadOrders(showLoading: false, showErrors: false);
+    } finally {
+      _isPollingOrders = false;
+    }
   }
 
 
@@ -294,7 +320,10 @@ class _LabOrdersPageState
 
 
 
-  Future<void> loadOrders() async {
+  Future<void> loadOrders({
+    bool showLoading = true,
+    bool showErrors = true,
+  }) async {
 
 
 
@@ -302,22 +331,10 @@ class _LabOrdersPageState
 
 
 
-      if (mounted) {
-
-
-
+      if (mounted && showLoading) {
         setState(() {
-
-
-
           isLoading = true;
-
-
-
         });
-
-
-
       }
 
 
@@ -830,7 +847,7 @@ class _LabOrdersPageState
 
 
 
-      await loadCollectionOtps();
+      await loadCollectionOtps(showLoadingIndicator: showLoading);
 
 
 
@@ -890,7 +907,8 @@ class _LabOrdersPageState
 
 
 
-      ScaffoldMessenger.of(
+      if (showErrors) {
+        ScaffoldMessenger.of(
 
 
 
@@ -931,6 +949,7 @@ class _LabOrdersPageState
 
 
       );
+      }
 
 
 
@@ -962,11 +981,7 @@ class _LabOrdersPageState
 
 
 
-  Future<void>
-
-
-
-      loadCollectionOtps() async {
+  Future<void> loadCollectionOtps({bool showLoadingIndicator = true}) async {
 
 
 
@@ -1250,15 +1265,7 @@ class _LabOrdersPageState
 
 
 
-        await fetchCollectionOtp(
-
-
-
-          orderId,
-
-
-
-        );
+        await fetchCollectionOtp(orderId, showLoadingIndicator: showLoadingIndicator);
 
 
 
@@ -1310,19 +1317,10 @@ class _LabOrdersPageState
 
 
 
-  Future<void>
-
-
-
-      fetchCollectionOtp(
-
-
-
-    String orderId,
-
-
-
-  ) async {
+  Future<void> fetchCollectionOtp(
+    String orderId, {
+    bool showLoadingIndicator = true,
+  }) async {
 
 
 
@@ -1362,46 +1360,13 @@ class _LabOrdersPageState
 
 
 
-    if (mounted) {
-
-
-
+    if (mounted && showLoadingIndicator) {
       setState(() {
-
-
-
-        loadingOtpOrders.add(
-
-
-
-          orderId,
-
-
-
-        );
-
-
-
-
-
-
-
-        otpErrors.remove(
-
-
-
-          orderId,
-
-
-
-        );
-
-
-
+        loadingOtpOrders.add(orderId);
+        otpErrors.remove(orderId);
       });
-
-
-
+    } else {
+      loadingOtpOrders.add(orderId);
     }
 
 
@@ -1502,15 +1467,7 @@ class _LabOrdersPageState
 
 
 
-      debugPrint(
-
-
-
-        "LAB COLLECTION OTP RESULT = $result",
-
-
-
-      );
+      debugPrint("LAB COLLECTION OTP RESPONSE RECEIVED");
 
 
 
@@ -1606,15 +1563,7 @@ class _LabOrdersPageState
 
 
 
-          debugPrint(
-
-
-
-            "LAB COLLECTION OTP LOADED = $otp",
-
-
-
-          );
+          debugPrint("LAB COLLECTION OTP LOADED");
 
 
 
@@ -1667,53 +1616,22 @@ class _LabOrdersPageState
 
 
         final String message =
+            result["message"]?.toString() ?? "Unable to get collection OTP.";
 
-
-
-            result["message"]
-
-
-
-                    ?.toString() ??
-
-
-
-                "Unable to get collection OTP.";
-
-
-
-
-
-
-
-        if (!mounted) {
-
-
-
+        if (message.toLowerCase().contains("no active collection otp")) {
+          if (mounted && (collectionOtps.containsKey(orderId) || otpErrors.containsKey(orderId))) {
+            setState(() {
+              collectionOtps.remove(orderId);
+              otpErrors.remove(orderId);
+            });
+          }
           return;
-
-
-
         }
 
-
-
-
-
-
+        if (!mounted) return;
 
         setState(() {
-
-
-
-          otpErrors[
-
-
-
-              orderId] = message;
-
-
-
+          otpErrors[orderId] = message;
         });
 
 
@@ -1791,45 +1709,10 @@ class _LabOrdersPageState
 
 
     } finally {
-
-
-
-      if (!mounted) {
-
-
-
-        return;
-
-
-
+      loadingOtpOrders.remove(orderId);
+      if (mounted && showLoadingIndicator) {
+        setState(() {});
       }
-
-
-
-
-
-
-
-      setState(() {
-
-
-
-        loadingOtpOrders.remove(
-
-
-
-          orderId,
-
-
-
-        );
-
-
-
-      });
-
-
-
     }
 
 

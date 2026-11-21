@@ -49,6 +49,20 @@ static Map<String, dynamic> _defaultSchedule() => {
   'endTime': '19:30',
   'breakStart': '13:00',
   'breakEnd': '14:00',
+  'daySchedules': <Map<String, dynamic>>[
+    for (final day in const [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+      'Friday', 'Saturday', 'Sunday',
+    ])
+      <String, dynamic>{
+        'day': day,
+        'enabled': day != 'Sunday',
+        'startTime': '10:00',
+        'endTime': '19:30',
+        'breakStart': '13:00',
+        'breakEnd': '14:00',
+      },
+  ],
   'slotDurationMinutes': 30,
   'maxAppointmentsPerDay': 10,
 };
@@ -62,19 +76,66 @@ Map<String, dynamic> get _activeSchedule =>
         ? videoConsultationSchedule
         : hospitalVisitSchedule;
 
+List<Map<String, dynamic>> _readDaySchedules(
+  dynamic saved,
+  List<String> workingDays,
+  String startTime,
+  String endTime,
+  String breakStart,
+  String breakEnd,
+) {
+  const weekdays = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+    'Friday', 'Saturday', 'Sunday',
+  ];
+  final entries = saved is List
+      ? saved.whereType<Map>().map((entry) => Map<String, dynamic>.from(entry)).toList()
+      : <Map<String, dynamic>>[];
+  return weekdays.map((day) {
+    final entry = entries.firstWhere(
+      (item) => item['day']?.toString() == day,
+      orElse: () => <String, dynamic>{},
+    );
+    return <String, dynamic>{
+      'day': day,
+      'enabled': entry['enabled'] is bool
+          ? entry['enabled'] == true
+          : workingDays.contains(day),
+      'startTime': (entry['startTime'] ?? startTime).toString(),
+      'endTime': (entry['endTime'] ?? endTime).toString(),
+      'breakStart': (entry['breakStart'] ?? breakStart).toString(),
+      'breakEnd': (entry['breakEnd'] ?? breakEnd).toString(),
+    };
+  }).toList();
+}
+
 Map<String, dynamic> _readSchedule(dynamic saved, dynamic legacy) {
   final defaults = _defaultSchedule();
   final savedMap = saved is Map ? saved : const <dynamic, dynamic>{};
   final legacyMap = legacy is Map ? legacy : const <dynamic, dynamic>{};
   final days = savedMap['workingDays'] ?? legacyMap['workingDays'];
+  final workingDays = days is List && days.isNotEmpty
+      ? days.map((day) => day.toString()).toList()
+      : List<String>.from(defaults['workingDays'] as List);
+  final startTime = (savedMap['startTime'] ?? legacyMap['startTime'] ?? defaults['startTime']).toString();
+  final endTime = (savedMap['endTime'] ?? legacyMap['endTime'] ?? defaults['endTime']).toString();
+  final breakStart = (savedMap['breakStart'] ?? legacyMap['breakStart'] ?? defaults['breakStart']).toString();
+  final breakEnd = (savedMap['breakEnd'] ?? legacyMap['breakEnd'] ?? defaults['breakEnd']).toString();
+  final rawDaySchedules = savedMap['daySchedules'] ?? legacyMap['daySchedules'];
   return {
-    'workingDays': days is List && days.isNotEmpty
-        ? days.map((day) => day.toString()).toList()
-        : List<String>.from(defaults['workingDays'] as List),
-    'startTime': (savedMap['startTime'] ?? legacyMap['startTime'] ?? defaults['startTime']).toString(),
-    'endTime': (savedMap['endTime'] ?? legacyMap['endTime'] ?? defaults['endTime']).toString(),
-    'breakStart': (savedMap['breakStart'] ?? legacyMap['breakStart'] ?? defaults['breakStart']).toString(),
-    'breakEnd': (savedMap['breakEnd'] ?? legacyMap['breakEnd'] ?? defaults['breakEnd']).toString(),
+    'workingDays': workingDays,
+    'startTime': startTime,
+    'endTime': endTime,
+    'breakStart': breakStart,
+    'breakEnd': breakEnd,
+    'daySchedules': _readDaySchedules(
+      rawDaySchedules,
+      workingDays,
+      startTime,
+      endTime,
+      breakStart,
+      breakEnd,
+    ),
     'slotDurationMinutes': int.tryParse(
           (savedMap['slotDurationMinutes'] ?? legacyMap['slotDurationMinutes'] ?? defaults['slotDurationMinutes']).toString(),
         ) ?? 30,
@@ -1576,14 +1637,71 @@ Widget casesPage() {
   // SCHEDULE PAGE
   //==================================================
 
-  Future<void> _pickScheduleTime(String field) async {
+  List<Map<String, dynamic>> _scheduleDayEntries(Map<String, dynamic> schedule) =>
+      (schedule['daySchedules'] as List).cast<Map<String, dynamic>>();
+
+  Map<String, dynamic> _dayScheduleFor(String day) =>
+      _scheduleDayEntries(_activeSchedule)
+          .firstWhere((entry) => entry['day'] == day);
+
+  Map<String, dynamic> _schedulePayload(Map<String, dynamic> schedule) {
+    final daySchedules = _scheduleDayEntries(schedule)
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList();
+    final workingDays = daySchedules
+        .where((entry) => entry['enabled'] == true)
+        .toList();
+    final firstWorkingDay = workingDays.isNotEmpty ? workingDays.first : null;
+    return {
+      ...schedule,
+      'daySchedules': daySchedules,
+      'workingDays': workingDays.map((entry) => entry['day'].toString()).toList(),
+      if (firstWorkingDay != null) ...{
+        'startTime': firstWorkingDay['startTime'],
+        'endTime': firstWorkingDay['endTime'],
+        'breakStart': firstWorkingDay['breakStart'],
+        'breakEnd': firstWorkingDay['breakEnd'],
+      },
+    };
+  }
+
+  String? _validateSchedule(Map<String, dynamic> schedule, String label) {
+    final enabledDays = _scheduleDayEntries(schedule)
+        .where((entry) => entry['enabled'] == true)
+        .toList();
+    if (enabledDays.isEmpty) return '$label: select at least one working day.';
+
+    bool isValidTime(String value) => RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').hasMatch(value);
+    for (final entry in enabledDays) {
+      final day = entry['day'].toString();
+      final start = entry['startTime'].toString();
+      final end = entry['endTime'].toString();
+      final breakStart = entry['breakStart'].toString();
+      final breakEnd = entry['breakEnd'].toString();
+      if (!isValidTime(start) || !isValidTime(end) || start >= end) {
+        return '$label: set valid start and end times for $day.';
+      }
+      if (breakStart.isEmpty != breakEnd.isEmpty) {
+        return '$label: set both break times or turn the break off for $day.';
+      }
+      if (breakStart.isNotEmpty &&
+          (!isValidTime(breakStart) || !isValidTime(breakEnd) ||
+              breakStart >= breakEnd || breakStart < start || breakEnd > end)) {
+        return '$label: the $day break must fit within working hours.';
+      }
+    }
+    return null;
+  }
+
+  Future<void> _pickScheduleTime(String field, {String? day}) async {
+    final targetSchedule = day == null ? _activeSchedule : _dayScheduleFor(day);
     final scheduleField = field == 'start'
         ? 'startTime'
         : field == 'end'
             ? 'endTime'
             : field;
-    final current = (_activeSchedule[scheduleField]?.toString().isNotEmpty == true
-            ? _activeSchedule[scheduleField].toString()
+    final current = (targetSchedule[scheduleField]?.toString().isNotEmpty == true
+            ? targetSchedule[scheduleField].toString()
             : '10:00');
 
     final parts = current.split(':');
@@ -1602,7 +1720,7 @@ Widget casesPage() {
         '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
 
     setState(() {
-      _activeSchedule[scheduleField] = formatted;
+      targetSchedule[scheduleField] = formatted;
     });
   }
 
@@ -1613,10 +1731,13 @@ Widget casesPage() {
       );
       return;
     }
-    if ((hospitalVisitSchedule['workingDays'] as List).isEmpty ||
-        (videoConsultationSchedule['workingDays'] as List).isEmpty) {
+    final hospitalPayload = _schedulePayload(hospitalVisitSchedule);
+    final videoPayload = _schedulePayload(videoConsultationSchedule);
+    final scheduleError = _validateSchedule(hospitalPayload, 'Hospital visit') ??
+        _validateSchedule(videoPayload, 'Video consultation');
+    if (scheduleError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one working day for both schedules.')),
+        SnackBar(content: Text(scheduleError)),
       );
       return;
     }
@@ -1626,8 +1747,8 @@ Widget casesPage() {
       final response = await ApiService.updateDoctorSchedule(
         doctorId: doctorId,
         consultationSchedules: {
-          'hospitalVisit': hospitalVisitSchedule,
-          'videoConsultation': videoConsultationSchedule,
+          'hospitalVisit': hospitalPayload,
+          'videoConsultation': videoPayload,
         },
       );
 
@@ -1649,13 +1770,81 @@ Widget casesPage() {
     }
   }
 
-  Widget _timeSettingTile(String title, String value, String field) {
+  Widget _timeSettingTile(String title, String value, String field, {String? day}) {
     return ListTile(
+      dense: true,
       contentPadding: EdgeInsets.zero,
       title: Text(title),
       subtitle: Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
       trailing: const Icon(Icons.access_time, color: Color(0xff14B8A6)),
-      onTap: () => _pickScheduleTime(field),
+      onTap: () => _pickScheduleTime(field, day: day),
+    );
+  }
+
+  Widget _dayScheduleCard(String day) {
+    final daySchedule = _dayScheduleFor(day);
+    final enabled = daySchedule['enabled'] == true;
+    final hasBreak = daySchedule['breakStart'].toString().isNotEmpty &&
+        daySchedule['breakEnd'].toString().isNotEmpty;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 8),
+        leading: Switch(
+          value: enabled,
+          activeColor: const Color(0xff14B8A6),
+          onChanged: (value) => setState(() => daySchedule['enabled'] = value),
+        ),
+        title: Text(day, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          enabled
+              ? '${daySchedule['startTime']} – ${daySchedule['endTime']}'
+              : 'Closed',
+        ),
+        children: [
+          if (enabled) ...[
+            Row(
+              children: [
+                Expanded(child: _timeSettingTile('Start time', daySchedule['startTime'].toString(), 'startTime', day: day)),
+                const SizedBox(width: 12),
+                Expanded(child: _timeSettingTile('End time', daySchedule['endTime'].toString(), 'endTime', day: day)),
+              ],
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Break time'),
+              subtitle: Text(hasBreak ? '${daySchedule['breakStart']} – ${daySchedule['breakEnd']}' : 'No break'),
+              value: hasBreak,
+              activeColor: const Color(0xff14B8A6),
+              onChanged: (value) => setState(() {
+                daySchedule['breakStart'] = value ? '13:00' : '';
+                daySchedule['breakEnd'] = value ? '14:00' : '';
+              }),
+            ),
+            if (hasBreak)
+              Row(
+                children: [
+                  Expanded(child: _timeSettingTile('Break starts', daySchedule['breakStart'].toString(), 'breakStart', day: day)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _timeSettingTile('Break ends', daySchedule['breakEnd'].toString(), 'breakEnd', day: day)),
+                ],
+              ),
+          ] else
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text('This day is not available for appointments.'),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -1697,7 +1886,7 @@ Widget casesPage() {
             ),
             const SizedBox(height: 12),
             const Text(
-              'Choose a consultation type to edit its own working days, hours, breaks and appointment limits.',
+              'Set working hours for each day. Hospital visits and video consultations have separate schedules.',
               style: TextStyle(color: Colors.grey, fontSize: 13),
             ),
             const SizedBox(height: 12),
@@ -1709,42 +1898,16 @@ Widget casesPage() {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('$selectedScheduleType • Working Days', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        for (final day in [
-                          'Monday', 'Tuesday', 'Wednesday', 'Thursday',
-                          'Friday', 'Saturday', 'Sunday',
-                        ])
-                          FilterChip(
-                            label: Text(day.substring(0, 3)),
-                            selected: (_activeSchedule['workingDays'] as List<String>).contains(day),
-                            selectedColor: const Color(0xffD9F7F3),
-                            onSelected: (selected) {
-                              setState(() {
-                                final days = _activeSchedule['workingDays'] as List<String>;
-                                if (selected) {
-                                  if (!days.contains(day)) days.add(day);
-                                } else {
-                                  days.remove(day);
-                                }
-                              });
-                            },
-                          ),
-                      ],
-                    ),
+                    Text('$selectedScheduleType • Weekly hours', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    const Text('Turn on each working day and set its own hours and break.'),
+                    const SizedBox(height: 14),
+                    for (final day in const [
+                      'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+                      'Friday', 'Saturday', 'Sunday',
+                    ])
+                      _dayScheduleCard(day),
                     const Divider(height: 28),
-                    const Text('Consultation Hours', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    _timeSettingTile('Start time', _activeSchedule['startTime'].toString(), 'start'),
-                    _timeSettingTile('End time', _activeSchedule['endTime'].toString(), 'end'),
-                    const Divider(height: 24),
-                    const Text('Break Time', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    _timeSettingTile('Break starts', _activeSchedule['breakStart'].toString(), 'breakStart'),
-                    _timeSettingTile('Break ends', _activeSchedule['breakEnd'].toString(), 'breakEnd'),
-                    const Divider(height: 24),
                     DropdownButtonFormField<int>(
                       initialValue: _activeSchedule['slotDurationMinutes'] as int,
                       decoration: const InputDecoration(

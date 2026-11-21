@@ -271,6 +271,8 @@
   "availableSlots": "Available Slots",
   "loadingAvailableSlots": "Loading available slots...",
   "noAvailableSlots": "No available slots for this date. Please select another date.",
+  "appointmentSlotUnavailable": "This slot is no longer available. Please choose another time.",
+  "unavailable": "Unavailable",
   "selectedAppointmentTime": "Selected Appointment Time",
   "uploadReportsOptional": "Upload Reports (Optional)",
   "confirmBooking": "Confirm Booking",

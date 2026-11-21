@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -98,6 +100,7 @@ class _BookAppointmentPageState
 
  bool loadingSlots = false;
  int _slotRequestId = 0;
+ Timer? _slotClockTimer;
 
  String _doctorPaymentMethod = "upi";
 
@@ -132,6 +135,8 @@ class _BookAppointmentPageState
  void initState() {
 
   super.initState();
+
+  _startSlotClock();
 
 
 
@@ -172,6 +177,49 @@ class _BookAppointmentPageState
 
 
  // ============================================================
+
+ void _startSlotClock() {
+  _slotClockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+  if (!mounted || selectedDateApi.isEmpty) return;
+  final selectedTime = timeController.text.trim();
+  if (selectedTime.isNotEmpty && !_slotStartsInFuture(selectedTime)) {
+   setState(timeController.clear);
+  } else if (selectedDateApi == _todayApiDate) {
+   setState(() {});
+  }
+  });
+ }
+
+ String get _todayApiDate {
+  final now = _indiaNow;
+  return '${now.year.toString().padLeft(4, '0')}-'
+    '${now.month.toString().padLeft(2, '0')}-'
+    '${now.day.toString().padLeft(2, '0')}';
+ }
+
+ DateTime get _indiaNow =>
+  DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+
+ bool _slotStartsInFuture(String slotTime) {
+  final now = _indiaNow;
+  if (selectedDateApi > _todayApiDate) return true;
+  if (selectedDateApi < _todayApiDate) return false;
+
+  final match = RegExp(r'^(\d{1,2}):(\d{2})\s*(AM|PM)$', caseSensitive: false)
+    .firstMatch(slotTime.trim());
+  if (match == null) return false;
+  final hour12 = int.tryParse(match.group(1)!);
+  final minute = int.tryParse(match.group(2)!);
+  if (hour12 == null || minute == null || hour12 < 1 || hour12 > 12 || minute > 59) {
+   return false;
+  }
+  final hour24 = (hour12 % 12) + (match.group(3)!.toUpperCase() == 'PM' ? 12 : 0);
+  return hour24 * 60 + minute > now.hour * 60 + now.minute;
+ }
+
+ List<Map<String, dynamic>> get _visibleSlots => availableSlots
+  .where((slot) => _slotStartsInFuture(slot['time']?.toString() ?? ''))
+  .toList();
 
  // PICK REPORT
 
@@ -412,17 +460,8 @@ class _BookAppointmentPageState
 
    setState(() {
 
-    availableSlots = slots
-
-      .where(
-
-       (slot) =>
-
-         slot["available"] == true,
-
-      )
-
-      .toList();
+    // Keep unavailable future slots visible so patients can identify bookings.
+    availableSlots = slots;
 
    });
 
@@ -617,6 +656,18 @@ if (selectedDateApi.isEmpty ||
   );
   return;
 }
+
+  final selectedTime = timeController.text.trim();
+  final selectedSlotIsAvailable = availableSlots.any((slot) =>
+    slot['time']?.toString() == selectedTime && slot['available'] == true);
+  if (!selectedSlotIsAvailable || !_slotStartsInFuture(selectedTime)) {
+   setState(timeController.clear);
+   ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('appointmentSlotUnavailable'.tr())),
+   );
+   await loadAvailableSlots(selectedDateApi);
+   return;
+  }
 
 
 
@@ -2996,7 +3047,7 @@ Future<void> _handlePaymentError(
 
 
 
-       else if (availableSlots
+       else if (_visibleSlots
 
          .isEmpty)
 
@@ -3128,7 +3179,7 @@ Future<void> _handlePaymentError(
 
          children:
 
-           availableSlots
+           _visibleSlots
 
              .map(
 
@@ -3144,13 +3195,12 @@ Future<void> _handlePaymentError(
 
 
 
-           final bool selected =
-
-             timeController
-
-                 .text ==
-
-               time;
+           final bool available = slot["available"] == true;
+           final bool selected = available && timeController.text == time;
+           final String unavailableLabel =
+             slot["unavailableReason"] == "daily_limit"
+               ? "unavailable"
+               : "booked";
 
 
 
@@ -3168,15 +3218,7 @@ Future<void> _handlePaymentError(
 
 
 
-            onTap: () {
-
-             selectSlot(
-
-              time,
-
-             );
-
-            },
+            onTap: available ? () => selectSlot(time) : null,
 
 
 
@@ -3201,14 +3243,8 @@ Future<void> _handlePaymentError(
                BoxDecoration(
 
               color: selected
-
-                ? const Color(
-
-                  0xff10BEC4,
-
-                 )
-
-                : Colors.white,
+                ? const Color(0xff10BEC4)
+                : available ? Colors.white : Colors.grey.shade100,
 
 
 
@@ -3228,19 +3264,7 @@ Future<void> _handlePaymentError(
 
                 Border.all(
 
-               color: selected
-
-                 ? const Color(
-
-                   0xff10BEC4,
-
-                  )
-
-                 : Colors
-
-                   .grey
-
-                   .shade300,
+               color: Colors.grey.shade300,
 
               ),
 
@@ -3248,74 +3272,43 @@ Future<void> _handlePaymentError(
 
 
 
-             child: Row(
-
-              mainAxisSize:
-
-                MainAxisSize.min,
-
-
-
+             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-
-               Icon(
-
-                Icons.access_time,
-
-                size: 18,
-
-
-
-                color: selected
-
-                  ? Colors.white
-
-                  : const Color(
-
-                    0xff10BEC4,
-
-                   ),
-
+               Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                 Icon(
+                  available ? Icons.access_time : Icons.event_busy,
+                  size: 18,
+                  color: selected
+                    ? Colors.white
+                    : available ? const Color(0xff10BEC4) : Colors.grey.shade600,
+                 ),
+                 const SizedBox(width: 6),
+                 Text(
+                  time,
+                  style: TextStyle(
+                   fontWeight: FontWeight.w600,
+                   color: selected
+                     ? Colors.white
+                     : available ? Colors.black87 : Colors.grey.shade700,
+                  ),
+                 ),
+                ],
                ),
-
-
-
-               const SizedBox(
-
-                width: 6,
-
-               ),
-
-
-
-               Text(
-
-                time,
-
-
-
-                style:
-
-                  TextStyle(
-
-                 fontWeight:
-
-                   FontWeight.w600,
-
-
-
-                 color: selected
-
-                   ? Colors.white
-
-                   : Colors.black87,
-
+               if (!available) ...[
+                const SizedBox(height: 3),
+                Text(
+                 unavailableLabel.tr(),
+                 style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                 ),
                 ),
-
-               ),
-
+               ],
               ],
-
              ),
 
             ),
@@ -3994,6 +3987,8 @@ Future<void> _handlePaymentError(
  @override
 
  void dispose() {
+
+  _slotClockTimer?.cancel();
 
   _razorpay.clear();
 
