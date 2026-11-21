@@ -274,6 +274,7 @@
   "noAvailableSlots": "આ તારીખ માટે કોઈ સ્લોટ ઉપલબ્ધ નથી. કૃપા કરીને બીજી તારીખ પસંદ કરો.",
   "appointmentSlotUnavailable": "આ સ્લોટ હવે ઉપલબ્ધ નથી. કૃપા કરીને બીજો સમય પસંદ કરો.",
   "unavailable": "ઉપલબ્ધ નથી",
+  "paymentPending": "ચુકવણી બાકી",
   "selectedAppointmentTime": "પસંદ કરેલ એપોઇન્ટમેન્ટનો સમય",
   "uploadReportsOptional": "રિપોર્ટ અપલોડ કરો (વૈકલ્પિક)",
   "confirmBooking": "બુકિંગની પુષ્ટિ કરો",

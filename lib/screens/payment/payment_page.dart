@@ -1,9 +1,13 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
+import '../../services/razorpay_checkout_stub.dart'
+    if (dart.library.js_interop) '../../services/razorpay_checkout_web.dart'
+    as web_razorpay;
 import '../patient/appointments_page.dart';
 import '../patient/lab_orders_page.dart';
 import '../patient/medicine_order_page.dart';
@@ -62,9 +66,11 @@ class _PaymentPageState extends State<PaymentPage> {
     super.initState();
     _razorpay = Razorpay();
 
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    if (!kIsWeb) {
+      _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+      _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+      _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    }
 
     debugPrint("================================");
     debugPrint("HEALTHHOME PAYMENT INITIALIZED");
@@ -230,7 +236,16 @@ class _PaymentPageState extends State<PaymentPage> {
       };
 
       debugPrint("OPENING RAZORPAY CHECKOUT: $options");
-      _razorpay.open(options);
+      if (kIsWeb) {
+        web_razorpay.openWebRazorpayCheckout(
+          options: options,
+          onSuccess: _handlePaymentSuccess,
+          onFailure: _handlePaymentError,
+          onExternalWallet: _handleExternalWallet,
+        );
+      } else {
+        _razorpay.open(options);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {

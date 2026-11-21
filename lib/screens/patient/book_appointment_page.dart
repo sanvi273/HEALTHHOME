@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -15,6 +16,9 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 
 import '../../services/api_service.dart';
+import '../../services/razorpay_checkout_stub.dart'
+    if (dart.library.js_interop) '../../services/razorpay_checkout_web.dart'
+    as web_razorpay;
 import '../../widgets/profile_image.dart';
 import '../../models/patient_report_upload.dart';
 
@@ -144,7 +148,7 @@ class _BookAppointmentPageState
 
 
 
-  _razorpay.on(
+  if (!kIsWeb) _razorpay.on(
 
    Razorpay.EVENT_PAYMENT_SUCCESS,
 
@@ -154,7 +158,7 @@ class _BookAppointmentPageState
 
 
 
-  _razorpay.on(
+  if (!kIsWeb) _razorpay.on(
 
    Razorpay.EVENT_PAYMENT_ERROR,
 
@@ -164,7 +168,7 @@ class _BookAppointmentPageState
 
 
 
-  _razorpay.on(
+  if (!kIsWeb) _razorpay.on(
 
    Razorpay.EVENT_EXTERNAL_WALLET,
 
@@ -1452,7 +1456,16 @@ final Map<String, dynamic> options = {
 
 
    try {
-        _razorpay.open(options);
+        if (kIsWeb) {
+          web_razorpay.openWebRazorpayCheckout(
+            options: options,
+            onSuccess: _handlePaymentSuccess,
+            onFailure: _handlePaymentError,
+            onExternalWallet: _handleExternalWallet,
+          );
+        } else {
+          _razorpay.open(options);
+        }
       } catch (openError) {
         debugPrint("RAZORPAY OPEN ERROR: $openError");
 
@@ -3208,6 +3221,8 @@ Future<void> _handlePaymentError(
            final String unavailableLabel =
              slot["unavailableReason"] == "daily_limit"
                ? "unavailable"
+               : slot["unavailableReason"] == "payment_pending"
+                   ? "paymentPending"
                : "booked";
 
 

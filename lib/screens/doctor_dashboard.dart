@@ -451,6 +451,13 @@ Future<void> loadAppointments() async {
             .map<Map<String, dynamic>>(
               (item) => Map<String, dynamic>.from(item),
             )
+            .where((appointment) {
+              final consultationType =
+                  appointment['consultationType']?.toString().trim().toLowerCase() ?? '';
+              final paymentStatus =
+                  appointment['paymentStatus']?.toString().trim().toLowerCase() ?? '';
+              return consultationType != 'video consultation' || paymentStatus == 'paid';
+            })
             .toList();
 
     // ==========================================================
