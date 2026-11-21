@@ -10,6 +10,7 @@ import '../../widgets/help_support_card.dart';
 import '../../widgets/profile_image.dart';
 import '../edit_profile_screen.dart';
 import 'patient_cart_overview_page.dart';
+import 'family_members_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -32,12 +33,16 @@ class _ProfilePageState extends State<ProfilePage> {
   List<String> labTestCartPreview = [];
   bool isLoadingCartSummary = true;
   bool hasCartSummaryError = false;
+  int familyMemberCount = 0;
+  bool isLoadingFamilyMemberSummary = true;
+  bool hasFamilyMemberSummaryError = false;
 
   @override
   void initState() {
     super.initState();
     loadData();
     loadCartSummary();
+    loadFamilyMemberSummary();
   }
 
   Future<void> loadCartSummary() async {
@@ -103,6 +108,93 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (!mounted) return;
     await loadCartSummary();
+  }
+
+  Future<void> loadFamilyMemberSummary() async {
+    try {
+      final members = await ApiService.getMyFamilyMembers();
+      if (!mounted) return;
+      setState(() {
+        familyMemberCount = members.length;
+        hasFamilyMemberSummaryError = false;
+        isLoadingFamilyMemberSummary = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        hasFamilyMemberSummaryError = true;
+        isLoadingFamilyMemberSummary = false;
+      });
+    }
+  }
+
+  Future<void> openFamilyMembers() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const FamilyMembersPage(),
+      ),
+    );
+    if (mounted) await loadFamilyMemberSummary();
+  }
+
+  Widget familyMembersCard() {
+    return InkWell(
+      onTap: openFamilyMembers,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xffE5EEEE)),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 7,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xffE8F8F5),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: const Icon(Icons.people_alt_outlined, color: Color(0xff0D9488)),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'familyMembers'.tr(),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    isLoadingFamilyMemberSummary
+                        ? 'loading'.tr()
+                        : hasFamilyMemberSummaryError
+                            ? 'familyMembersLoadError'.tr()
+                            : 'familyMemberCount'.tr(
+                                namedArgs: {'count': familyMemberCount.toString()},
+                              ),
+                    style: const TextStyle(color: Colors.black54, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.black45),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget myCartCard() {
@@ -547,6 +639,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
+
+            const SizedBox(height: 20),
+
+            familyMembersCard(),
 
             const SizedBox(height: 20),
 

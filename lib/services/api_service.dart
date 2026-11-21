@@ -1692,6 +1692,78 @@ class ApiService {
     return data;
   }
 
+  static Future<List<Map<String, dynamic>>> getMyFamilyMembers() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/family-members"),
+      headers: await _getAuthHeaders(),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid family members response.");
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to load family members.");
+    }
+    final rawMembers = data["members"];
+    if (rawMembers is! List) return <Map<String, dynamic>>[];
+    return rawMembers
+        .whereType<Map>()
+        .map((member) => Map<String, dynamic>.from(member))
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> createFamilyMember({
+    required Map<String, dynamic> member,
+  }) async {
+    return _sendFamilyMemberMutation(
+      http.post(
+        Uri.parse("$baseUrl/api/family-members"),
+        headers: await _getAuthHeaders(),
+        body: jsonEncode(member),
+      ),
+    );
+  }
+
+  static Future<Map<String, dynamic>> updateFamilyMember({
+    required String memberId,
+    required Map<String, dynamic> member,
+  }) async {
+    return _sendFamilyMemberMutation(
+      http.put(
+        Uri.parse("$baseUrl/api/family-members/${Uri.encodeComponent(memberId)}"),
+        headers: await _getAuthHeaders(),
+        body: jsonEncode(member),
+      ),
+    );
+  }
+
+  static Future<Map<String, dynamic>> deleteFamilyMember({
+    required String memberId,
+  }) async {
+    return _sendFamilyMemberMutation(
+      http.delete(
+        Uri.parse("$baseUrl/api/family-members/${Uri.encodeComponent(memberId)}"),
+        headers: await _getAuthHeaders(),
+      ),
+    );
+  }
+
+  static Future<Map<String, dynamic>> _sendFamilyMemberMutation(
+    Future<http.Response> responseFuture,
+  ) async {
+    final response = await responseFuture;
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid family member response.");
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to save family member details.");
+    }
+    return data;
+  }
+
   static Future<Map<String, dynamic>> uploadMyProfileImage({
     required String token,
     required Uint8List bytes,
