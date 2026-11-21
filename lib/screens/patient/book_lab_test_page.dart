@@ -9,10 +9,12 @@ import '../payment/payment_page.dart';
 
 class BookLabTestPage extends StatefulWidget {
   final List<String> selectedTests;
+  final String? preferredLabId;
 
   const BookLabTestPage({
     super.key,
     required this.selectedTests,
+    this.preferredLabId,
   });
 
   @override
@@ -32,6 +34,7 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
   bool isLoading = true;
   bool isBooking = false;
+  bool isAddingTestToCart = false;
   bool isLoadingTests = false;
   bool isLoadingAvailableTests = false;
   bool isLoadingLabs = false;
@@ -88,7 +91,7 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
   Future<void> initialize() async {
     try {
-      _selectedTests = List<String>.from(_selectedTests);
+      _selectedTests = List<String>.from(widget.selectedTests);
 
       final prefs = await SharedPreferences.getInstance();
 
@@ -115,7 +118,10 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
           final name =
               test["testName"]?.toString().trim().toLowerCase() ?? "";
 
-          if (name == requestedName) {
+          final labMatches = widget.preferredLabId == null ||
+              widget.preferredLabId!.isEmpty ||
+              test["labId"]?.toString() == widget.preferredLabId;
+          if (name == requestedName && labMatches) {
             selectedTestDetails = test;
             selectedLabId = test["labId"]?.toString();
             selectedLabName = test["labName"]?.toString();
@@ -942,10 +948,71 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
             ),
           ),
 
+          SizedBox(height: 12),
+
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: OutlinedButton.icon(
+              onPressed: isAddingTestToCart
+                  ? null
+                  : () => _addTestToCart(test),
+              icon: isAddingTestToCart
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: primaryColor,
+                      ),
+                    )
+                  : Icon(Icons.add_shopping_cart),
+              label: Text(
+                isAddingTestToCart ? "loadingCart".tr() : "addToCart".tr(),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: primaryColor,
+                side: BorderSide(color: primaryColor),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+
           SizedBox(height: 20),
         ],
       ),
     );
+  }
+
+  Future<void> _addTestToCart(Map<String, dynamic> test) async {
+    if (isAddingTestToCart) return;
+    final labId = selectedLabId ?? test["labId"]?.toString() ?? "";
+    final testId = test["_id"]?.toString() ?? "";
+    if (labId.isEmpty || testId.isEmpty) {
+      _showMessage("This test cannot be added to the cart right now.", isError: true);
+      return;
+    }
+
+    setState(() => isAddingTestToCart = true);
+    try {
+      await ApiService.addLabTestToCart(
+        labId: labId,
+        testId: testId,
+      );
+      if (!mounted) return;
+      final testName = test["testName"]?.toString() ?? "Lab test";
+      _showMessage("$testName ${"addedToCart".tr()}");
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(
+        error.toString().replaceFirst("Exception: ", ""),
+        isError: true,
+      );
+    } finally {
+      if (mounted) setState(() => isAddingTestToCart = false);
+    }
   }
 
   Widget _detailInfoCard(

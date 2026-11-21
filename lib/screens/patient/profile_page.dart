@@ -9,6 +9,7 @@ import '../payment/payment_history_page.dart';
 import '../../widgets/help_support_card.dart';
 import '../../widgets/profile_image.dart';
 import '../edit_profile_screen.dart';
+import 'patient_cart_overview_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -25,11 +26,185 @@ class _ProfilePageState extends State<ProfilePage> {
   String height = "";
   String weight = "";
   String bmi = "";
+  int medicineCartCount = 0;
+  int labTestCartCount = 0;
+  List<String> medicineCartPreview = [];
+  List<String> labTestCartPreview = [];
+  bool isLoadingCartSummary = true;
+  bool hasCartSummaryError = false;
 
   @override
   void initState() {
     super.initState();
     loadData();
+    loadCartSummary();
+  }
+
+  Future<void> loadCartSummary() async {
+    var loadedMedicineCount = 0;
+    var loadedLabCount = 0;
+    var loadedMedicinePreview = <String>[];
+    var loadedLabPreview = <String>[];
+    var hadError = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phone = prefs.getString('patientPhone') ??
+          prefs.getString('userPhone') ??
+          prefs.getString('phone') ??
+          '';
+      if (phone.trim().isEmpty) {
+        hadError = true;
+      } else {
+        await Future.wait<void>([
+          ApiService.getCartItems(phone).then<void>((items) {
+            loadedMedicineCount = items.length;
+            loadedMedicinePreview = items
+                .whereType<Map>()
+                .take(2)
+                .map((item) =>
+                    (item['medicine'] ?? item['medicineName'] ?? 'Medicine')
+                        .toString())
+                .toList();
+          }).catchError((_) {
+            hadError = true;
+          }),
+          ApiService.getMyLabTestCart().then<void>((items) {
+            loadedLabCount = items.length;
+            loadedLabPreview = items
+                .whereType<Map>()
+                .take(2)
+                .map((item) => (item['testName'] ?? 'Lab test').toString())
+                .toList();
+          }).catchError((_) {
+            hadError = true;
+          }),
+        ]);
+      }
+    } catch (_) {
+      hadError = true;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      medicineCartCount = loadedMedicineCount;
+      labTestCartCount = loadedLabCount;
+      medicineCartPreview = loadedMedicinePreview;
+      labTestCartPreview = loadedLabPreview;
+      hasCartSummaryError = hadError;
+      isLoadingCartSummary = false;
+    });
+  }
+
+  Future<void> openMyCart() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => const PatientCartOverviewPage(),
+      ),
+    );
+    if (!mounted) return;
+    await loadCartSummary();
+  }
+
+  Widget myCartCard() {
+    return InkWell(
+      onTap: openMyCart,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xffE5EEEE)),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 7,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xffE8F8F5),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: const Icon(
+                Icons.shopping_cart_outlined,
+                color: Color(0xff0D9488),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'myCart'.tr(),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  if (isLoadingCartSummary)
+                    Text('loadingCart'.tr())
+                  else if (hasCartSummaryError)
+                    Text(
+                      'cartSummaryLoadError'.tr(),
+                      style: TextStyle(color: Colors.black54, fontSize: 12),
+                    )
+                  else ...[
+                    Text(
+                      '$medicineCartCount ${'pharmacyItems'.tr()}  •  '
+                      '$labTestCartCount ${'labTestItems'.tr()}',
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
+                      ),
+                    ),
+                    if (medicineCartPreview.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'cartMedicinePreview'.tr(
+                          namedArgs: {'items': medicineCartPreview.join(', ')},
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.black54, fontSize: 12),
+                      ),
+                    ],
+                    if (labTestCartPreview.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'cartLabPreview'.tr(
+                          namedArgs: {'items': labTestCartPreview.join(', ')},
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.black54, fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+            if (isLoadingCartSummary)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              const Icon(Icons.chevron_right, color: Colors.black45),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> loadData() async {
@@ -319,6 +494,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 });
               },
             ),
+
+            const SizedBox(height: 20),
+
+            myCartCard(),
 
             const SizedBox(height: 20),
 

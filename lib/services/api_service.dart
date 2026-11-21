@@ -1988,6 +1988,61 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<List<dynamic>> getMyLabTestCart() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/lab-test-cart"),
+      headers: await _getAuthHeaders(),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map || response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        decoded is Map
+            ? decoded["message"] ?? "Unable to load your lab test cart."
+            : "The server returned an invalid lab cart response.",
+      );
+    }
+    final items = decoded["items"];
+    return items is List ? List<dynamic>.from(items) : <dynamic>[];
+  }
+
+  static Future<Map<String, dynamic>> addLabTestToCart({
+    required String labId,
+    required String testId,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/lab-test-cart"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"labId": labId, "testId": testId}),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid lab cart response.");
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to add this test to your cart.");
+    }
+    return data;
+  }
+
+  static Future<Map<String, dynamic>> removeLabTestFromCart(
+    String itemId,
+  ) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/api/lab-test-cart/${Uri.encodeComponent(itemId)}"),
+      headers: await _getAuthHeaders(),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid lab cart response.");
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to remove this test from your cart.");
+    }
+    return data;
+  }
+
   // ============================================================
   // MEDICINE ORDERS
   // ============================================================
