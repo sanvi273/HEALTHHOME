@@ -7,7 +7,9 @@ import '../../services/api_service.dart';
 import 'order_medicines_page.dart';
 
 class MedicineOrdersPage extends StatefulWidget {
-  const MedicineOrdersPage({super.key});
+  const MedicineOrdersPage({super.key, this.familyMember});
+
+  final Map<String, dynamic>? familyMember;
 
   @override
   State<MedicineOrdersPage> createState() =>
@@ -109,10 +111,21 @@ class _MedicineOrdersPageState extends State<MedicineOrdersPage> {
         "========================================",
       );
 
-      final data =
-          await ApiService.getPatientMedicineOrders(
-        patientPhone,
-      );
+      final data = widget.familyMember == null
+          ? await ApiService.getPatientMedicineOrders(patientPhone)
+          : List<dynamic>.from(
+              (await ApiService.getFamilyMemberOverview(
+                memberId: widget.familyMember!['_id'].toString(),
+              ))['medicineOrders'] as List? ?? const [],
+            );
+      final selectedMemberId = widget.familyMember?['_id']?.toString();
+      final selectedOrders = data.where((rawOrder) {
+        if (rawOrder is! Map) return false;
+        final orderMemberId = rawOrder['familyMemberId']?.toString() ?? '';
+        return selectedMemberId == null || selectedMemberId.isEmpty
+            ? orderMemberId.isEmpty
+            : orderMemberId == selectedMemberId;
+      }).toList();
 
       debugPrint(
         "PATIENT MEDICINE ORDERS = $data",
@@ -121,7 +134,7 @@ class _MedicineOrdersPageState extends State<MedicineOrdersPage> {
       if (!mounted) return;
 
       setState(() {
-        orders = data;
+        orders = selectedOrders;
 
         isLoading = false;
       });
@@ -1080,7 +1093,9 @@ class _MedicineOrdersPageState extends State<MedicineOrdersPage> {
         centerTitle: false,
 
         title: Text(
-          "myMedicineOrders".tr(),
+          widget.familyMember == null
+              ? "myMedicineOrders".tr()
+              : "${widget.familyMember!['name']} • ${"myMedicineOrders".tr()}",
 
           style:
               const TextStyle(

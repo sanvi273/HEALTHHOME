@@ -6,7 +6,9 @@ import '../../widgets/profile_image.dart';
 import 'doctor_profile_page.dart';
 
 class DoctorsListPage extends StatefulWidget {
-  const DoctorsListPage({super.key});
+  const DoctorsListPage({super.key, this.familyMember});
+
+  final Map<String, dynamic>? familyMember;
 
   @override
   State<DoctorsListPage> createState() => _DoctorsListPageState();
@@ -251,6 +253,7 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
                                     MaterialPageRoute(
                                       builder: (_) => DoctorProfilePage(
                                         doctor: doctor,
+                                        familyMember: widget.familyMember,
                                       ),
                                     ),
                                   );

@@ -16,7 +16,9 @@ import '../../services/telegram/AgoraVideoCallPage.dart';
 
 class AppointmentsPage extends StatefulWidget {
 
-  const AppointmentsPage({super.key});
+  const AppointmentsPage({super.key, this.familyMember});
+
+  final Map<String, dynamic>? familyMember;
 
   @override
 
@@ -84,10 +86,12 @@ void initState() {
 
   );
 
-  reconsultationOfferTimer = Timer.periodic(
-    const Duration(seconds: 30),
-    (_) => loadReconsultationOffers(),
-  );
+  if (widget.familyMember == null) {
+    reconsultationOfferTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => loadReconsultationOffers(),
+    );
+  }
 
 }
 
@@ -127,7 +131,10 @@ void initState() {
 
       final result = phone.isEmpty
           ? <dynamic>[]
-          : await ApiService.getPatientAppointments(phone);
+          : await ApiService.getPatientAppointments(
+              phone,
+              familyMemberId: widget.familyMember?['_id']?.toString(),
+            );
 
       print("APPOINTMENTS API RESULT = $result");
 
@@ -143,7 +150,9 @@ void initState() {
 
       }
 
-      await loadReconsultationOffers();
+      if (widget.familyMember == null) {
+        await loadReconsultationOffers();
+      }
 
     } catch (e) {
 
@@ -1943,7 +1952,9 @@ Widget _proposalDetailRow(IconData icon, String label, String value) {
 
         title: Text(
 
-          "myAppointments".tr(),
+          widget.familyMember == null
+              ? "myAppointments".tr()
+              : "${widget.familyMember!['name']} • ${"myAppointments".tr()}",
 
           style: const TextStyle(
 

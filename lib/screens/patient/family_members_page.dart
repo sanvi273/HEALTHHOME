@@ -2,6 +2,13 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
+import 'appointments_page.dart';
+import 'doctor_list_page.dart';
+import 'lab_home_page.dart';
+import 'lab_orders_page.dart';
+import 'medicine_order_page.dart';
+import 'pharmacy_page.dart';
+import 'reports_page.dart';
 
 const Color _familyAccent = Color(0xff0D9488);
 
@@ -214,13 +221,51 @@ class FamilyMemberDetailsPage extends StatefulWidget {
 
 class _FamilyMemberDetailsPageState extends State<FamilyMemberDetailsPage> {
   late Map<String, dynamic> _member;
+  Map<String, dynamic> _overview = {};
+  bool _isLoadingOverview = true;
+  String? _overviewError;
   bool _isDeleting = false;
 
   @override
   void initState() {
     super.initState();
     _member = Map<String, dynamic>.from(widget.member);
+    _loadOverview();
   }
+
+  Future<void> _loadOverview() async {
+    try {
+      final overview = await ApiService.getFamilyMemberOverview(
+        memberId: _member['_id'].toString(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _overview = overview;
+        final refreshed = overview['familyMember'];
+        if (refreshed is Map) _member = Map<String, dynamic>.from(refreshed);
+        _isLoadingOverview = false;
+        _overviewError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _overviewError = error.toString().replaceFirst('Exception: ', '');
+        _isLoadingOverview = false;
+      });
+    }
+  }
+
+  Future<void> _openPage(Widget page) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => page),
+    );
+    if (mounted) await _loadOverview();
+  }
+
+  List<dynamic> _overviewList(String key) =>
+      _overview[key] is List ? List<dynamic>.from(_overview[key] as List) : [];
+
+  void _openReports() => _openPage(ReportsPage(familyMember: _member));
 
   Future<void> _editMember() async {
     final updated = await Navigator.of(context).push<Map<String, dynamic>>(
@@ -228,7 +273,10 @@ class _FamilyMemberDetailsPageState extends State<FamilyMemberDetailsPage> {
         builder: (_) => FamilyMemberFormPage(member: _member),
       ),
     );
-    if (updated != null && mounted) setState(() => _member = updated);
+    if (updated != null && mounted) {
+      setState(() => _member = updated);
+      await _loadOverview();
+    }
   }
 
   Future<void> _deleteMember() async {
@@ -278,7 +326,7 @@ class _FamilyMemberDetailsPageState extends State<FamilyMemberDetailsPage> {
     return Scaffold(
       backgroundColor: const Color(0xffF7F8FA),
       appBar: AppBar(
-        title: Text('familyMemberDetails'.tr()),
+        title: Text(_member['name']?.toString() ?? 'familyMemberDetails'.tr()),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         actions: [
@@ -341,6 +389,10 @@ class _FamilyMemberDetailsPageState extends State<FamilyMemberDetailsPage> {
             ),
           ),
           const SizedBox(height: 14),
+          _buildActions(),
+          const SizedBox(height: 14),
+          _buildActivityOverview(),
+          const SizedBox(height: 14),
           _detailCard('personalDetails'.tr(), [
             _detailRow('dateOfBirth'.tr(), _dateLabel(_member['dateOfBirth'])),
             _detailRow(
@@ -366,6 +418,130 @@ class _FamilyMemberDetailsPageState extends State<FamilyMemberDetailsPage> {
       ),
     );
   }
+
+  Widget _buildActions() {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('careServices'.tr(),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _actionButton(Icons.medical_services_outlined, 'bookAppointment'.tr(),
+                    () => _openPage(DoctorsListPage(familyMember: _member))),
+                _actionButton(Icons.medication_outlined, 'pharmacy'.tr(),
+                    () => _openPage(PharmacyPage(familyMember: _member))),
+                _actionButton(Icons.science_outlined, 'labTests'.tr(),
+                    () => _openPage(LabHomePage(familyMember: _member))),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton(IconData icon, String label, VoidCallback onPressed) =>
+      OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(foregroundColor: _familyAccent),
+      );
+
+  Widget _buildActivityOverview() {
+    if (_isLoadingOverview) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+    if (_overviewError != null) {
+      return Card(
+        child: ListTile(
+          leading: const Icon(Icons.cloud_off_outlined, color: Colors.red),
+          title: Text(_overviewError!),
+          trailing: IconButton(
+            onPressed: _loadOverview,
+            icon: const Icon(Icons.refresh),
+          ),
+        ),
+      );
+    }
+
+    final appointments = _overviewList('appointments');
+    final medicines = _overviewList('medicineOrders');
+    final labs = _overviewList('labOrders');
+    final prescriptions = _overviewList('prescriptions');
+    final reportCount = labs.fold<int>(0, (total, raw) {
+      if (raw is! Map || raw['reports'] is! List) return total;
+      return total + (raw['reports'] as List).length;
+    });
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('healthOverview'.tr(),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _activityTile('myAppointments'.tr(), appointments.length,
+                Icons.calendar_month_outlined,
+                () => _openPage(AppointmentsPage(familyMember: _member))),
+            _activityTile('myMedicineOrders'.tr(), medicines.length,
+                Icons.medication_outlined,
+                () => _openPage(MedicineOrdersPage(familyMember: _member))),
+            _activityTile('labTests'.tr(), labs.length,
+                Icons.science_outlined,
+                () => _openPage(LabOrdersPage(familyMember: _member))),
+            _activityTile('myLabReports'.tr(), reportCount,
+                Icons.description_outlined, _openReports),
+            _activityTile('myPrescriptions'.tr(), prescriptions.length,
+                Icons.receipt_long_outlined,
+                () => _openPage(FamilyMemberPrescriptionPage(
+                      memberName: _member['name']?.toString() ?? '',
+                      prescriptions: prescriptions,
+                    ))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _activityTile(
+    String title,
+    int count,
+    IconData icon,
+    VoidCallback onTap,
+  ) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(icon, color: _familyAccent),
+        title: Text(title),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$count', style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+        onTap: onTap,
+      );
 
   Widget _detailCard(String title, List<Widget> rows) {
     return Card(
@@ -409,6 +585,130 @@ class _FamilyMemberDetailsPageState extends State<FamilyMemberDetailsPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class FamilyMemberPrescriptionPage extends StatelessWidget {
+  const FamilyMemberPrescriptionPage({
+    super.key,
+    required this.memberName,
+    required this.prescriptions,
+  });
+
+  final String memberName;
+  final List<dynamic> prescriptions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xffF7F8FA),
+      appBar: AppBar(
+        title: Text('$memberName • ${'myPrescriptions'.tr()}'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+      ),
+      body: prescriptions.isEmpty
+          ? Center(child: Text('noPrescriptionsFound'.tr()))
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: prescriptions.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final raw = prescriptions[index];
+                final prescription = raw is Map
+                    ? Map<String, dynamic>.from(raw)
+                    : <String, dynamic>{};
+                final medicines = prescription['medicines'] is List
+                    ? List<dynamic>.from(prescription['medicines'])
+                    : <dynamic>[];
+                final tests = prescription['labTests'] is List
+                    ? List<dynamic>.from(prescription['labTests'])
+                    : <dynamic>[];
+                final symptoms = prescription['symptoms'] is List
+                    ? List<dynamic>.from(prescription['symptoms'])
+                    : <dynamic>[];
+                final doctor = prescription['doctorName']?.toString() ?? '';
+                final diagnosis = prescription['diagnosis']?.toString() ?? '';
+                return Card(
+                  margin: EdgeInsets.zero,
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          diagnosis.isEmpty ? 'myPrescriptions'.tr() : diagnosis,
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        if (doctor.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(doctor,
+                              style: const TextStyle(color: Colors.black54)),
+                        ],
+                        if (symptoms.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text('${'symptoms'.tr()}: ${symptoms.join(', ')}'),
+                        ],
+                        if (prescription['advice']?.toString().trim().isNotEmpty ==
+                            true) ...[
+                          const SizedBox(height: 8),
+                          Text('${'advice'.tr()}: ${prescription['advice']}'),
+                        ],
+                        if (medicines.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Text('medicines'.tr(),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700)),
+                          ...medicines.map((rawMedicine) {
+                            final medicine = rawMedicine is Map
+                                ? Map<String, dynamic>.from(rawMedicine)
+                                : <String, dynamic>{};
+                            final name = medicine['medicine']?.toString() ??
+                                medicine['medicineName']?.toString() ??
+                                '';
+                            final dose = medicine['dose']?.toString() ?? '';
+                            final duration =
+                                medicine['duration']?.toString() ?? '';
+                            final details = [dose, duration]
+                                .where((value) => value.trim().isNotEmpty)
+                                .join(' • ');
+                            return ListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.medication_outlined,
+                                  color: _familyAccent),
+                              title: Text(name),
+                              subtitle:
+                                  details.isEmpty ? null : Text(details),
+                            );
+                          }),
+                        ],
+                        if (tests.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text('labTests'.tr(),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700)),
+                          ...tests.map((rawTest) {
+                            final testName = rawTest is Map
+                                ? rawTest['testName']?.toString() ?? ''
+                                : rawTest.toString();
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text('• $testName'),
+                            );
+                          }),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

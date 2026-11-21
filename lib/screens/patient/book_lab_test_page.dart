@@ -10,11 +10,13 @@ import '../payment/payment_page.dart';
 class BookLabTestPage extends StatefulWidget {
   final List<String> selectedTests;
   final String? preferredLabId;
+  final Map<String, dynamic>? familyMember;
 
   const BookLabTestPage({
     super.key,
     required this.selectedTests,
     this.preferredLabId,
+    this.familyMember,
   });
 
   @override
@@ -96,9 +98,13 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
       final prefs = await SharedPreferences.getInstance();
 
       patientName =
-          prefs.getString("patientName") ??
+          widget.familyMember?['name']?.toString() ??
+              prefs.getString("patientName") ??
               prefs.getString("userName") ??
               "patient".tr();
+
+      addressController.text =
+          widget.familyMember?['address']?.toString() ?? "";
 
       patientPhone =
           prefs.getString("patientPhone") ??
@@ -2059,6 +2065,7 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
             : "Home Collection",
         bookingType: "test".tr(),
         paymentMethod: _labPaymentMethod,
+        familyMemberId: widget.familyMember?['_id']?.toString() ?? "",
       );
 
       debugPrint("LAB ORDER RESPONSE = $orderResponse");

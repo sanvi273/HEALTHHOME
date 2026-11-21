@@ -112,7 +112,9 @@ class LabPdfReportViewer extends StatelessWidget {
 }
 
 class ReportsPage extends StatefulWidget {
-  const ReportsPage({super.key});
+  const ReportsPage({super.key, this.familyMember});
+
+  final Map<String, dynamic>? familyMember;
 
   @override
   State<ReportsPage> createState() => _ReportsPageState();
@@ -138,10 +140,15 @@ class _ReportsPageState extends State<ReportsPage> {
           await SharedPreferences.getInstance();
 
       final String currentPhone =
-          prefs.getString("userPhone") ?? "";
+          prefs.getString("userPhone") ??
+              prefs.getString("patientPhone") ??
+              "";
 
-      final orders =
-          await ApiService.getLabOrders();
+      final orders = widget.familyMember == null
+          ? await ApiService.getLabOrders()
+          : (await ApiService.getFamilyMemberOverview(
+              memberId: widget.familyMember!['_id'].toString(),
+            ))['labOrders'] as List? ?? const [];
 
       debugPrint("================================");
       debugPrint("LOADING PATIENT LAB REPORTS");
@@ -162,7 +169,13 @@ class _ReportsPageState extends State<ReportsPage> {
                 ? e["reports"]
                 : [];
 
-        return patientPhone == currentPhone &&
+        final isSelectedPerson = widget.familyMember == null
+            ? (e["familyMemberId"] == null ||
+                e["familyMemberId"].toString().isEmpty)
+            : e["familyMemberId"]?.toString() ==
+                widget.familyMember!['_id'].toString();
+
+        return isSelectedPerson && patientPhone == currentPhone &&
             status == "Completed" &&
             reportFiles.isNotEmpty;
       }).toList();
@@ -511,7 +524,9 @@ class _ReportsPageState extends State<ReportsPage> {
 
       appBar: AppBar(
         title: Text(
-          "myLabReports".tr(),
+          widget.familyMember == null
+              ? "myLabReports".tr()
+              : "${widget.familyMember!['name']} • ${"myLabReports".tr()}",
           style: TextStyle(
             fontWeight:
                 FontWeight.bold,

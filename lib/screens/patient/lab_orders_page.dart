@@ -29,18 +29,11 @@ import 'lab_order_tracking_page.dart';
 
 
 class LabOrdersPage extends StatefulWidget {
+  final Map<String, dynamic>? familyMember;
 
 
 
-  const LabOrdersPage({
-
-
-
-    super.key,
-
-
-
-  });
+  const LabOrdersPage({super.key, this.familyMember});
 
 
 
@@ -491,11 +484,11 @@ class _LabOrdersPageState
 
 
 
-      final data =
-
-
-
-          await ApiService.getLabOrders();
+      final data = widget.familyMember == null
+          ? await ApiService.getLabOrders()
+          : (await ApiService.getFamilyMemberOverview(
+              memberId: widget.familyMember!['_id'].toString(),
+            ))['labOrders'] as List? ?? const [];
 
 
 
@@ -613,13 +606,19 @@ class _LabOrdersPageState
 
                   "";
 
+          final bool belongsToSelectedMember = widget.familyMember == null
+              ? (order["familyMemberId"] == null ||
+                  order["familyMemberId"].toString().isEmpty)
+              : order["familyMemberId"]?.toString() ==
+                  widget.familyMember!['_id'].toString();
 
 
 
 
 
 
-          return orderPhone ==
+
+          return belongsToSelectedMember && (orderPhone ==
 
 
 
@@ -631,7 +630,7 @@ class _LabOrdersPageState
 
 
 
-                  patientPhone.trim();
+                  patientPhone.trim());
 
 
 
@@ -5332,7 +5331,9 @@ class _LabOrdersPageState
 
 
 
-          "myLabOrders".tr(),
+          widget.familyMember == null
+              ? "myLabOrders".tr()
+              : "${widget.familyMember!['name']} • ${"myLabOrders".tr()}",
 
 
 

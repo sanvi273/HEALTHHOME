@@ -6,10 +6,12 @@ import '../../widgets/profile_image.dart';
 
 class DoctorProfilePage extends StatelessWidget {
   final Map doctor;
+  final Map<String, dynamic>? familyMember;
 
   const DoctorProfilePage({
     super.key,
     required this.doctor,
+    this.familyMember,
   });
 
   @override
@@ -240,6 +242,7 @@ class DoctorProfilePage extends StatelessWidget {
                       builder: (_) =>
                           BookAppointmentPage(
                         doctor: doctor,
+                        familyMember: familyMember,
                       ),
                     ),
                   );
