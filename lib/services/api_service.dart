@@ -1293,6 +1293,80 @@ class ApiService {
   // APPOINTMENT RESCHEDULING
   // ============================================================
 
+  static Future<Map<String, dynamic>> createOrUpdateReconsultationOffer({
+    required String appointmentId,
+    required List<Map<String, String>> slots,
+  }) async {
+    final response = await http.put(
+      Uri.parse(
+        "$baseUrl/api/reconsultations/appointments/"
+        "${Uri.encodeComponent(appointmentId)}/offer",
+      ),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"slots": slots}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data is! Map ||
+        data["success"] != true) {
+      throw Exception(
+        data is Map
+            ? data["message"] ?? "Unable to offer a reconsultation"
+            : "Unable to offer a reconsultation",
+      );
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
+  static Future<List<dynamic>> getPatientReconsultationOffers() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/reconsultations/offers/patient"),
+      headers: await _getAuthHeaders(),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data is! Map ||
+        data["success"] != true) {
+      throw Exception(
+        data is Map
+            ? data["message"] ?? "Unable to load reconsultation offers"
+            : "Unable to load reconsultation offers",
+      );
+    }
+    return data["offers"] is List
+        ? List<dynamic>.from(data["offers"] as List)
+        : <dynamic>[];
+  }
+
+  static Future<Map<String, dynamic>> requestReconsultation({
+    required String offerId,
+    required String date,
+    required String time,
+  }) async {
+    final response = await http.post(
+      Uri.parse(
+        "$baseUrl/api/reconsultations/offers/"
+        "${Uri.encodeComponent(offerId)}/request",
+      ),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"date": date, "time": time}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data is! Map ||
+        data["success"] != true) {
+      throw Exception(
+        data is Map
+            ? data["message"] ?? "Unable to request a reconsultation"
+            : "Unable to request a reconsultation",
+      );
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
   /// Doctor proposes a new date/time for an existing appointment.
   static Future<Map<String, dynamic>> proposeAppointmentReschedule({
     required String appointmentId,
@@ -1381,8 +1455,21 @@ class ApiService {
       headers: await _getAuthHeaders(),
       body: jsonEncode({"deviceToken": token, "platform": platform}),
     );
+    final data = jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception("Device registration failed (${response.statusCode})");
+      throw Exception(
+        data is Map
+            ? data["message"] ??
+                "Device registration failed (${response.statusCode})"
+            : "Device registration failed (${response.statusCode})",
+      );
+    }
+    if (data is! Map || data["success"] != true) {
+      throw Exception(
+        data is Map
+            ? data["message"] ?? "Device registration was rejected"
+            : "Device registration was rejected",
+      );
     }
   }
 

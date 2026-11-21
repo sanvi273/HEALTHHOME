@@ -33,6 +33,9 @@ class IncomingCallService {
   static final Set<String> _shownCalls = <String>{};
   static Timer? _ringTimeout;
   static Timer? _activeCallPoll;
+  static Timer? _deviceRegistrationRetry;
+  static Duration _deviceRegistrationRetryDelay =
+      const Duration(seconds: 5);
   static String? _ringingCallId;
   static bool _isForeground = true;
   static bool _checkingActiveCalls = false;
@@ -56,15 +59,15 @@ class IncomingCallService {
     });
     FirebaseMessaging.onBackgroundMessage(healthHomeFcmBackgroundHandler);
     await initializeLocalNotifications();
-    final settings = await FirebaseMessaging.instance.requestPermission(
+    await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
-    if (settings.authorizationStatus != AuthorizationStatus.denied) {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) await registerToken(token);
-    }
+    // Register the FCM token even when notification display permission is
+    // denied. The permission controls whether Android can show the alert; it
+    // should not leave the patient's device missing from the call registry.
+    unawaited(registerCurrentDevice());
     FirebaseMessaging.instance.onTokenRefresh.listen(registerToken);
     FirebaseMessaging.onMessage.listen((message) async {
       if (message.data['type'] == 'incoming_call') {
@@ -205,19 +208,42 @@ class IncomingCallService {
         defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
     try {
       await ApiService.registerCallDevice(token: token, platform: platform);
+      _deviceRegistrationRetry?.cancel();
+      _deviceRegistrationRetry = null;
+      _deviceRegistrationRetryDelay = const Duration(seconds: 5);
     } catch (error) {
       debugPrint('Call push registration failed: $error');
+      _scheduleDeviceRegistrationRetry();
     }
+  }
+
+  static void _scheduleDeviceRegistrationRetry() {
+    if (kIsWeb || _deviceRegistrationRetry != null) return;
+    final delay = _deviceRegistrationRetryDelay;
+    _deviceRegistrationRetryDelay = Duration(
+      seconds: (_deviceRegistrationRetryDelay.inSeconds * 2)
+          .clamp(5, 300)
+          .toInt(),
+    );
+    _deviceRegistrationRetry = Timer(delay, () {
+      _deviceRegistrationRetry = null;
+      unawaited(registerCurrentDevice());
+    });
   }
 
   static Future<void> registerCurrentDevice() async {
     if (kIsWeb) return;
     try {
       final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) await registerToken(token);
+      if (token != null && token.isNotEmpty) {
+        await registerToken(token);
+      } else {
+        _scheduleDeviceRegistrationRetry();
+      }
       await checkActivePatientCalls();
     } catch (error) {
       debugPrint('Unable to obtain FCM token: $error');
+      _scheduleDeviceRegistrationRetry();
     }
   }
 
@@ -254,6 +280,8 @@ class IncomingCallService {
 
   static Future<void> unregisterCurrentDevice() async {
     if (kIsWeb) return;
+    _deviceRegistrationRetry?.cancel();
+    _deviceRegistrationRetry = null;
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await ApiService.removeCallDevice(token: token);
@@ -293,5 +321,8 @@ class _IncomingCallLifecycleObserver extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     IncomingCallService._setForeground(state == AppLifecycleState.resumed);
+    if (state == AppLifecycleState.resumed) {
+      unawaited(IncomingCallService.registerCurrentDevice());
+    }
   }
 }

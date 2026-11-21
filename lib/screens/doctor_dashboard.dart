@@ -859,6 +859,10 @@ Future<void> loadAppointments() async {
 
           });
 
+          if (index == 0) {
+            loadAppointments();
+          }
+
         },
 
         items: const [
@@ -1308,6 +1312,7 @@ Widget casesPage() {
           "Pending";
   final paymentMethod =
       appointment["paymentMethod"]?.toString().trim() ?? "ONLINE";
+  final isReconsultation = appointment["isReconsultation"] == true;
 
   return Card(
     margin: const EdgeInsets.only(
@@ -1512,6 +1517,24 @@ Widget casesPage() {
 
           const SizedBox(height: 10),
 
+          if (isReconsultation)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xffE4F6F3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                "Free reconsultation",
+                style: TextStyle(
+                  color: Color(0xff008F89),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+
+          if (isReconsultation) const SizedBox(height: 10),
+
           // ====================================================
           // PAYMENT
           // ====================================================
@@ -1528,13 +1551,17 @@ Widget casesPage() {
 
               const SizedBox(width: 10),
 
-              Text(
-                paymentMethod == "AT_HOSPITAL"
-                    ? "Payment at hospital: $paymentStatus"
-                    : "Online payment: $paymentStatus",
+              Expanded(
+                child: Text(
+                isReconsultation
+                    ? "Free reconsultation • No payment required"
+                    : paymentMethod == "AT_HOSPITAL"
+                        ? "Payment at hospital: $paymentStatus"
+                        : "Online payment: $paymentStatus",
                 style:
                     const TextStyle(
                   fontSize: 14,
+                ),
                 ),
               ),
             ],
@@ -2325,6 +2352,7 @@ final isVideo =
     consultationType.toLowerCase() == "video consultation";
 final paymentStatus = appointment["paymentStatus"]?.toString() ?? "Pending";
 final paymentMethod = appointment["paymentMethod"]?.toString() ?? "ONLINE";
+final isReconsultation = appointment["isReconsultation"] == true;
 final consultationStatus =
     appointment["consultationStatus"]?.toString().trim().toLowerCase() ?? "";
 final canCompleteVideoAppointment = isVideo &&
@@ -2508,11 +2536,13 @@ debugPrint("================================");
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isVideo
-                      ? "Online payment: $paymentStatus"
-                      : paymentMethod == "AT_HOSPITAL"
-                          ? "Payment at hospital: $paymentStatus"
-                          : "Online payment: $paymentStatus",
+                  isReconsultation
+                      ? "Free reconsultation • No payment required"
+                      : isVideo
+                          ? "Online payment: $paymentStatus"
+                          : paymentMethod == "AT_HOSPITAL"
+                              ? "Payment at hospital: $paymentStatus"
+                              : "Online payment: $paymentStatus",
                   style: const TextStyle(fontSize: 14),
                 ),
               ),

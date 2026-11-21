@@ -636,7 +636,6 @@ class _LoginScreenState extends State<LoginScreen> {
       loginToken,
     );
     await _clearSavedTermsAcceptance(prefs);
-    await IncomingCallService.registerCurrentDevice();
 
     await prefs.setBool(
       "isLoggedIn",
@@ -648,6 +647,7 @@ class _LoginScreenState extends State<LoginScreen> {
     await prefs.setString("userName", userName);
     await prefs.setString("userPhone", userPhone);
     await prefs.setString("userRole", userRole);
+    await IncomingCallService.registerCurrentDevice();
 
     debugPrint(
       "LOGIN TOKEN SAVED BEFORE VERIFICATION CHECK",

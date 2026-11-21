@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../services/api_service.dart';
+import 'services/api_service.dart';
+import 'screens/doctor/reconsultation_offer_dialog.dart';
 
 class PrescriptionScreen extends StatefulWidget {
   final Map<String, dynamic> appointment;
@@ -90,6 +91,7 @@ class _PrescriptionScreenState
   bool isSaving = false;
   bool isDownloading = false;
   bool isSending = false;
+  bool isOpeningReconsultationOffer = false;
 
   // ============================================================
   // DISPOSE
@@ -470,6 +472,27 @@ class _PrescriptionScreenState
           isSaving = false;
         });
       }
+    }
+  }
+
+  Future<void> offerFreeReconsultation() async {
+    if (isOpeningReconsultationOffer) return;
+    setState(() => isOpeningReconsultationOffer = true);
+    try {
+      final offered = await showDialog<bool>(
+        context: context,
+        builder: (_) => ReconsultationOfferDialog(
+          appointment: widget.appointment,
+        ),
+      );
+      if (offered == true && mounted) {
+        showMessage(
+          'Free reconsultation times sent to the patient.',
+          success: true,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isOpeningReconsultationOffer = false);
     }
   }
 
@@ -2260,6 +2283,41 @@ class _PrescriptionScreenState
                 fontSize: 17,
                 fontWeight:
                     FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: OutlinedButton.icon(
+            onPressed: isOpeningReconsultationOffer
+                ? null
+                : offerFreeReconsultation,
+            icon: isOpeningReconsultationOffer
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.event_repeat),
+            label: Text(
+              isOpeningReconsultationOffer
+                  ? 'Opening...'
+                  : 'Offer Free Reconsultation',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xff0F9D91),
+              side: const BorderSide(color: Color(0xff14B8A6)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
           ),

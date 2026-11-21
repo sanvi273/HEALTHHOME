@@ -27,6 +27,9 @@ class AppointmentsPage extends StatefulWidget {
 class _AppointmentsPageState extends State<AppointmentsPage> {
 
   List<dynamic> appointments = [];
+  List<dynamic> reconsultationOffers = [];
+  final Map<String, String> _selectedReconsultationSlots = {};
+  final Set<String> _requestingReconsultationOffers = {};
 
   bool loading = true;
 
@@ -41,6 +44,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
 Map<String, dynamic>? readyConsultation;
 
 Timer? consultationTimer;
+Timer? reconsultationOfferTimer;
 
 bool checkingConsultation = false;
 
@@ -80,6 +84,11 @@ void initState() {
 
   );
 
+  reconsultationOfferTimer = Timer.periodic(
+    const Duration(seconds: 30),
+    (_) => loadReconsultationOffers(),
+  );
+
 }
 
   // ============================================================
@@ -116,29 +125,9 @@ void initState() {
 
       print("================================");
 
-      if (phone.isEmpty) {
-
-        print("❌ Patient phone not found");
-
-        if (mounted) {
-
-          setState(() {
-
-            appointments = [];
-
-            loading = false;
-
-          });
-
-        }
-
-        return;
-
-      }
-
-      final result =
-
-          await ApiService.getPatientAppointments(phone);
+      final result = phone.isEmpty
+          ? <dynamic>[]
+          : await ApiService.getPatientAppointments(phone);
 
       print("APPOINTMENTS API RESULT = $result");
 
@@ -153,6 +142,8 @@ void initState() {
         });
 
       }
+
+      await loadReconsultationOffers();
 
     } catch (e) {
 
@@ -172,6 +163,55 @@ void initState() {
 
     }
 
+  }
+
+  Future<void> loadReconsultationOffers() async {
+    try {
+      final offers = await ApiService.getPatientReconsultationOffers();
+      if (!mounted) return;
+      setState(() => reconsultationOffers = offers);
+    } catch (error) {
+      print("❌ RECONSULTATION OFFERS ERROR = $error");
+    }
+  }
+
+  Future<void> _requestReconsultation(
+    Map<String, dynamic> offer,
+    Map<String, String> slot,
+  ) async {
+    final offerId = offer["_id"]?.toString() ?? "";
+    if (offerId.isEmpty || _requestingReconsultationOffers.contains(offerId)) {
+      return;
+    }
+    setState(() => _requestingReconsultationOffers.add(offerId));
+    try {
+      final result = await ApiService.requestReconsultation(
+        offerId: offerId,
+        date: slot["date"] ?? "",
+        time: slot["time"] ?? "",
+      );
+      if (!mounted) return;
+      _selectedReconsultationSlots.remove(offerId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result["message"]?.toString() ??
+                "Free reconsultation request sent to the doctor.",
+          ),
+        ),
+      );
+      await loadAppointments();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Unable to request reconsultation: $error")),
+      );
+      await loadReconsultationOffers();
+    } finally {
+      if (mounted) {
+        setState(() => _requestingReconsultationOffers.remove(offerId));
+      }
+    }
   }
 
 // ============================================================
@@ -699,6 +739,176 @@ Future<void> checkReadyConsultation() async {
 
   // ============================================================
 
+Widget buildReconsultationOfferCard(Map<String, dynamic> offer) {
+  final offerId = offer["_id"]?.toString() ?? "";
+  final doctorName = offer["doctorName"]?.toString() ?? "Your doctor";
+  final specialization = offer["specialization"]?.toString() ?? "";
+  final consultationType = offer["consultationType"]?.toString() ?? "";
+  final hospital = offer["hospital"]?.toString() ?? "";
+  final originalDate = offer["originalAppointmentDate"]?.toString() ?? "";
+  final originalTime = offer["originalAppointmentTime"]?.toString() ?? "";
+  final slots = (offer["slots"] is List ? offer["slots"] as List : const [])
+      .whereType<Map>()
+      .map((slot) => Map<String, String>.from({
+            "date": slot["date"]?.toString() ?? "",
+            "time": slot["time"]?.toString() ?? "",
+          }))
+      .toList();
+  final selectedKey = _selectedReconsultationSlots[offerId];
+  Map<String, String>? selectedSlot;
+  for (final slot in slots) {
+    if ('${slot["date"]}|${slot["time"]}' == selectedKey) {
+      selectedSlot = slot;
+      break;
+    }
+  }
+  final chosenSlot = selectedSlot;
+  final isRequesting = _requestingReconsultationOffers.contains(offerId);
+
+  return Card(
+    margin: const EdgeInsets.only(bottom: 14),
+    elevation: 2,
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+      side: const BorderSide(color: Color(0xffB8E6E0)),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Color(0xffE4F6F3),
+                child: Icon(Icons.event_repeat, color: Color(0xff008F89)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      doctorName,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (specialization.isNotEmpty)
+                      Text(
+                        specialization,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                    if (consultationType.isNotEmpty)
+                      Text(
+                        consultationType,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                    if (hospital.isNotEmpty)
+                      Text(
+                        hospital,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xffE4F6F3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'FREE',
+                  style: TextStyle(
+                    color: Color(0xff008F89),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Your doctor offered a free follow-up. Choose a time to request it.',
+            style: TextStyle(color: Color(0xff465B59), height: 1.35),
+          ),
+          if (originalDate.isNotEmpty || originalTime.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'For your visit on ${formatDate(originalDate)}${originalTime.isEmpty ? "" : " at $originalTime"}',
+              style: const TextStyle(color: Colors.black54, fontSize: 12),
+            ),
+          ],
+          if (slots.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: slots.map((slot) {
+                final key = '${slot["date"]}|${slot["time"]}';
+                return ChoiceChip(
+                  label: Text('${formatDate(slot["date"])} • ${slot["time"]}'),
+                  selected: selectedKey == key,
+                  onSelected: isRequesting
+                      ? null
+                      : (_) => setState(
+                            () => _selectedReconsultationSlots[offerId] = key,
+                          ),
+                  selectedColor: const Color(0xffD7F2EE),
+                  labelStyle: TextStyle(
+                    color: selectedKey == key
+                        ? const Color(0xff006F69)
+                        : const Color(0xff465B59),
+                    fontWeight: selectedKey == key
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: chosenSlot == null || isRequesting
+                    ? null
+                    : () => _requestReconsultation(offer, chosenSlot),
+                icon: isRequesting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send),
+                label: Text(
+                  isRequesting
+                      ? 'Sending request...'
+                      : 'Accept time & send request',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff0F9D91),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
 Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
   final String doctorName =
@@ -740,6 +950,8 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
       (appointment["paymentMethod"] ?? "ONLINE").toString().trim();
 
   final String paymentAmount = (appointment["fees"] ?? "").toString().trim();
+
+  final bool isReconsultation = appointment["isReconsultation"] == true;
 
   final String appointmentId =
 
@@ -973,7 +1185,9 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
                   const SizedBox(width: 7),
                   Expanded(
                     child: Text(
-                      consultationType == "Video Consultation"
+                      isReconsultation
+                          ? "Free reconsultation • No payment required"
+                          : consultationType == "Video Consultation"
                           ? "Video consultation • $paymentStatus online"
                           : paymentMethod == "AT_HOSPITAL" && paymentStatus != "Paid"
                               ? "Hospital visit • Pay at the hospital during your visit${paymentAmount.isEmpty ? "" : " • ₹$paymentAmount"}"
@@ -1667,6 +1881,7 @@ Widget _proposalDetailRow(IconData icon, String label, String value) {
   void dispose() {
 
     consultationTimer?.cancel();
+    reconsultationOfferTimer?.cancel();
 
     super.dispose();
 
@@ -1685,6 +1900,10 @@ Widget _proposalDetailRow(IconData icon, String label, String value) {
         currentAppointments =
 
         filteredAppointments;
+
+    final visibleReconsultationOffers = selectedTab == 0
+        ? reconsultationOffers
+        : const <dynamic>[];
 
     return Scaffold(
 
@@ -1822,9 +2041,9 @@ Widget _proposalDetailRow(IconData icon, String label, String value) {
 
                     )
 
-                  : currentAppointments
+                  : currentAppointments.isEmpty &&
 
-                          .isEmpty
+                          visibleReconsultationOffers.isEmpty
 
                       ? ListView(
 
@@ -1878,16 +2097,21 @@ Widget _proposalDetailRow(IconData icon, String label, String value) {
 
                           ),
 
-                          itemCount:
+                          itemCount: visibleReconsultationOffers.length +
 
-                              currentAppointments
-
-                                  .length,
+                              currentAppointments.length,
 
                           itemBuilder:
 
                               (context, index) {
 
+                            if (index < visibleReconsultationOffers.length) {
+                              return buildReconsultationOfferCard(
+                                Map<String, dynamic>.from(
+                                  visibleReconsultationOffers[index] as Map,
+                                ),
+                              );
+                            }
                             final appointment =
 
                                 Map<String,
@@ -1896,7 +2120,7 @@ Widget _proposalDetailRow(IconData icon, String label, String value) {
 
                               currentAppointments[
 
-                                  index],
+                                  index - visibleReconsultationOffers.length],
 
                             );
 
