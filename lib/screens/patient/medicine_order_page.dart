@@ -55,6 +55,8 @@ class _MedicineOrdersPageState extends State<MedicineOrdersPage> {
   // Stores OTP error message for each order.
   final Map<String, String> otpErrors = {};
 
+  final Set<String> submittingReturnRequests = <String>{};
+
   // ============================================================
   // INIT
   // ============================================================
@@ -484,6 +486,200 @@ class _MedicineOrdersPageState extends State<MedicineOrdersPage> {
         "";
 
     return otpErrors[orderId] ?? "";
+  }
+
+  Widget buildReturnRequestSection(Map<String, dynamic> order) {
+    final orderId = order["_id"]?.toString() ?? order["id"]?.toString() ?? "";
+    final returnStatus = (order["returnRequestStatus"]?.toString() ??
+            "NOT_REQUESTED")
+        .toUpperCase();
+    final deliveredAt = DateTime.tryParse(
+      (order["deliveredAt"] ?? order["updatedAt"] ?? "").toString(),
+    );
+    final deadline = deliveredAt?.add(const Duration(days: 3));
+    final hasReturnWindow = deadline != null && DateTime.now().isBefore(deadline);
+
+    String? statusMessage;
+    Color statusColor = Colors.blueGrey;
+    switch (returnStatus) {
+      case "REQUESTED":
+        statusMessage = "returnRequestPending".tr();
+        statusColor = Colors.orange;
+        break;
+      case "APPROVED":
+        statusMessage = "returnRequestApproved".tr();
+        statusColor = Colors.teal;
+        break;
+      case "REJECTED":
+        statusMessage = "returnRequestDeclined".tr();
+        statusColor = Colors.red;
+        break;
+      case "RECEIVED":
+        statusMessage = "returnRequestReceived".tr();
+        statusColor = Colors.green;
+        break;
+    }
+    final pharmacyNote = returnStatus == "RECEIVED"
+        ? (order["returnReceivedNote"] ?? order["returnDecisionNote"])
+        : order["returnDecisionNote"];
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xffF7FAFA),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xffDDEBE9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.assignment_return_outlined, color: primaryColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "returnPolicyTitle".tr(),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (statusMessage != null) ...[
+            Text(
+              statusMessage,
+              style: TextStyle(color: statusColor, fontWeight: FontWeight.w600),
+            ),
+            if ((pharmacyNote?.toString() ?? "").trim().isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(
+                "${"returnPharmacyNote".tr()}: $pharmacyNote",
+                style: const TextStyle(color: Colors.black54),
+              ),
+            ],
+          ] else if (returnStatus == "NOT_REQUESTED" && hasReturnWindow) ...[
+            Text(
+              "returnPolicyHint".tr(),
+              style: const TextStyle(color: Colors.black54, height: 1.35),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: orderId.isEmpty ||
+                        submittingReturnRequests.contains(orderId)
+                    ? null
+                    : () => showReturnRequestDialog(orderId),
+                icon: submittingReturnRequests.contains(orderId)
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.assignment_return_outlined),
+                label: Text(
+                  submittingReturnRequests.contains(orderId)
+                      ? "submittingReturnRequest".tr()
+                      : "requestMedicineReturn".tr(),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: primaryColor,
+                  side: const BorderSide(color: primaryColor),
+                ),
+              ),
+            ),
+          ] else if (returnStatus == "NOT_REQUESTED")
+            Text(
+              "returnWindowExpired".tr(),
+              style: const TextStyle(color: Colors.black54),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> showReturnRequestDialog(String orderId) async {
+    final reasonController = TextEditingController();
+    String validationMessage = "";
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text("requestMedicineReturn".tr()),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("returnReasonPrompt".tr()),
+              const SizedBox(height: 12),
+              TextField(
+                controller: reasonController,
+                autofocus: true,
+                minLines: 3,
+                maxLines: 5,
+                maxLength: 1000,
+                decoration: InputDecoration(
+                  hintText: "returnReasonHint".tr(),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              if (validationMessage.isNotEmpty)
+                Text(
+                  validationMessage,
+                  style: const TextStyle(color: Colors.red),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text("cancel".tr()),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = reasonController.text.trim();
+                if (value.length < 5) {
+                  setDialogState(() {
+                    validationMessage = "returnReasonRequired".tr();
+                  });
+                  return;
+                }
+                Navigator.pop(dialogContext, value);
+              },
+              child: Text("submitReturnRequest".tr()),
+            ),
+          ],
+        ),
+      ),
+    );
+    reasonController.dispose();
+    if (reason == null || reason.trim().isEmpty || !mounted) return;
+
+    setState(() => submittingReturnRequests.add(orderId));
+    try {
+      await ApiService.requestMedicineReturn(
+        orderId: orderId,
+        reason: reason.trim(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("returnRequestSent".tr())),
+      );
+      await refreshOrders();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst("Exception: ", "")),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => submittingReturnRequests.remove(orderId));
+    }
   }
 
   // ============================================================
@@ -1388,6 +1584,11 @@ class _MedicineOrdersPageState extends State<MedicineOrdersPage> {
                 ),
               ),
             ),
+
+            if (status.trim().toLowerCase() == "delivered" &&
+                order["medicines"] is List &&
+                (order["medicines"] as List).isNotEmpty)
+              buildReturnRequestSection(order),
           ],
         ),
       ),

@@ -29,6 +29,7 @@ class _PharmacyDashboardState extends State<PharmacyDashboard> {
 
 List<dynamic> orders = [];
 List<dynamic> acceptedOrders = [];
+List<dynamic> returnRequests = [];
 List<dynamic> medicines = [];
 
 List<Map<String, dynamic>> deliveryPartners = [];
@@ -1003,6 +1004,23 @@ Future<void> loadOrders() async {
         })
         .toList();
 
+    final List<dynamic> activeReturnRequests = allOrders.where((order) {
+      final status =
+          order["returnRequestStatus"]?.toString().toUpperCase() ?? "";
+      return status == "REQUESTED" || status == "APPROVED";
+    }).toList()
+      ..sort((a, b) {
+        final aDate = DateTime.tryParse(
+              a["returnRequestedAt"]?.toString() ?? "",
+            ) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = DateTime.tryParse(
+              b["returnRequestedAt"]?.toString() ?? "",
+            ) ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
+
     // ==========================================================
     // NEWEST PENDING ORDER FIRST
     // ==========================================================
@@ -1086,6 +1104,7 @@ Future<void> loadOrders() async {
     setState(() {
       orders = pendingOrders;
       acceptedOrders = activeOrders;
+      returnRequests = activeReturnRequests;
       totalRevenue = calculatedRevenue;
     });
 
@@ -1399,6 +1418,19 @@ Future<List<Map<String, dynamic>>?> _selectPrescriptionMedicines(
             orders: orders,
             delivered: acceptedOrders,
             revenue: calculateRevenue(),
+            returnRequests: returnRequests,
+            onOpenReturnRequests: () async {
+              final pharmacyId = pharmacyData?["_id"]?.toString() ?? "";
+              if (pharmacyId.isEmpty) return;
+              await Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => PharmacyReturnRequestsPage(
+                    pharmacyId: pharmacyId,
+                  ),
+                ),
+              );
+              if (mounted) await loadOrders();
+            },
             onAccept: (index) async {
               if (index < 0 || index >= orders.length) return;
 
@@ -1608,6 +1640,8 @@ class OrdersPage extends StatelessWidget {
   final String pharmacyName;
   final List delivered;
   final int revenue;
+  final List returnRequests;
+  final Future<void> Function() onOpenReturnRequests;
 
   final Future<void> Function(int) onAccept;
   final Function(int) onReject;
@@ -1620,6 +1654,8 @@ class OrdersPage extends StatelessWidget {
     required this.orders,
     required this.delivered,
     required this.revenue,
+    required this.returnRequests,
+    required this.onOpenReturnRequests,
     required this.onAccept,
     required this.onReject,
   });
@@ -1680,6 +1716,27 @@ class OrdersPage extends StatelessWidget {
                   ],
                 ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: onOpenReturnRequests,
+                icon: const Icon(Icons.assignment_return_outlined),
+                label: Text("Return Requests (${returnRequests.length})"),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xff0F766E),
+                  side: const BorderSide(color: Color(0xff0F766E)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+              ),
             ),
           ),
 
@@ -3302,6 +3359,390 @@ class _DeliveryOtpDialogState extends State<_DeliveryOtpDialog> {
 }
 
 // ================= DELIVERY PAGE =================
+
+class PharmacyReturnRequestsPage extends StatefulWidget {
+  const PharmacyReturnRequestsPage({
+    super.key,
+    required this.pharmacyId,
+  });
+
+  final String pharmacyId;
+
+  @override
+  State<PharmacyReturnRequestsPage> createState() =>
+      _PharmacyReturnRequestsPageState();
+}
+
+class _PharmacyReturnRequestsPageState
+    extends State<PharmacyReturnRequestsPage> {
+  bool _isLoading = true;
+  final Set<String> _busyOrderIds = <String>{};
+  List<Map<String, dynamic>> _requests = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRequests();
+  }
+
+  Future<void> _loadRequests() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final response = await ApiService.getPharmacyOrders(widget.pharmacyId);
+      if (response["success"] != true) {
+        throw Exception(response["message"] ?? "Unable to load return requests.");
+      }
+      final allOrders = response["orders"] is List
+          ? List<dynamic>.from(response["orders"])
+          : <dynamic>[];
+      final requests = allOrders
+          .whereType<Map>()
+          .map((order) => Map<String, dynamic>.from(order))
+          .where((order) {
+            final status =
+                order["returnRequestStatus"]?.toString().toUpperCase() ?? "";
+            return status == "REQUESTED" ||
+                status == "APPROVED" ||
+                status == "REJECTED" ||
+                status == "RECEIVED";
+          })
+          .toList()
+        ..sort((a, b) {
+          final aDate = DateTime.tryParse(
+                a["returnRequestedAt"]?.toString() ?? "",
+              ) ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          final bDate = DateTime.tryParse(
+                b["returnRequestedAt"]?.toString() ?? "",
+              ) ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          return bDate.compareTo(aDate);
+        });
+      if (!mounted) return;
+      setState(() => _requests = requests);
+    } catch (error) {
+      if (mounted) _showMessage(error.toString().replaceFirst("Exception: ", ""), true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<String?> _askForNote({
+    required String title,
+    required String hint,
+    required bool requiredNote,
+  }) async {
+    final controller = TextEditingController();
+    var errorText = "";
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                minLines: 2,
+                maxLines: 4,
+                maxLength: 1000,
+                decoration: InputDecoration(
+                  hintText: hint,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+              if (errorText.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    errorText,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = controller.text.trim();
+                if (requiredNote && value.length < 5) {
+                  setDialogState(() => errorText = "Please enter a reason (at least 5 characters).");
+                  return;
+                }
+                Navigator.pop(dialogContext, value);
+              },
+              child: const Text("Continue"),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  Future<void> _decideRequest(
+    Map<String, dynamic> order,
+    String decision,
+  ) async {
+    final orderId = order["_id"]?.toString() ?? "";
+    if (orderId.isEmpty) return;
+    final note = await _askForNote(
+      title: decision == "APPROVED" ? "Approve medicine return" : "Decline medicine return",
+      hint: decision == "APPROVED"
+          ? "Return instructions for the patient (optional)"
+          : "Reason for declining this return",
+      requiredNote: decision == "REJECTED",
+    );
+    if (note == null || !mounted) return;
+
+    setState(() => _busyOrderIds.add(orderId));
+    try {
+      final result = await ApiService.decideMedicineReturn(
+        orderId: orderId,
+        decision: decision,
+        note: note,
+      );
+      if (!mounted) return;
+      _showMessage(result["message"]?.toString() ?? "Return request updated.");
+      await _loadRequests();
+    } catch (error) {
+      if (mounted) _showMessage(error.toString().replaceFirst("Exception: ", ""), true);
+    } finally {
+      if (mounted) setState(() => _busyOrderIds.remove(orderId));
+    }
+  }
+
+  Future<void> _markReceived(Map<String, dynamic> order) async {
+    final orderId = order["_id"]?.toString() ?? "";
+    if (orderId.isEmpty) return;
+    final note = await _askForNote(
+      title: "Mark return as received",
+      hint: "Optional notes about the returned medicine",
+      requiredNote: false,
+    );
+    if (note == null || !mounted) return;
+
+    setState(() => _busyOrderIds.add(orderId));
+    try {
+      final result = await ApiService.markMedicineReturnReceived(
+        orderId: orderId,
+        note: note,
+      );
+      if (!mounted) return;
+      _showMessage(result["message"]?.toString() ?? "Return marked received.");
+      await _loadRequests();
+    } catch (error) {
+      if (mounted) _showMessage(error.toString().replaceFirst("Exception: ", ""), true);
+    } finally {
+      if (mounted) setState(() => _busyOrderIds.remove(orderId));
+    }
+  }
+
+  void _showMessage(String message, [bool isError = false]) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : null,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _dateText(dynamic value) {
+    final date = DateTime.tryParse(value?.toString() ?? "");
+    if (date == null) return "";
+    return date.toLocal().toString().split(".").first;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xffF4F7FB),
+      appBar: AppBar(
+        title: const Text("Medicine Return Requests"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            tooltip: "Refresh",
+            onPressed: _loadRequests,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _requests.isEmpty
+              ? RefreshIndicator(
+                  onRefresh: _loadRequests,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      SizedBox(height: 160),
+                      Icon(Icons.assignment_return_outlined, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Center(
+                        child: Text(
+                          "No medicine return requests",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadRequests,
+                  child: ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _requests.length,
+                    itemBuilder: (context, index) => _requestCard(_requests[index]),
+                  ),
+                ),
+    );
+  }
+
+  Widget _requestCard(Map<String, dynamic> order) {
+    final orderId = order["_id"]?.toString() ?? "";
+    final status =
+        order["returnRequestStatus"]?.toString().toUpperCase() ?? "REQUESTED";
+    final medicines = order["medicines"] is List
+        ? List<dynamic>.from(order["medicines"] as List)
+        : <dynamic>[];
+    final isBusy = _busyOrderIds.contains(orderId);
+    final orderIdLabel = orderId.length > 10
+        ? "${orderId.substring(0, 6)}…${orderId.substring(orderId.length - 4)}"
+        : orderId;
+    final statusLabel = switch (status) {
+      "APPROVED" => "Approved",
+      "REJECTED" => "Declined",
+      "RECEIVED" => "Received",
+      _ => "New request",
+    };
+    final statusColor = switch (status) {
+      "APPROVED" => Colors.teal.shade100,
+      "REJECTED" => Colors.red.shade100,
+      "RECEIVED" => Colors.green.shade100,
+      _ => Colors.orange.shade100,
+    };
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 14),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.assignment_return_outlined, color: Color(0xff0F766E)),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    order["patientName"]?.toString() ?? "Patient",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Chip(
+                  label: Text(statusLabel),
+                  backgroundColor: statusColor,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            Text("Order #$orderIdLabel"),
+            Text("Phone: ${order["patientPhone"] ?? "—"}"),
+            if (_dateText(order["returnRequestedAt"]).isNotEmpty)
+              Text("Requested: ${_dateText(order["returnRequestedAt"])}"),
+            if (status == "RECEIVED" &&
+                _dateText(order["returnReceivedAt"]).isNotEmpty)
+              Text("Received: ${_dateText(order["returnReceivedAt"])}"),
+            const Divider(height: 22),
+            const Text("Return reason", style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(order["returnReason"]?.toString() ?? "No reason supplied."),
+            const SizedBox(height: 12),
+            const Text("Items", style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            for (final rawItem in medicines.whereType<Map>())
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  "• ${rawItem["medicineName"] ?? "Medicine"} × ${rawItem["quantity"] ?? 1}",
+                ),
+              ),
+            if ((status == "APPROVED" || status == "RECEIVED") &&
+                (order["returnDecisionNote"]?.toString() ?? "").trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text("Your return instructions: ${order["returnDecisionNote"]}"),
+            ],
+            if (status == "REJECTED" &&
+                (order["returnDecisionNote"]?.toString() ?? "").trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text("Decline reason: ${order["returnDecisionNote"]}"),
+            ],
+            if (status == "RECEIVED" &&
+                (order["returnReceivedNote"]?.toString() ?? "").trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text("Receipt note: ${order["returnReceivedNote"]}"),
+            ],
+            const SizedBox(height: 14),
+            if (status == "REQUESTED")
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: isBusy ? null : () => _decideRequest(order, "REJECTED"),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text("Decline"),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: isBusy ? null : () => _decideRequest(order, "APPROVED"),
+                      icon: const Icon(Icons.check),
+                      label: const Text("Approve return"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xff0F766E),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            if (status == "APPROVED")
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: isBusy ? null : () => _markReceived(order),
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: const Text("Mark return received"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff0F766E),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            if (isBusy) ...[
+              const SizedBox(height: 8),
+              const LinearProgressIndicator(minHeight: 2),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class DeliveryPage extends StatelessWidget {
   final List delivered;

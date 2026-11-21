@@ -1817,6 +1817,67 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> requestMedicineReturn({
+    required String orderId,
+    required String reason,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/orders/return-request/$orderId"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"reason": reason}),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid return response.");
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to request a return.");
+    }
+    return data;
+  }
+
+  static Future<Map<String, dynamic>> decideMedicineReturn({
+    required String orderId,
+    required String decision,
+    String note = "",
+  }) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/api/orders/return-request/$orderId/decision"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"decision": decision, "note": note}),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid return response.");
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to update the return request.");
+    }
+    return data;
+  }
+
+  static Future<Map<String, dynamic>> markMedicineReturnReceived({
+    required String orderId,
+    String note = "",
+  }) async {
+    final response = await http.put(
+      Uri.parse("$baseUrl/api/orders/return-request/$orderId/received"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({"note": note}),
+    );
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw Exception("The server returned an invalid return response.");
+    }
+    final data = Map<String, dynamic>.from(decoded);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(data["message"] ?? "Unable to mark the return received.");
+    }
+    return data;
+  }
+
   // ============================================================
   // ASSIGN DELIVERY PARTNER
   // ============================================================
