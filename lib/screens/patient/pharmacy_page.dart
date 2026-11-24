@@ -156,11 +156,11 @@ class PharmacyPage extends StatelessWidget {
                       children: [
 
                         Text(
-                          "flat20Off".tr(),
+                          "yourHealthOurPriority".tr(),
 
                           style:
                               TextStyle(
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight:
                                 FontWeight.bold,
                             color:
@@ -168,15 +168,11 @@ class PharmacyPage extends StatelessWidget {
                           ),
                         ),
 
-                        SizedBox(
-                          height: 8,
-                        ),
-
                         Text(
                           "onYourFirstOrder".tr(),
                           style:
                               TextStyle(
-                            fontSize: 15,
+                            fontSize: 16,
                             color:
                                 Colors.black54,
                           ),

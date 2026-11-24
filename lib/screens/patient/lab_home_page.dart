@@ -282,7 +282,7 @@ class LabHomePage extends StatelessWidget {
 
                     children: [
                       Text(
-                        "flat20Off".tr(),
+                        "betterHealthcare".tr(),
 
                         style:
                             TextStyle(
@@ -294,12 +294,12 @@ class LabHomePage extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(
-                        height: 8,
-                      ),
-
                       Text(
-                        "onYourFirstLabBooking".tr(),
+                        "atYourDoorstep".tr(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black54,
+                        ),
                       ),
                     ],
                     ),
