@@ -660,7 +660,12 @@ Future<void> removeDeliveryPartner(int index) async {
   Future<void> showDeliveryPartnerSheet(
     Map<String, dynamic> order,
   ) async {
-    await loadDeliveryPartners();
+    // Partners are loaded with the dashboard and refreshed after add/remove.
+    // Reuse that list so opening the assignment picker does not wait on another
+    // network request. Retry the fetch only when no cached partners are present.
+    if (deliveryPartners.isEmpty) {
+      await loadDeliveryPartners();
+    }
 
     if (!mounted) return;
 
@@ -894,9 +899,34 @@ Future<void> removeDeliveryPartner(int index) async {
       if (!mounted) return;
 
       if (result["success"] == true) {
-        await loadOrders();
+        final savedOrder = result["order"] is Map
+            ? Map<String, dynamic>.from(result["order"] as Map)
+            : <String, dynamic>{};
+        final updatedOrder = <String, dynamic>{
+          ...order,
+          ...savedOrder,
+          "deliveryAgentName": name,
+          "deliveryAgentPhone": phone,
+          "deliveryAgentAssigned": true,
+        };
 
-        if (!mounted) return;
+        List<dynamic> applyAssignedPartner(List<dynamic> currentOrders) {
+          return currentOrders.map((rawOrder) {
+            if (rawOrder is! Map) return rawOrder;
+            final currentOrder = Map<String, dynamic>.from(rawOrder);
+            final currentId = _mongoIdFrom(
+              currentOrder["_id"] ?? currentOrder["id"],
+            );
+            return currentId == orderId
+                ? <String, dynamic>{...currentOrder, ...updatedOrder}
+                : rawOrder;
+          }).toList();
+        }
+
+        setState(() {
+          orders = applyAssignedPartner(orders);
+          acceptedOrders = applyAssignedPartner(acceptedOrders);
+        });
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1485,28 +1515,34 @@ Future<List<Map<String, dynamic>>?> _selectPrescriptionMedicines(
                 return;
               }
 
-              await loadOrders();
-              if (!mounted) return;
+              final responseOrder = result["order"];
+              final acceptedOrder = responseOrder is Map
+                  ? Map<String, dynamic>.from(responseOrder)
+                  : <String, dynamic>{...order, "status": "Accepted"};
+              final wasAlreadyActive = acceptedOrders.any((item) {
+                if (item is! Map) return false;
+                return _mongoIdFrom(item["_id"] ?? item["id"]) == orderId;
+              });
 
-              Map<String, dynamic>? acceptedOrder;
-              for (final item in acceptedOrders) {
-                if (item["_id"]?.toString() == orderId) {
-                  acceptedOrder = Map<String, dynamic>.from(item);
-                  break;
+              setState(() {
+                orders.removeWhere((item) {
+                  if (item is! Map) return false;
+                  return _mongoIdFrom(item["_id"] ?? item["id"]) == orderId;
+                });
+                acceptedOrders.removeWhere((item) {
+                  if (item is! Map) return false;
+                  return _mongoIdFrom(item["_id"] ?? item["id"]) == orderId;
+                });
+                acceptedOrders.insert(0, acceptedOrder);
+                if (!wasAlreadyActive) {
+                  totalRevenue +=
+                      (num.tryParse(
+                                acceptedOrder["totalAmount"]?.toString() ?? "",
+                              ) ??
+                              0)
+                          .toInt();
                 }
-              }
-
-              if (acceptedOrder == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      "Order accepted, but order details could not be loaded.",
-                    ),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-                return;
-              }
+              });
 
               await showDeliveryPartnerSheet(acceptedOrder);
             },
@@ -4473,8 +4509,6 @@ class DeliveryPage extends StatelessWidget {
         !isPartnerAssigned(order)) {
       await assignPartner(order);
 
-      await refreshOrders();
-
       return;
     }
 
@@ -5146,8 +5180,6 @@ class DeliveryPage extends StatelessWidget {
                               await assignPartner(
                                 order,
                               );
-
-                              await refreshOrders();
                             },
                           ),
                         ],
@@ -5225,8 +5257,6 @@ class DeliveryPage extends StatelessWidget {
                               await assignPartner(
                                 order,
                               );
-
-                              await refreshOrders();
                             },
 
                             child:
