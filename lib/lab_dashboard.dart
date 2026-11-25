@@ -5,6 +5,7 @@ import 'package:healthhome/screens/onboarding_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'upload_lab_report_page.dart';
 import 'widgets/help_support_card.dart';
+import 'widgets/ratings_card.dart';
 import 'widgets/profile_image.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/ratings_pages.dart';
@@ -4767,6 +4768,8 @@ Widget profilePage() {
             ),
           ),
         ),
+
+        const RatingsCard(horizontalMargin: 20),
 
         const HelpSupportCard(horizontalMargin: 20),
 

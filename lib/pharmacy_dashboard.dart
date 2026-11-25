@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../pharmacy/add_medicine_page.dart';
 import '../pharmacy/my_medicines_page.dart';
 import 'widgets/help_support_card.dart';
+import 'widgets/ratings_card.dart';
 import 'widgets/profile_image.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/ratings_pages.dart';
@@ -5959,6 +5960,8 @@ extension PharmacyProfileExtension on _PharmacyDashboardState {
               ],
             ),
           ),
+
+          const RatingsCard(horizontalMargin: 34),
 
           const HelpSupportCard(horizontalMargin: 34),
 

@@ -8,6 +8,7 @@ import '../services/incoming_call_service.dart';
 import '../services/telegram/AgoraVideoCallPage.dart';
 import '../models/patient_report.dart';
 import '../widgets/help_support_card.dart';
+import '../widgets/ratings_card.dart';
 import '../widgets/profile_image.dart';
 import 'edit_profile_screen.dart';
 import 'onboarding_screen.dart';
@@ -3406,6 +3407,8 @@ if (isVideo) {
             doctorAbout,
 
           ),
+
+          const RatingsCard(),
 
           const HelpSupportCard(),
 
