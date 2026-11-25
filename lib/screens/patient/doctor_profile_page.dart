@@ -3,6 +3,8 @@ import 'package:easy_localization/easy_localization.dart';
 
 import 'book_appointment_page.dart';
 import '../../widgets/profile_image.dart';
+import '../../widgets/rating_display.dart';
+import '../ratings_pages.dart';
 
 class DoctorProfilePage extends StatelessWidget {
   final Map doctor;
@@ -45,6 +47,12 @@ class DoctorProfilePage extends StatelessWidget {
     final String about =
         doctor["about"]?.toString() ??
             "Experienced healthcare professional.";
+    final num rating = doctor["rating"] is num
+        ? doctor["rating"] as num
+        : num.tryParse(doctor["rating"]?.toString() ?? "") ?? 0;
+    final num ratingCount = doctor["ratingCount"] is num
+        ? doctor["ratingCount"] as num
+        : num.tryParse(doctor["ratingCount"]?.toString() ?? "") ?? 0;
     final String profileImageUrl =
         doctor["profileImageUrl"]?.toString() ?? "";
 
@@ -109,6 +117,27 @@ class DoctorProfilePage extends StatelessWidget {
                   fontWeight:
                       FontWeight.bold,
                 ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Center(
+              child: RatingSummaryLink(
+                rating: rating,
+                count: ratingCount,
+                onTap: doctorId.isEmpty
+                    ? null
+                    : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PublicProviderReviewsPage(
+                              entityType: "doctor",
+                              targetId: doctorId,
+                              providerName: doctorName,
+                            ),
+                          ),
+                        ),
               ),
             ),
 

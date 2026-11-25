@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../widgets/profile_image.dart';
+import '../../widgets/rating_display.dart';
+import '../ratings_pages.dart';
 
 class PharmacyListPage extends StatefulWidget {
   const PharmacyListPage({super.key});
@@ -55,6 +57,13 @@ class _PharmacyListPageState
 
                 final pharmacy =
                     pharmacies[index];
+                final pharmacyId = pharmacy["_id"]?.toString() ?? "";
+                final rating = pharmacy["rating"] is num
+                    ? pharmacy["rating"] as num
+                    : num.tryParse(pharmacy["rating"]?.toString() ?? "") ?? 0;
+                final ratingCount = pharmacy["ratingCount"] is num
+                    ? pharmacy["ratingCount"] as num
+                    : num.tryParse(pharmacy["ratingCount"]?.toString() ?? "") ?? 0;
 
                 return Card(
                   child: ListTile(
@@ -66,10 +75,30 @@ class _PharmacyListPageState
                     title: Text(
                       pharmacy["name"],
                     ),
-                    subtitle: Text(
-                      pharmacy["address"] ??
-                          "",
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(pharmacy["address"] ?? ""),
+                        const SizedBox(height: 4),
+                        RatingSummaryLink(
+                          rating: rating,
+                          count: ratingCount,
+                          onTap: pharmacyId.isEmpty
+                              ? null
+                              : () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PublicProviderReviewsPage(
+                                        entityType: "pharmacy",
+                                        targetId: pharmacyId,
+                                        providerName: pharmacy["name"]?.toString() ?? "Pharmacy",
+                                      ),
+                                    ),
+                                  ),
+                        ),
+                      ],
                     ),
+                    isThreeLine: true,
                   ),
                 );
               },

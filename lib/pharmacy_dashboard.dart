@@ -9,6 +9,7 @@ import '../pharmacy/my_medicines_page.dart';
 import 'widgets/help_support_card.dart';
 import 'widgets/profile_image.dart';
 import 'screens/edit_profile_screen.dart';
+import 'screens/ratings_pages.dart';
 
 class PharmacyDashboard extends StatefulWidget {
   const PharmacyDashboard({super.key});
@@ -1610,6 +1611,7 @@ Future<List<Map<String, dynamic>>?> _selectPrescriptionMedicines(
           ),
 
           profilePage(),
+          const ProviderRatingsTabPage(),
         ],
       ),
 
@@ -1659,6 +1661,10 @@ Future<List<Map<String, dynamic>>?> _selectPrescriptionMedicines(
               Icons.person,
             ),
             label: "Profile",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.star_rate_outlined),
+            label: "Reviews",
           ),
         ],
       ),

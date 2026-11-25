@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'profile_image.dart';
+import 'rating_display.dart';
 
 /// A resilient provider selector that avoids dropdown value assertions when
 /// provider data is still loading or has duplicate display names.
@@ -114,6 +115,16 @@ class ProviderPicker extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Colors.black54),
                       ),
+                    if (!isLoading && name.isNotEmpty)
+                      RatingSummaryLink(
+                        rating: selected?["rating"] is num
+                            ? selected!["rating"] as num
+                            : num.tryParse(selected?["rating"]?.toString() ?? "") ?? 0,
+                        count: selected?["ratingCount"] is num
+                            ? selected!["ratingCount"] as num
+                            : num.tryParse(selected?["ratingCount"]?.toString() ?? "") ?? 0,
+                        textColor: const Color(0xff475569),
+                      ),
                   ],
                 ),
               ),
@@ -193,13 +204,26 @@ class ProviderPicker extends StatelessWidget {
                         fallbackIcon: fallbackIcon,
                       ),
                       title: Text(providerName),
-                      subtitle: providerAddress.isEmpty
-                          ? null
-                          : Text(
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (providerAddress.isNotEmpty)
+                            Text(
                               providerAddress,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                          RatingSummaryLink(
+                            rating: option["rating"] is num
+                                ? option["rating"] as num
+                                : num.tryParse(option["rating"]?.toString() ?? "") ?? 0,
+                            count: option["ratingCount"] is num
+                                ? option["ratingCount"] as num
+                                : num.tryParse(option["ratingCount"]?.toString() ?? "") ?? 0,
+                            textColor: const Color(0xff475569),
+                          ),
+                        ],
+                      ),
                       trailing: id == selectedId
                           ? const Icon(Icons.check_circle, color: Color(0xff14B8A6))
                           : null,

@@ -4,6 +4,8 @@ import 'package:easy_localization/easy_localization.dart';
 import '../../services/api_service.dart';
 import '../../widgets/profile_image.dart';
 import 'doctor_profile_page.dart';
+import '../ratings_pages.dart';
+import '../../widgets/rating_display.dart';
 
 class DoctorsListPage extends StatefulWidget {
   const DoctorsListPage({super.key});
@@ -241,6 +243,12 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
                                 doctor["hospitalVisitFee"]?.toString() ??
                                     doctor["fees"]?.toString() ??
                                     "0";
+                            final rating = doctor["rating"] is num
+                                ? doctor["rating"] as num
+                                : num.tryParse(doctor["rating"]?.toString() ?? "") ?? 0;
+                            final ratingCount = doctor["ratingCount"] is num
+                                ? doctor["ratingCount"] as num
+                                : num.tryParse(doctor["ratingCount"]?.toString() ?? "") ?? 0;
 
                             return Card(
                               elevation: 3,
@@ -315,13 +323,20 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
 
                                             Row(
                                               children: [
-                                                const Icon(
-                                                  Icons.star,
-                                                  color: Colors.amber,
-                                                  size: 18,
+                                                RatingSummaryLink(
+                                                  rating: rating,
+                                                  count: ratingCount,
+                                                  onTap: () => Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => PublicProviderReviewsPage(
+                                                        entityType: "doctor",
+                                                        targetId: doctor["_id"].toString(),
+                                                        providerName: doctor["name"]?.toString() ?? "Doctor",
+                                                      ),
+                                                    ),
+                                                  ),
                                                 ),
-
-                                                const Text("4.8"),
 
                                                 const Spacer(),
 

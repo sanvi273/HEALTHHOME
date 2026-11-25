@@ -12,6 +12,7 @@ import 'reports_page.dart';
 import 'medicine_order_page.dart';
 import 'lab_orders_page.dart';
 import '../payment/payment_history_page.dart';
+import '../ratings_pages.dart';
 
 class PatientDashboard extends StatefulWidget {
   const PatientDashboard({super.key});
@@ -92,6 +93,11 @@ class _PatientDashboardState extends State<PatientDashboard> {
   void openPaymentHistory() => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const PaymentHistoryPage()),
+      );
+
+  void openRatingsAndReviews() => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PatientReviewsPage()),
       );
 
 
@@ -578,6 +584,14 @@ class _PatientDashboardState extends State<PatientDashboard> {
             compact: compact,
             onTap: openPaymentHistory,
           ),
+          _QuickAccessCard(
+            title: 'Ratings & Reviews',
+            icon: Icons.star_rate_rounded,
+            iconColor: const Color(0xffC47A00),
+            iconBackground: const Color(0xfffff3d8),
+            compact: compact,
+            onTap: openRatingsAndReviews,
+          ),
         ];
 
         return GridView.builder(
@@ -670,6 +684,14 @@ class _PatientDashboardState extends State<PatientDashboard> {
                 onTap: () {
                   Navigator.pop(sheetContext);
                   openPaymentHistory();
+                },
+              ),
+              _SheetLink(
+                icon: Icons.star_rate_rounded,
+                title: 'Ratings & Reviews',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  openRatingsAndReviews();
                 },
               ),
               ],

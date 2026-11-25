@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/api_service.dart';
 import '../../widgets/profile_image.dart';
+import '../../widgets/rating_display.dart';
+import '../ratings_pages.dart';
 import '../../widgets/provider_picker.dart';
 import '../payment/payment_page.dart';
 
@@ -209,7 +211,17 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
         labId,
       );
 
-      labTests = data;
+      final lab = labs.cast<Map>().firstWhere(
+        (item) => item["_id"]?.toString() == labId,
+        orElse: () => <String, dynamic>{},
+      );
+      labTests = data.map((raw) => <String, dynamic>{
+        ...Map<String, dynamic>.from(raw),
+        "labId": labId,
+        "labName": lab["name"]?.toString() ?? "",
+        "labRating": lab["rating"] ?? 0,
+        "labRatingCount": lab["ratingCount"] ?? 0,
+      }).toList();
 
       debugPrint(
         "LAB TEST PRICE DATA = $labTests",
@@ -259,6 +271,8 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
 
             test["labId"] = labId;
             test["labName"] = labName;
+            test["labRating"] = lab["rating"] ?? 0;
+            test["labRatingCount"] = lab["ratingCount"] ?? 0;
             test["labProfileImageUrl"] =
                 (lab["profileImageUrl"] ?? lab["image"] ?? "").toString();
 
@@ -628,6 +642,12 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
         test["category"]?.toString() ?? "general".tr();
     final price =
         _toDouble(test["price"]);
+    final labRating = test["labRating"] is num
+        ? test["labRating"] as num
+        : num.tryParse(test["labRating"]?.toString() ?? "") ?? 0;
+    final labRatingCount = test["labRatingCount"] is num
+        ? test["labRatingCount"] as num
+        : num.tryParse(test["labRatingCount"]?.toString() ?? "") ?? 0;
 
     return Container(
       margin: EdgeInsets.only(bottom: 12),
@@ -698,6 +718,21 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
                         color: Colors.black54,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    RatingSummaryLink(
+                      rating: labRating,
+                      count: labRatingCount,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PublicProviderReviewsPage(
+                            entityType: "laboratory",
+                            targetId: test["labId"]?.toString() ?? "",
+                            providerName: labName,
+                          ),
+                        ),
+                      ),
+                    ),
                     SizedBox(height: 7),
                     Text(
                       "₹${price.toStringAsFixed(0)}",
@@ -748,6 +783,12 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
         test["description"]?.toString().trim() ?? "";
     final price =
         _toDouble(test["price"]);
+    final labRating = test["labRating"] is num
+        ? test["labRating"] as num
+        : num.tryParse(test["labRating"]?.toString() ?? "") ?? 0;
+    final labRatingCount = test["labRatingCount"] is num
+        ? test["labRatingCount"] as num
+        : num.tryParse(test["labRatingCount"]?.toString() ?? "") ?? 0;
     final testLabImageUrl =
         test["labProfileImageUrl"]?.toString().trim() ?? "";
     final selectedLabImageUrl =
@@ -844,6 +885,23 @@ class _BookLabTestPageState extends State<BookLabTestPage> {
               style: TextStyle(
                 color: primaryColor,
                 fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          RatingSummaryLink(
+            rating: labRating,
+            count: labRatingCount,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PublicProviderReviewsPage(
+                  entityType: "laboratory",
+                  targetId: test["labId"]?.toString() ?? "",
+                  providerName: labName,
+                ),
               ),
             ),
           ),

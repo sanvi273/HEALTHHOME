@@ -813,6 +813,95 @@ class ApiService {
   }
 
   // ============================================================
+  // RATINGS AND REVIEWS
+  // ============================================================
+
+  static Future<List<Map<String, dynamic>>> getEligibleReviews() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/ratings/eligible"),
+      headers: await _getAuthHeaders(),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300 ||
+        data is! Map || data["success"] != true || data["reviews"] is! List) {
+      throw Exception(
+        data is Map
+            ? data["message"]?.toString() ?? "Unable to load reviews."
+            : "Unable to load reviews.",
+      );
+    }
+    return (data["reviews"] as List)
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> submitRating({
+    required String entityType,
+    required String targetId,
+    required String transactionId,
+    required int rating,
+    String review = "",
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/ratings"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode({
+        "entityType": entityType,
+        "targetId": targetId,
+        "transactionId": transactionId,
+        "rating": rating,
+        "review": review,
+      }),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300 || data is! Map) {
+      throw Exception(
+        data is Map
+            ? data["message"]?.toString() ?? "Unable to submit your review."
+            : "Unable to submit your review.",
+      );
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
+  static Future<Map<String, dynamic>> getProviderReviews() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/ratings/mine"),
+      headers: await _getAuthHeaders(),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300 || data is! Map) {
+      throw Exception(
+        data is Map
+            ? data["message"]?.toString() ?? "Unable to load provider reviews."
+            : "Unable to load provider reviews.",
+      );
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
+  static Future<Map<String, dynamic>> getPublicReviews({
+    required String entityType,
+    required String targetId,
+  }) async {
+    final response = await http.get(
+      Uri.parse(
+        "$baseUrl/api/ratings/public/${Uri.encodeComponent(entityType)}/${Uri.encodeComponent(targetId)}",
+      ),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300 || data is! Map) {
+      throw Exception(
+        data is Map
+            ? data["message"]?.toString() ?? "Unable to load provider reviews."
+            : "Unable to load provider reviews.",
+      );
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
+  // ============================================================
   // MEDICINES
   // ============================================================
 
