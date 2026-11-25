@@ -1219,6 +1219,9 @@ class _MyPrescriptionPageState
                 ?.toString() ??
             "doctor".tr();
 
+    final doctorEmergencyNumber =
+        prescription["doctorEmergencyNumber"]?.toString().trim() ?? "";
+
     final diagnosis =
         prescription["diagnosis"]
                 ?.toString() ??
@@ -1303,6 +1306,17 @@ class _MyPrescriptionPageState
                               FontWeight.bold,
                         ),
                       ),
+
+                      if (doctorEmergencyNumber.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          "Emergency contact: $doctorEmergencyNumber",
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
 
                       const SizedBox(
                         height: 5,
@@ -2315,6 +2329,14 @@ class PrescriptionDetailsPage
                 as List
             : [];
 
+    String patientInfo(String key, {String unit = ""}) {
+      final value = prescription[key]?.toString().trim() ?? "";
+      return value.isEmpty ? "Not provided" : "$value$unit";
+    }
+
+    final doctorEmergencyNumber =
+        prescription["doctorEmergencyNumber"]?.toString().trim() ?? "";
+
     return Scaffold(
       backgroundColor:
           const Color(0xffF5F7FA),
@@ -2344,16 +2366,29 @@ class PrescriptionDetailsPage
 
           buildDetailsCard(
             title: "doctor".tr(),
-            child: Text(
-              prescription["doctorName"]
-                      ?.toString() ??
-                  "doctor".tr(),
-              style:
-                  const TextStyle(
-                fontSize: 20,
-                fontWeight:
-                    FontWeight.bold,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prescription["doctorName"]?.toString() ?? "doctor".tr(),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                if (doctorEmergencyNumber.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.emergency_outlined, color: Color(0xffD94841), size: 19),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          "Emergency contact: $doctorEmergencyNumber",
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
 
@@ -2363,16 +2398,20 @@ class PrescriptionDetailsPage
 
           buildDetailsCard(
             title: "patient".tr(),
-            child: Text(
-              prescription["patientName"]
-                      ?.toString() ??
-                  "-",
-              style:
-                  const TextStyle(
-                fontSize: 17,
-                fontWeight:
-                    FontWeight.w600,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prescription["patientName"]?.toString() ?? "-",
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Text("Gender: ${patientInfo('patientGender')}"),
+                Text("Blood group: ${patientInfo('patientBloodGroup')}"),
+                Text("Height: ${patientInfo('patientHeight', unit: ' cm')}"),
+                Text("Weight: ${patientInfo('patientWeight', unit: ' kg')}"),
+                Text("BMI: ${patientInfo('patientBmi')}"),
+              ],
             ),
           ),
 

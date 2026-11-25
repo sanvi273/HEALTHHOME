@@ -156,6 +156,7 @@ Map<String, dynamic> _readSchedule(dynamic saved, dynamic legacy) {
 String doctorId = "";
 String doctorName = "";
 String doctorPhone = "";
+String doctorEmergencyNumber = "";
 String doctorHospital = "";
 String doctorSpecialization = "";
 String doctorExperience = "";
@@ -284,6 +285,9 @@ Future<void> loadDoctor() async {
           doctor["phone"]?.toString() ??
           phone;
 
+      doctorEmergencyNumber =
+          doctor["emergencyNumber"]?.toString() ?? doctorPhone;
+
       doctorHospital =
           doctor["hospital"]?.toString() ??
           "";
@@ -344,6 +348,11 @@ Future<void> loadDoctor() async {
       );
 
       await prefs.setString(
+        "doctorEmergencyNumber",
+        doctorEmergencyNumber,
+      );
+
+      await prefs.setString(
   "doctorId",
   doctorId,
 );
@@ -401,6 +410,7 @@ Future<void> loadDoctor() async {
 
       doctorPhone =
           phone;
+      doctorEmergencyNumber = doctorPhone;
     }
 
 
@@ -425,6 +435,8 @@ Future<void> loadDoctor() async {
         prefs.getString("doctorPhone") ??
         prefs.getString("userPhone") ??
         "";
+    doctorEmergencyNumber =
+        prefs.getString("doctorEmergencyNumber") ?? doctorPhone;
 
   }
 
@@ -1298,6 +1310,44 @@ Widget casesPage() {
   );
 }
 
+ Widget patientHealthSummary(dynamic appointment) {
+  String value(String key) {
+    final raw = appointment[key]?.toString().trim() ?? "";
+    return raw.isEmpty ? "Not provided" : raw;
+  }
+
+  final height = value("patientHeight");
+  final weight = value("patientWeight");
+  final details = <String>[
+    "Gender: ${value('patientGender')}",
+    "Blood group: ${value('patientBloodGroup')}",
+    "Height: $height${height == "Not provided" ? "" : " cm"}",
+    "Weight: $weight${weight == "Not provided" ? "" : " kg"}",
+    "BMI: ${value("patientBmi")}",
+  ];
+
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(top: 14),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xffF3FAF9),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xffD8EFEC)),
+    ),
+    child: Wrap(
+      spacing: 14,
+      runSpacing: 8,
+      children: details
+          .map((detail) => Text(
+                detail,
+                style: const TextStyle(fontSize: 13, color: Color(0xff335B58)),
+              ))
+          .toList(),
+    ),
+  );
+}
+
  Widget appointmentCard(
   dynamic appointment,
 ) {
@@ -1449,6 +1499,10 @@ Widget casesPage() {
           const SizedBox(height: 12),
 
           // ====================================================
+          patientHealthSummary(appointment),
+
+          const SizedBox(height: 18),
+
           // DATE
           // ====================================================
 
@@ -2486,6 +2540,10 @@ debugPrint("================================");
 
           const SizedBox(height: 18),
 
+          patientHealthSummary(appointment),
+
+          const SizedBox(height: 18),
+
           // ================= DATE =================
 
           Text(
@@ -3322,6 +3380,7 @@ if (isVideo) {
               role: 'doctor',
               initialProfile: {
                 'name': doctorName,
+                'emergencyNumber': doctorEmergencyNumber,
                 'specialization': doctorSpecialization,
                 'experience': doctorExperience,
                 'fees': doctorFees,
@@ -3334,6 +3393,8 @@ if (isVideo) {
                 if (!mounted) return;
                 setState(() {
                   doctorName = profile['name']?.toString() ?? doctorName;
+                  doctorEmergencyNumber =
+                      profile['emergencyNumber']?.toString() ?? doctorEmergencyNumber;
                   doctorSpecialization =
                       profile['specialization']?.toString() ?? doctorSpecialization;
                   doctorExperience =
@@ -3364,6 +3425,12 @@ if (isVideo) {
 
             doctorPhone,
 
+          ),
+
+          profileTile(
+            Icons.emergency_outlined,
+            "Emergency Contact",
+            doctorEmergencyNumber,
           ),
 
           profileTile(

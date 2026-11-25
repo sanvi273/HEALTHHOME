@@ -116,6 +116,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           common,
           const _ProfileField(key: 'specialization', label: 'Specialization', isRequired: true),
           const _ProfileField(key: 'experience', label: 'Experience', isRequired: true),
+          const _ProfileField(key: 'emergencyNumber', label: 'Emergency contact number', keyboardType: TextInputType.phone),
           const _ProfileField(key: 'videoConsultationFee', label: 'Video consultation fee', isRequired: true, keyboardType: TextInputType.numberWithOptions(decimal: true)),
           const _ProfileField(key: 'hospitalVisitFee', label: 'Hospital visit fee', isRequired: true, keyboardType: TextInputType.numberWithOptions(decimal: true)),
           const _ProfileField(key: 'hospital', label: 'Hospital / clinic', isRequired: true),
@@ -229,6 +230,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'hospitalVisitFee',
           'hospital',
           'about',
+          'emergencyNumber',
         ]) {
           await prefs.setString('doctor${key[0].toUpperCase()}${key.substring(1)}', profile[key]?.toString() ?? '');
         }
@@ -258,6 +260,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (number == null || number <= 0) {
         return 'Enter a valid ${field.label.toLowerCase()}.';
       }
+    }
+    if (field.key == 'emergencyNumber' &&
+        value.isNotEmpty &&
+        !RegExp(r'^\+?[0-9][0-9\s().-]{6,30}$').hasMatch(value)) {
+      return 'Enter a valid emergency contact number.';
     }
     if (field.key == 'videoConsultationFee' ||
         field.key == 'hospitalVisitFee') {

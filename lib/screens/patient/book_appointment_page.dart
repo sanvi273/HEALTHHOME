@@ -2329,7 +2329,9 @@ Future<void> _handlePaymentError(
 
   final String fees = _selectedConsultationFeeText;
 
-
+  final String doctorEmergencyNumber =
+      (widget.doctor["emergencyNumber"] ?? widget.doctor["phone"])
+          ?.toString().trim() ?? "";
 
   return Scaffold(
 
@@ -2524,6 +2526,22 @@ Future<void> _handlePaymentError(
              ),
 
             ),
+
+            if (doctorEmergencyNumber.isNotEmpty) ...[
+             const SizedBox(height: 8),
+             Row(
+              children: [
+               const Icon(Icons.emergency_outlined, size: 17, color: Color(0xffD94841)),
+               const SizedBox(width: 6),
+               Expanded(
+                child: Text(
+                 "Emergency contact: $doctorEmergencyNumber",
+                 style: const TextStyle(fontSize: 13, color: Color(0xff6B7280)),
+                ),
+               ),
+              ],
+             ),
+            ],
 
            ],
 

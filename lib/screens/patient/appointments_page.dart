@@ -951,6 +951,9 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
   final String paymentAmount = (appointment["fees"] ?? "").toString().trim();
 
+  final String doctorEmergencyNumber =
+      (appointment["doctorEmergencyNumber"] ?? "").toString().trim();
+
   final bool isReconsultation = appointment["isReconsultation"] == true;
 
   final String appointmentId =
@@ -1172,6 +1175,21 @@ Widget buildAppointmentCard(Map<String, dynamic> appointment) {
 
               ),
 
+              if (doctorEmergencyNumber.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.emergency_outlined, color: Color(0xffD94841), size: 17),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        "Doctor emergency contact: $doctorEmergencyNumber",
+                        style: const TextStyle(fontSize: 13, color: Color(0xff555555)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -2347,6 +2365,14 @@ class AppointmentDetailsPage extends StatelessWidget {
               "time".tr(),
 
               time,
+
+            ),
+
+            _detailRow(
+
+              "Doctor emergency contact",
+
+              (appointment["doctorEmergencyNumber"] ?? "").toString(),
 
             ),
 

@@ -353,6 +353,24 @@ class _PrescriptionScreenState
                 ?.toString() ??
                 "",
 
+        "patientGender":
+            widget.appointment["patientGender"]?.toString() ?? "",
+
+        "patientBloodGroup":
+            widget.appointment["patientBloodGroup"]?.toString() ?? "",
+
+        "patientHeight":
+            widget.appointment["patientHeight"]?.toString() ?? "",
+
+        "patientWeight":
+            widget.appointment["patientWeight"]?.toString() ?? "",
+
+        "patientBmi":
+            widget.appointment["patientBmi"]?.toString() ?? "",
+
+        "doctorEmergencyNumber":
+            widget.appointment["doctorEmergencyNumber"]?.toString() ?? "",
+
         "doctorName":
             widget.appointment[
                     "doctorName"]
@@ -880,6 +898,12 @@ class _PrescriptionScreenState
                 ?.toString() ??
                 "",
           ),
+
+          patientTile(Icons.wc, "Gender", widget.appointment["patientGender"]?.toString() ?? ""),
+          patientTile(Icons.bloodtype_outlined, "Blood Group", widget.appointment["patientBloodGroup"]?.toString() ?? ""),
+          patientTile(Icons.height, "Height (cm)", widget.appointment["patientHeight"]?.toString() ?? ""),
+          patientTile(Icons.monitor_weight_outlined, "Weight (kg)", widget.appointment["patientWeight"]?.toString() ?? ""),
+          patientTile(Icons.calculate_outlined, "BMI", widget.appointment["patientBmi"]?.toString() ?? ""),
 
           patientTile(
             Icons.calendar_today,
