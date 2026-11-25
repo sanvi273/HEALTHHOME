@@ -12,7 +12,6 @@ import '../widgets/ratings_card.dart';
 import '../widgets/profile_image.dart';
 import 'edit_profile_screen.dart';
 import 'onboarding_screen.dart';
-import 'ratings_pages.dart';
 import '../prescription_screen.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
@@ -864,8 +863,6 @@ Future<void> loadAppointments() async {
 
       profilePage(),
 
-      const ProviderRatingsTabPage(),
-
     ];
 
     return Scaffold(
@@ -918,11 +915,6 @@ Future<void> loadAppointments() async {
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: "Profile",
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.star_rate_outlined),
-            label: "Reviews",
           ),
 
         ],

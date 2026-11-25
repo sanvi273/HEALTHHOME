@@ -8,7 +8,6 @@ import 'widgets/help_support_card.dart';
 import 'widgets/ratings_card.dart';
 import 'widgets/profile_image.dart';
 import 'screens/edit_profile_screen.dart';
-import 'screens/ratings_pages.dart';
 
 
 class LaboratoryDashboard extends StatefulWidget {
@@ -547,7 +546,6 @@ final pages = <Widget>[
   inProgressPage(),
   reportsPage(),
   profilePage(),
-  const ProviderRatingsTabPage(),
 ];
 
     return Scaffold(
@@ -647,11 +645,6 @@ type: BottomNavigationBarType.fixed,
       Icons.person,
     ),
     label: "Profile",
-  ),
-  BottomNavigationBarItem(
-    icon: Icon(Icons.star_rate_outlined),
-    activeIcon: Icon(Icons.star_rate),
-    label: "Reviews",
   ),
 ],
       ),
