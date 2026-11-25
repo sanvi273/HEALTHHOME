@@ -66,6 +66,13 @@ class _PrescriptionScreenState
 
   final List<Map<String, dynamic>> labTests = [];
 
+  final List<Map<String, dynamic>> prescriptionTemplates = [];
+
+  String? selectedPrescriptionTemplateId;
+  bool isLoadingTemplates = true;
+  bool isSavingTemplate = false;
+  String? templateLoadError;
+
   // ============================================================
   // MEDICINE OPTIONS
   // ============================================================
@@ -98,6 +105,12 @@ class _PrescriptionScreenState
   // ============================================================
 
   @override
+  void initState() {
+    super.initState();
+    loadPrescriptionTemplates();
+  }
+
+  @override
   void dispose() {
     symptomsController.dispose();
     diagnosisController.dispose();
@@ -112,6 +125,351 @@ class _PrescriptionScreenState
     labTestNoteController.dispose();
 
     super.dispose();
+  }
+
+  Future<void> loadPrescriptionTemplates() async {
+    if (mounted) {
+      setState(() {
+        isLoadingTemplates = true;
+        templateLoadError = null;
+      });
+    }
+
+    try {
+      final templates = await ApiService.getDoctorPrescriptionTemplates();
+      if (!mounted) return;
+      setState(() {
+        prescriptionTemplates
+          ..clear()
+          ..addAll(templates);
+        final selectedStillExists = prescriptionTemplates.any(
+          (template) =>
+              template["_id"]?.toString() == selectedPrescriptionTemplateId,
+        );
+        if (!selectedStillExists) {
+          selectedPrescriptionTemplateId = prescriptionTemplates.isEmpty
+              ? null
+              : prescriptionTemplates.first["_id"]?.toString();
+        }
+        isLoadingTemplates = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        isLoadingTemplates = false;
+        templateLoadError = error.toString().replaceFirst("Exception: ", "");
+      });
+    }
+  }
+
+  Future<void> applySelectedPrescriptionTemplate() async {
+    Map<String, dynamic>? selectedTemplate;
+    for (final template in prescriptionTemplates) {
+      if (template["_id"]?.toString() == selectedPrescriptionTemplateId) {
+        selectedTemplate = template;
+        break;
+      }
+    }
+    final templateToApply = selectedTemplate;
+    if (templateToApply == null) {
+      showMessage("Select a saved prescription template first.");
+      return;
+    }
+
+    final hasExistingDraft = symptomsController.text.trim().isNotEmpty ||
+        diagnosisController.text.trim().isNotEmpty ||
+        notesController.text.trim().isNotEmpty ||
+        medicines.isNotEmpty ||
+        labTests.isNotEmpty;
+    if (hasExistingDraft) {
+      final shouldReplace = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text("Apply prescription template?"),
+          content: const Text(
+            "This will replace the current symptoms, diagnosis, advice, medicines, and lab tests in this draft. Patient and appointment details will stay unchanged.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text("Keep editing"),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text("Apply template"),
+            ),
+          ],
+        ),
+      );
+      if (shouldReplace != true) return;
+    }
+
+    final templateMedicines = templateToApply["medicines"] is List
+        ? (templateToApply["medicines"] as List)
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList()
+        : <Map<String, dynamic>>[];
+    final templateLabTests = templateToApply["labTests"] is List
+        ? (templateToApply["labTests"] as List)
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList()
+        : <Map<String, dynamic>>[];
+
+    setState(() {
+      symptomsController.text = templateToApply["symptoms"]?.toString() ?? "";
+      diagnosisController.text = templateToApply["diagnosis"]?.toString() ?? "";
+      notesController.text = templateToApply["advice"]?.toString() ?? "";
+      medicines
+        ..clear()
+        ..addAll(templateMedicines);
+      labTests
+        ..clear()
+        ..addAll(templateLabTests);
+    });
+    showMessage("Template applied. Review and edit it for this patient.", success: true);
+  }
+
+  Future<void> saveCurrentPrescriptionAsTemplate() async {
+    if (diagnosisController.text.trim().isEmpty &&
+        symptomsController.text.trim().isEmpty &&
+        notesController.text.trim().isEmpty &&
+        medicines.isEmpty &&
+        labTests.isEmpty) {
+      showMessage("Add prescription details before saving a template.");
+      return;
+    }
+
+    final nameController = TextEditingController();
+    final templateName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Save prescription template"),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          maxLength: 80,
+          decoration: const InputDecoration(
+            labelText: "Template name",
+            hintText: "e.g. Cold and fever",
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              Navigator.pop(dialogContext, value.trim());
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Cancel"),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = nameController.text.trim();
+              if (value.isNotEmpty) Navigator.pop(dialogContext, value);
+            },
+            child: const Text("Save template"),
+          ),
+        ],
+      ),
+    );
+    nameController.dispose();
+    if (templateName == null || templateName.isEmpty || !mounted) return;
+
+    setState(() => isSavingTemplate = true);
+    try {
+      final response = await ApiService.createDoctorPrescriptionTemplate(
+        template: {
+          "name": templateName,
+          "symptoms": symptomsController.text.trim(),
+          "diagnosis": diagnosisController.text.trim(),
+          "advice": notesController.text.trim(),
+          "medicines": medicines,
+          "labTests": labTests,
+        },
+      );
+      if (!mounted) return;
+      final savedTemplate = response["template"];
+      setState(() {
+        final savedId = savedTemplate is Map
+            ? savedTemplate["_id"]?.toString()
+            : null;
+        if (savedId != null) selectedPrescriptionTemplateId = savedId;
+      });
+      await loadPrescriptionTemplates();
+      if (!mounted) return;
+      showMessage("Prescription template saved.", success: true);
+    } catch (error) {
+      if (!mounted) return;
+      showMessage(error.toString().replaceFirst("Exception: ", ""));
+    } finally {
+      if (mounted) setState(() => isSavingTemplate = false);
+    }
+  }
+
+  Future<void> deleteSelectedPrescriptionTemplate() async {
+    final templateId = selectedPrescriptionTemplateId;
+    if (templateId == null) return;
+    final template = prescriptionTemplates.firstWhere(
+      (item) => item["_id"]?.toString() == templateId,
+      orElse: () => <String, dynamic>{},
+    );
+    if (template.isEmpty) return;
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Delete template?"),
+        content: Text("Delete ‘${template["name"] ?? "this template"}’ from your saved templates?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text("Cancel"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true) return;
+
+    try {
+      await ApiService.deleteDoctorPrescriptionTemplate(templateId);
+      if (!mounted) return;
+      setState(() => selectedPrescriptionTemplateId = null);
+      await loadPrescriptionTemplates();
+      if (mounted) showMessage("Template deleted.", success: true);
+    } catch (error) {
+      if (mounted) showMessage(error.toString().replaceFirst("Exception: ", ""));
+    }
+  }
+
+  Widget buildPrescriptionTemplateSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 7, offset: Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.bolt_rounded, color: Color(0xff14B8A6)),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  "Quick prescription templates",
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+              IconButton(
+                tooltip: "Refresh templates",
+                onPressed: isLoadingTemplates ? null : loadPrescriptionTemplates,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            "Save common prescriptions and apply them to a draft. Review every detail before prescribing.",
+            style: TextStyle(color: Colors.black54, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          if (isLoadingTemplates)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (templateLoadError != null)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    templateLoadError!,
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                  ),
+                ),
+                TextButton(onPressed: loadPrescriptionTemplates, child: const Text("Retry")),
+              ],
+            )
+          else if (prescriptionTemplates.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Text(
+                "No saved templates yet. Fill out a prescription and save it here for next time.",
+                style: TextStyle(color: Colors.black54),
+              ),
+            )
+          else
+            DropdownButtonFormField<String>(
+              initialValue: selectedPrescriptionTemplateId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: "Choose a saved template",
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.description_outlined),
+              ),
+              items: prescriptionTemplates.map((template) {
+                final id = template["_id"]?.toString() ?? "";
+                final name = template["name"]?.toString() ?? "Prescription template";
+                return DropdownMenuItem<String>(
+                  value: id,
+                  child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                );
+              }).toList(),
+              onChanged: (value) => setState(() => selectedPrescriptionTemplateId = value),
+            ),
+          if (prescriptionTemplates.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: selectedPrescriptionTemplateId == null
+                        ? null
+                        : applySelectedPrescriptionTemplate,
+                    icon: const Icon(Icons.playlist_add_check_rounded),
+                    label: const Text("Use template"),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.outlined(
+                  tooltip: "Delete selected template",
+                  onPressed: selectedPrescriptionTemplateId == null
+                      ? null
+                      : deleteSelectedPrescriptionTemplate,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: isSavingTemplate ? null : saveCurrentPrescriptionAsTemplate,
+              icon: isSavingTemplate
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.bookmark_add_outlined),
+              label: Text(isSavingTemplate ? "Saving template..." : "Save current as template"),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // ============================================================
@@ -735,6 +1093,10 @@ class _PrescriptionScreenState
           children: [
 
             buildPatientCard(),
+
+            const SizedBox(height: 14),
+
+            buildPrescriptionTemplateSection(),
 
             const SizedBox(
               height: 18,

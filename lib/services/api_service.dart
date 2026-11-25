@@ -2993,6 +2993,56 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<List<Map<String, dynamic>>> getDoctorPrescriptionTemplates() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/api/prescriptions/templates"),
+      headers: await _getAuthHeaders(),
+    );
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true) {
+      throw Exception(data["message"] ?? "Unable to load prescription templates.");
+    }
+    final rawTemplates = data["templates"];
+    return rawTemplates is List
+        ? rawTemplates
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList()
+        : <Map<String, dynamic>>[];
+  }
+
+  static Future<Map<String, dynamic>> createDoctorPrescriptionTemplate({
+    required Map<String, dynamic> template,
+  }) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/api/prescriptions/templates"),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode(template),
+    );
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true) {
+      throw Exception(data["message"] ?? "Unable to save prescription template.");
+    }
+    return data;
+  }
+
+  static Future<void> deleteDoctorPrescriptionTemplate(String templateId) async {
+    final response = await http.delete(
+      Uri.parse("$baseUrl/api/prescriptions/templates/${Uri.encodeComponent(templateId)}"),
+      headers: await _getAuthHeaders(),
+    );
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true) {
+      throw Exception(data["message"] ?? "Unable to delete prescription template.");
+    }
+  }
+
   static Future<List<dynamic>> getPatientPrescriptions(
     String patientId,
   ) async {

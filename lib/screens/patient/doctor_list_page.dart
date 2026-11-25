@@ -321,7 +321,9 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
 
                                             const SizedBox(height: 8),
 
-                                            Row(
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 RatingSummaryLink(
                                                   rating: rating,
@@ -337,15 +339,14 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
                                                     ),
                                                   ),
                                                 ),
-
-                                                const Spacer(),
-
-                                                Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.end,
+                                                const SizedBox(height: 8),
+                                                Wrap(
+                                                  spacing: 14,
+                                                  runSpacing: 3,
                                                   children: [
                                                     Text(
                                                       "${'videoConsultation'.tr()}: ₹$videoFee",
+                                                      softWrap: true,
                                                       style: const TextStyle(
                                                         color: Colors.green,
                                                         fontWeight: FontWeight.bold,
@@ -354,6 +355,7 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
                                                     ),
                                                     Text(
                                                       "${'hospitalVisit'.tr()}: ₹$hospitalFee",
+                                                      softWrap: true,
                                                       style: const TextStyle(
                                                         color: Colors.green,
                                                         fontWeight: FontWeight.bold,
