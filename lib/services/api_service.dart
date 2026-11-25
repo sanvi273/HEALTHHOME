@@ -38,6 +38,18 @@ class ApiService {
       "",
     );
 
+    normalized = normalized.replaceFirst(RegExp(r'/+$'), "");
+
+    // Call sites append `/api/...`, so accept either a host or a host ending
+    // in `/api` from --dart-define without producing `/api/api/...`.
+    final parsed = Uri.tryParse(normalized);
+    if (parsed != null &&
+        parsed.hasScheme &&
+        parsed.hasAuthority &&
+        parsed.path.toLowerCase() == "/api") {
+      normalized = parsed.replace(path: "").toString();
+    }
+
     return normalized.replaceFirst(RegExp(r'/+$'), "");
   }
 
@@ -820,6 +832,12 @@ class ApiService {
     try {
       return jsonDecode(response.body);
     } on FormatException {
+      final requestUrl = response.request?.url;
+      debugPrint(
+        "Ratings API returned non-JSON: HTTP ${response.statusCode}; "
+        "URL=${requestUrl?.host}${requestUrl?.path}; "
+        "Content-Type=${response.headers['content-type'] ?? 'unknown'}",
+      );
       throw Exception(
         "Reviews are unavailable because the server returned an invalid response. "
         "Please try again later.",
@@ -896,9 +914,19 @@ class ApiService {
     required String entityType,
     required String targetId,
   }) async {
+    final normalizedEntityType = entityType.trim().toLowerCase();
+    final normalizedTargetId = targetId.trim();
+    const supportedTypes = {"doctor", "laboratory", "pharmacy"};
+    if (!supportedTypes.contains(normalizedEntityType) ||
+        !RegExp(r'^[a-fA-F0-9]{24}$').hasMatch(normalizedTargetId)) {
+      throw Exception(
+        "The provider profile ID is missing or invalid. Reload the provider list and try again.",
+      );
+    }
+
     final response = await http.get(
       Uri.parse(
-        "$baseUrl/api/ratings/public/${Uri.encodeComponent(entityType)}/${Uri.encodeComponent(targetId)}",
+        "$baseUrl/api/ratings/public/${Uri.encodeComponent(normalizedEntityType)}/${Uri.encodeComponent(normalizedTargetId)}",
       ),
     );
     final data = _decodeRatingsResponse(response);
