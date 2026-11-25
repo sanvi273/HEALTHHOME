@@ -233,6 +233,14 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
                           itemCount: filteredDoctors.length,
                           itemBuilder: (context, index) {
                             final doctor = filteredDoctors[index];
+                            final videoFee =
+                                doctor["videoConsultationFee"]?.toString() ??
+                                    doctor["fees"]?.toString() ??
+                                    "0";
+                            final hospitalFee =
+                                doctor["hospitalVisitFee"]?.toString() ??
+                                    doctor["fees"]?.toString() ??
+                                    "0";
 
                             return Card(
                               elevation: 3,
@@ -317,13 +325,27 @@ class _DoctorsListPageState extends State<DoctorsListPage> {
 
                                                 const Spacer(),
 
-                                                Text(
-                                                  "₹${doctor["fees"]}",
-                                                  style: const TextStyle(
-                                                    color: Colors.green,
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                  ),
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.end,
+                                                  children: [
+                                                    Text(
+                                                      "${'videoConsultation'.tr()}: ₹$videoFee",
+                                                      style: const TextStyle(
+                                                        color: Colors.green,
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      "${'hospitalVisit'.tr()}: ₹$hospitalFee",
+                                                      style: const TextStyle(
+                                                        color: Colors.green,
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ],
                                             ),

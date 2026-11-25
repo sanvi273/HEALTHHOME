@@ -233,6 +233,25 @@ class _BookAppointmentPageState
   .where((slot) => _slotStartsInFuture(slot['time']?.toString() ?? ''))
   .toList();
 
+ double _consultationFeeFor(String type) {
+  final feeKey = type == "Video Consultation"
+      ? "videoConsultationFee"
+      : "hospitalVisitFee";
+  final rawFee = widget.doctor[feeKey] ?? widget.doctor["fees"];
+  final amount = double.tryParse(rawFee?.toString() ?? "");
+  return amount != null && amount.isFinite ? amount : 0;
+ }
+
+ double get _selectedConsultationFee =>
+  _consultationFeeFor(consultationType);
+
+ String get _selectedConsultationFeeText {
+  final amount = _selectedConsultationFee;
+  return amount == amount.roundToDouble()
+      ? amount.toStringAsFixed(0)
+      : amount.toStringAsFixed(2);
+ }
+
  // PICK REPORT
 
  // ============================================================
@@ -784,11 +803,7 @@ if (selectedDateApi.isEmpty ||
 
 
 
-  final String fees =
-
-    widget.doctor["fees"]?.toString() ??
-
-      "0";
+  final String fees = _selectedConsultationFeeText;
 
 
 
@@ -842,9 +857,7 @@ if (selectedDateApi.isEmpty ||
 
 
 
-  final double consultationFee =
-
-    double.tryParse(fees) ?? 0;
+  final double consultationFee = _selectedConsultationFee;
 
 
 
@@ -2314,11 +2327,7 @@ Future<void> _handlePaymentError(
 
 
 
-  final String fees =
-
-    widget.doctor["fees"]?.toString() ??
-
-      "0";
+  final String fees = _selectedConsultationFeeText;
 
 
 

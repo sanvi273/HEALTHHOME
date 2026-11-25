@@ -116,7 +116,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           common,
           const _ProfileField(key: 'specialization', label: 'Specialization', isRequired: true),
           const _ProfileField(key: 'experience', label: 'Experience', isRequired: true),
-          const _ProfileField(key: 'fees', label: 'Consultation fees', isRequired: true, keyboardType: TextInputType.numberWithOptions(decimal: true)),
+          const _ProfileField(key: 'videoConsultationFee', label: 'Video consultation fee', isRequired: true, keyboardType: TextInputType.numberWithOptions(decimal: true)),
+          const _ProfileField(key: 'hospitalVisitFee', label: 'Hospital visit fee', isRequired: true, keyboardType: TextInputType.numberWithOptions(decimal: true)),
           const _ProfileField(key: 'hospital', label: 'Hospital / clinic', isRequired: true),
           const _ProfileField(key: 'about', label: 'About', maxLines: 4),
         ];
@@ -168,7 +169,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   void _applyProfile(Map<String, dynamic> profile) {
     for (final field in _fields) {
-      final value = profile[field.key];
+      final value = profile[field.key] ??
+          (widget.role == 'doctor' &&
+                  (field.key == 'videoConsultationFee' ||
+                      field.key == 'hospitalVisitFee')
+              ? profile['fees']
+              : null);
       if (value != null) {
         _controllers[field.key]!.text = value.toString();
       }
@@ -219,6 +225,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'specialization',
           'experience',
           'fees',
+          'videoConsultationFee',
+          'hospitalVisitFee',
           'hospital',
           'about',
         ]) {
@@ -249,6 +257,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final number = double.tryParse(value);
       if (number == null || number <= 0) {
         return 'Enter a valid ${field.label.toLowerCase()}.';
+      }
+    }
+    if (field.key == 'videoConsultationFee' ||
+        field.key == 'hospitalVisitFee') {
+      final amount = double.tryParse(value);
+      if (amount == null || !amount.isFinite || amount <= 0) {
+        return 'Enter a valid positive consultation fee.';
       }
     }
     return null;

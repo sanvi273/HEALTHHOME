@@ -19,7 +19,8 @@ class _DoctorProfileSetupState extends State<DoctorProfileSetup> {
   final nameController = TextEditingController();
   final specializationController = TextEditingController();
   final experienceController = TextEditingController();
-  final feesController = TextEditingController();
+  final videoConsultationFeeController = TextEditingController();
+  final hospitalVisitFeeController = TextEditingController();
   final hospitalController = TextEditingController();
   final aboutController = TextEditingController();
 
@@ -51,9 +52,22 @@ class _DoctorProfileSetupState extends State<DoctorProfileSetup> {
     if (nameController.text.trim().isEmpty ||
         specializationController.text.trim().isEmpty ||
         experienceController.text.trim().isEmpty ||
-        feesController.text.trim().isEmpty ||
+        videoConsultationFeeController.text.trim().isEmpty ||
+        hospitalVisitFeeController.text.trim().isEmpty ||
         hospitalController.text.trim().isEmpty) {
       _showMessage("Please complete all required fields.");
+      return;
+    }
+
+    final videoFee = double.tryParse(videoConsultationFeeController.text.trim());
+    final hospitalFee = double.tryParse(hospitalVisitFeeController.text.trim());
+    if (videoFee == null ||
+        !videoFee.isFinite ||
+        videoFee <= 0 ||
+        hospitalFee == null ||
+        !hospitalFee.isFinite ||
+        hospitalFee <= 0) {
+      _showMessage("Enter a valid positive fee for both appointment types.");
       return;
     }
 
@@ -85,7 +99,9 @@ final profileResult = await ApiService.addDoctor(
   phone: phone,
   specialization: specializationController.text.trim(),
   experience: experienceController.text.trim(),
-  fees: feesController.text.trim(),
+  fees: hospitalVisitFeeController.text.trim(),
+  videoConsultationFee: videoConsultationFeeController.text.trim(),
+  hospitalVisitFee: hospitalVisitFeeController.text.trim(),
   hospital: hospitalController.text.trim(),
   about: aboutController.text.trim(),
 );
@@ -148,7 +164,17 @@ final profileResult = await ApiService.addDoctor(
 
       await prefs.setString(
         "doctorFees",
-        feesController.text.trim(),
+        hospitalVisitFeeController.text.trim(),
+      );
+
+      await prefs.setString(
+        "doctorVideoConsultationFee",
+        videoConsultationFeeController.text.trim(),
+      );
+
+      await prefs.setString(
+        "doctorHospitalVisitFee",
+        hospitalVisitFeeController.text.trim(),
       );
 
       await prefs.setString(
@@ -279,7 +305,8 @@ final profileResult = await ApiService.addDoctor(
     nameController.dispose();
     specializationController.dispose();
     experienceController.dispose();
-    feesController.dispose();
+    videoConsultationFeeController.dispose();
+    hospitalVisitFeeController.dispose();
     hospitalController.dispose();
     aboutController.dispose();
     licenseNumberController.dispose();
@@ -359,10 +386,18 @@ final profileResult = await ApiService.addDoctor(
             const SizedBox(height: 14),
 
             _field(
-              feesController,
-              "Consultation Fees",
+              videoConsultationFeeController,
+              "Video Consultation Fee",
               icon: Icons.currency_rupee,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 14),
+
+            _field(
+              hospitalVisitFeeController,
+              "Hospital Visit Fee",
+              icon: Icons.currency_rupee,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: 14),
 

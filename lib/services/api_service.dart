@@ -644,6 +644,8 @@ class ApiService {
     required String specialization,
     required String experience,
     required String fees,
+    required String videoConsultationFee,
+    required String hospitalVisitFee,
     required String hospital,
     required String about,
     String? token, // accepted for compatibility; auth sent via header
@@ -663,6 +665,8 @@ class ApiService {
         "specialization": specialization,
         "experience": experience,
         "fees": fees,
+        "videoConsultationFee": videoConsultationFee,
+        "hospitalVisitFee": hospitalVisitFee,
         "hospital": hospital,
         "about": about,
       }),

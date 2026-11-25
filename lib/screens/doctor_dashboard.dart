@@ -158,6 +158,8 @@ String doctorHospital = "";
 String doctorSpecialization = "";
 String doctorExperience = "";
 String doctorFees = "";
+String doctorVideoConsultationFee = "";
+String doctorHospitalVisitFee = "";
 String doctorAbout = "";
 
 //==========================================
@@ -292,9 +294,15 @@ Future<void> loadDoctor() async {
           doctor["experience"]?.toString() ??
           "";
 
-      doctorFees =
+      doctorHospitalVisitFee =
+          doctor["hospitalVisitFee"]?.toString() ??
           doctor["fees"]?.toString() ??
           "";
+      doctorVideoConsultationFee =
+          doctor["videoConsultationFee"]?.toString() ??
+          doctor["fees"]?.toString() ??
+          "";
+      doctorFees = doctorHospitalVisitFee;
 
       doctorAbout =
           doctor["about"]?.toString() ??
@@ -356,6 +364,14 @@ Future<void> loadDoctor() async {
       await prefs.setString(
         "doctorFees",
         doctorFees,
+      );
+      await prefs.setString(
+        "doctorVideoConsultationFee",
+        doctorVideoConsultationFee,
+      );
+      await prefs.setString(
+        "doctorHospitalVisitFee",
+        doctorHospitalVisitFee,
       );
 
       await prefs.setString(
@@ -3300,6 +3316,8 @@ if (isVideo) {
                 'specialization': doctorSpecialization,
                 'experience': doctorExperience,
                 'fees': doctorFees,
+                'videoConsultationFee': doctorVideoConsultationFee,
+                'hospitalVisitFee': doctorHospitalVisitFee,
                 'hospital': doctorHospital,
                 'about': doctorAbout,
               },
@@ -3311,7 +3329,14 @@ if (isVideo) {
                       profile['specialization']?.toString() ?? doctorSpecialization;
                   doctorExperience =
                       profile['experience']?.toString() ?? doctorExperience;
-                  doctorFees = profile['fees']?.toString() ?? doctorFees;
+                  doctorVideoConsultationFee =
+                      profile['videoConsultationFee']?.toString() ??
+                          doctorVideoConsultationFee;
+                  doctorHospitalVisitFee =
+                      profile['hospitalVisitFee']?.toString() ??
+                          profile['fees']?.toString() ??
+                          doctorHospitalVisitFee;
+                  doctorFees = doctorHospitalVisitFee;
                   doctorHospital =
                       profile['hospital']?.toString() ?? doctorHospital;
                   doctorAbout = profile['about']?.toString() ?? doctorAbout;
@@ -3353,13 +3378,15 @@ if (isVideo) {
           ),
 
           profileTile(
+            Icons.video_call,
+            "Video Consultation Fee",
+            "₹$doctorVideoConsultationFee",
+          ),
 
+          profileTile(
             Icons.currency_rupee,
-
-            "Consultation Fees",
-
-            doctorFees,
-
+            "Hospital Visit Fee",
+            "₹$doctorHospitalVisitFee",
           ),
 
           profileTile(

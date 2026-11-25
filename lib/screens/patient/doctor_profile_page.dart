@@ -33,8 +33,14 @@ class DoctorProfilePage extends StatelessWidget {
     final String hospital =
         doctor["hospital"]?.toString() ?? "N/A";
 
-    final String fees =
-        doctor["fees"]?.toString() ?? "0";
+    final String videoConsultationFee =
+        doctor["videoConsultationFee"]?.toString() ??
+            doctor["fees"]?.toString() ??
+            "0";
+    final String hospitalVisitFee =
+        doctor["hospitalVisitFee"]?.toString() ??
+            doctor["fees"]?.toString() ??
+            "0";
 
     final String about =
         doctor["about"]?.toString() ??
@@ -50,7 +56,9 @@ class DoctorProfilePage extends StatelessWidget {
     debugPrint("DOCTOR PROFILE OPENED");
     debugPrint("DOCTOR ID = $doctorId");
     debugPrint("DOCTOR NAME = $doctorName");
-    debugPrint("DOCTOR FEES = $fees");
+    debugPrint(
+      "DOCTOR FEES = video ₹$videoConsultationFee, hospital ₹$hospitalVisitFee",
+    );
     debugPrint("================================");
 
     return Scaffold(
@@ -146,9 +154,15 @@ class DoctorProfilePage extends StatelessWidget {
             // ====================================================
 
             _infoTile(
-              Icons.currency_rupee,
-              "consultationFee".tr(),
-              "₹$fees",
+              Icons.video_call,
+              "videoConsultation".tr(),
+              "₹$videoConsultationFee",
+            ),
+
+            _infoTile(
+              Icons.local_hospital,
+              "hospitalVisit".tr(),
+              "₹$hospitalVisitFee",
             ),
 
             const SizedBox(height: 20),
