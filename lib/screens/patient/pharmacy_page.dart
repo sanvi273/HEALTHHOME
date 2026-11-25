@@ -168,15 +168,7 @@ class PharmacyPage extends StatelessWidget {
                           ),
                         ),
 
-                        Text(
-                          "onYourFirstOrder".tr(),
-                          style:
-                              TextStyle(
-                            fontSize: 16,
-                            color:
-                                Colors.black54,
-                          ),
-                        ),
+                        
                       ],
                     ),
                   ),
