@@ -22,6 +22,12 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
   final TextEditingController medicineController =
       TextEditingController();
 
+  final TextEditingController brandNameController =
+      TextEditingController();
+
+  final TextEditingController genericNameController =
+      TextEditingController();
+
   final TextEditingController priceController =
       TextEditingController();
 
@@ -36,6 +42,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
   // ============================================================
 
   String selectedCategory = "Tablet";
+  bool prescriptionRequired = false;
 
   Uint8List? selectedImageBytes;
   String? selectedImageFileName;
@@ -68,6 +75,8 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
   @override
   void dispose() {
     medicineController.dispose();
+    brandNameController.dispose();
+    genericNameController.dispose();
     priceController.dispose();
     stockController.dispose();
     descriptionController.dispose();
@@ -221,6 +230,8 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
     // ------------------------------------------------------------
 
     final medicineName = medicineController.text.trim();
+    final brandName = brandNameController.text.trim();
+    final genericName = genericNameController.text.trim();
     final priceText = priceController.text.trim();
     final stockText = stockController.text.trim();
     final description = descriptionController.text.trim();
@@ -293,6 +304,12 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
         medicineName: medicineName,
 
+        brandName: brandName,
+
+        genericName: genericName,
+
+        prescriptionRequired: prescriptionRequired,
+
         category: selectedCategory,
 
         description: description,
@@ -334,6 +351,8 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
         // --------------------------------------------------------
 
         medicineController.clear();
+        brandNameController.clear();
+        genericNameController.clear();
         priceController.clear();
         stockController.clear();
         descriptionController.clear();
@@ -342,6 +361,7 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
 
         setState(() {
           selectedCategory = "Tablet";
+          prescriptionRequired = false;
           submissionKey = _createSubmissionKey();
           hasSubmittedAttempt = false;
         });
@@ -502,6 +522,56 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
               ),
 
               const SizedBox(height: 28),
+
+              sectionTitle("Brand Name"),
+
+              const SizedBox(height: 8),
+
+              TextField(
+                controller: brandNameController,
+                onChanged: (_) => _markFormEdited(),
+                textInputAction: TextInputAction.next,
+                decoration: fieldDecoration(
+                  hint: "Enter brand name (optional)",
+                  icon: Icons.sell_outlined,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              sectionTitle("Generic Name"),
+
+              const SizedBox(height: 8),
+
+              TextField(
+                controller: genericNameController,
+                onChanged: (_) => _markFormEdited(),
+                textInputAction: TextInputAction.next,
+                decoration: fieldDecoration(
+                  hint: "Enter generic name (optional)",
+                  icon: Icons.science_outlined,
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: prescriptionRequired,
+                onChanged: isSaving
+                    ? null
+                    : (value) => setState(() {
+                          _markFormEdited();
+                          prescriptionRequired = value;
+                        }),
+                title: const Text("Prescription required"),
+                subtitle: const Text(
+                  "Turn on for medicines that require a doctor's prescription.",
+                ),
+                secondary: const Icon(Icons.description_outlined),
+              ),
+
+              const SizedBox(height: 24),
 
               // ==================================================
               // CATEGORY

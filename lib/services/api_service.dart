@@ -816,12 +816,23 @@ class ApiService {
   // RATINGS AND REVIEWS
   // ============================================================
 
+  static dynamic _decodeRatingsResponse(http.Response response) {
+    try {
+      return jsonDecode(response.body);
+    } on FormatException {
+      throw Exception(
+        "Reviews are unavailable because the server returned an invalid response. "
+        "Please try again later.",
+      );
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getEligibleReviews() async {
     final response = await http.get(
       Uri.parse("$baseUrl/api/ratings/eligible"),
       headers: await _getAuthHeaders(),
     );
-    final data = jsonDecode(response.body);
+    final data = _decodeRatingsResponse(response);
     if (response.statusCode < 200 || response.statusCode >= 300 ||
         data is! Map || data["success"] != true || data["reviews"] is! List) {
       throw Exception(
@@ -854,7 +865,7 @@ class ApiService {
         "review": review,
       }),
     );
-    final data = jsonDecode(response.body);
+    final data = _decodeRatingsResponse(response);
     if (response.statusCode < 200 || response.statusCode >= 300 || data is! Map) {
       throw Exception(
         data is Map
@@ -870,7 +881,7 @@ class ApiService {
       Uri.parse("$baseUrl/api/ratings/mine"),
       headers: await _getAuthHeaders(),
     );
-    final data = jsonDecode(response.body);
+    final data = _decodeRatingsResponse(response);
     if (response.statusCode < 200 || response.statusCode >= 300 || data is! Map) {
       throw Exception(
         data is Map
@@ -890,7 +901,7 @@ class ApiService {
         "$baseUrl/api/ratings/public/${Uri.encodeComponent(entityType)}/${Uri.encodeComponent(targetId)}",
       ),
     );
-    final data = jsonDecode(response.body);
+    final data = _decodeRatingsResponse(response);
     if (response.statusCode < 200 || response.statusCode >= 300 || data is! Map) {
       throw Exception(
         data is Map
@@ -908,6 +919,9 @@ class ApiService {
   static Future<dynamic> addMedicine({
     required String pharmacyPhone,
     required String medicineName,
+    String brandName = "",
+    String genericName = "",
+    bool prescriptionRequired = false,
     required String category,
     required String description,
     required String price,
@@ -922,6 +936,9 @@ class ApiService {
       // The backend ignores this client value and derives the owner from JWT.
       "pharmacyPhone": pharmacyPhone,
       "medicineName": medicineName,
+      "brandName": brandName,
+      "genericName": genericName,
+      "prescriptionRequired": prescriptionRequired.toString(),
       "category": category,
       "description": description,
       "price": int.parse(price).toString(),
@@ -1024,6 +1041,9 @@ class ApiService {
   static Future<Map<String, dynamic>> updateMedicine({
     required String id,
     required String medicineName,
+    String brandName = "",
+    String genericName = "",
+    bool? prescriptionRequired,
     required String category,
     required String manufacturer,
     required String description,
@@ -1036,6 +1056,8 @@ class ApiService {
     final uri = Uri.parse("$baseUrl/api/medicines/$id");
     final fields = <String, String>{
       "medicineName": medicineName,
+      "brandName": brandName,
+      "genericName": genericName,
       "category": category,
       "manufacturer": manufacturer,
       "description": description,
@@ -1043,6 +1065,9 @@ class ApiService {
       "stock": int.parse(stock).toString(),
       "image": image,
     };
+    if (prescriptionRequired != null) {
+      fields["prescriptionRequired"] = prescriptionRequired.toString();
+    }
 
     if (imageBytes != null) {
       final headers = await _getAuthHeaders();

@@ -3,6 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'edit_medicine_page.dart';
 
+bool? _prescriptionRequirement(dynamic value) {
+  if (value == true || value?.toString().toLowerCase() == 'true') return true;
+  if (value == false || value?.toString().toLowerCase() == 'false') return false;
+  return null;
+}
+
 class MyMedicinesPage extends StatefulWidget {
   const MyMedicinesPage({super.key});
 
@@ -139,9 +145,17 @@ class _MyMedicinesPageState
                     .toLowerCase() ??
                 "";
 
+        final brandName =
+            medicine["brandName"]?.toString().toLowerCase() ?? "";
+
+        final genericName =
+            medicine["genericName"]?.toString().toLowerCase() ?? "";
+
         return name.contains(query) ||
             category.contains(query) ||
-            manufacturer.contains(query);
+            manufacturer.contains(query) ||
+            brandName.contains(query) ||
+            genericName.contains(query);
       }).toList();
     });
   }
@@ -459,6 +473,15 @@ class _MyMedicinesPageState
                                               ?.toString() ??
                                           "Tablet";
 
+                                  final String brandName =
+                                      medicine["brandName"]?.toString() ?? "";
+
+                                  final String genericName =
+                                      medicine["genericName"]?.toString() ?? "";
+
+                                  final bool? prescriptionRequired =
+                                      _prescriptionRequirement(medicine["prescriptionRequired"]);
+
                                   final String
                                       manufacturer =
                                       medicine[
@@ -681,6 +704,39 @@ class _MyMedicinesPageState
                                                 "Category",
                                             value:
                                                 category,
+                                          ),
+
+                                          const SizedBox(height: 9),
+
+                                          medicineDetail(
+                                            icon: Icons.sell_outlined,
+                                            title: "Brand Name",
+                                            value: brandName.isEmpty ? "—" : brandName,
+                                          ),
+
+                                          const SizedBox(height: 9),
+
+                                          medicineDetail(
+                                            icon: Icons.science_outlined,
+                                            title: "Generic Name",
+                                            value: genericName.isEmpty ? "—" : genericName,
+                                          ),
+
+                                          const SizedBox(height: 9),
+
+                                          medicineDetail(
+                                            icon: Icons.description_outlined,
+                                            title: "Prescription",
+                                            value: prescriptionRequired == true
+                                                ? "Required"
+                                                : prescriptionRequired == false
+                                                    ? "Not required"
+                                                    : "Not specified",
+                                            valueColor: prescriptionRequired == true
+                                                ? Colors.deepOrange
+                                                : prescriptionRequired == false
+                                                    ? Colors.green
+                                                    : Colors.blueGrey,
                                           ),
 
                                           const SizedBox(

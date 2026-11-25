@@ -7,6 +7,12 @@ import '../payment/payment_page.dart';
 import '../../widgets/medicine_image.dart';
 import '../../widgets/profile_image.dart';
 
+bool? _prescriptionRequirement(dynamic value) {
+  if (value == true || value?.toString().toLowerCase() == 'true') return true;
+  if (value == false || value?.toString().toLowerCase() == 'false') return false;
+  return null;
+}
+
 class OrderMedicinesPage extends StatefulWidget {
   const OrderMedicinesPage({super.key});
 
@@ -239,6 +245,12 @@ class _OrderMedicinesPageState
                 .toString()
                 .toLowerCase();
 
+        final brandName =
+            (medicine["brandName"] ?? "").toString().toLowerCase();
+
+        final genericName =
+            (medicine["genericName"] ?? "").toString().toLowerCase();
+
         final status =
             (medicine["status"] ??
                     "available".tr())
@@ -257,7 +269,9 @@ class _OrderMedicinesPageState
             search.isEmpty ||
                 name.contains(search) ||
                 category.contains(search) ||
-                manufacturer.contains(search);
+                manufacturer.contains(search) ||
+                brandName.contains(search) ||
+                genericName.contains(search);
 
         final matchesCategory =
             selectedCategory == "All" ||
@@ -888,6 +902,11 @@ class _OrderMedicinesPageState
                 ?.toString() ??
             "";
 
+    final brandName = medicine["brandName"]?.toString() ?? "";
+    final genericName = medicine["genericName"]?.toString() ?? "";
+    final prescriptionRequired =
+        _prescriptionRequirement(medicine["prescriptionRequired"]);
+
     final image =
         medicine["image"]
                 ?.toString() ??
@@ -1047,6 +1066,45 @@ class _OrderMedicinesPageState
                               color:
                                   Colors.grey,
                               fontSize: 12,
+                            ),
+                          ),
+                        ),
+
+                      if (brandName.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            "Brand: $brandName",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.black54, fontSize: 12),
+                          ),
+                        ),
+
+                      if (genericName.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            "Generic: $genericName",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.black54, fontSize: 12),
+                          ),
+                        ),
+
+                      if (prescriptionRequired != false)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Text(
+                            prescriptionRequired == true
+                                ? "Prescription required"
+                                : "Prescription status not provided",
+                            style: TextStyle(
+                              color: prescriptionRequired == true
+                                  ? Colors.deepOrange.shade700
+                                  : Colors.black54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
@@ -1403,6 +1461,11 @@ class MedicineDetailPage
                 ?.toString() ??
             "";
 
+    final brandName = medicine["brandName"]?.toString() ?? "";
+    final genericName = medicine["genericName"]?.toString() ?? "";
+    final prescriptionRequired =
+        _prescriptionRequirement(medicine["prescriptionRequired"]);
+
     final description =
         medicine["description"]
                 ?.toString() ??
@@ -1580,6 +1643,72 @@ class MedicineDetailPage
                 ),
               ),
             ],
+
+            if (brandName.isNotEmpty || genericName.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              if (brandName.isNotEmpty)
+                Text(
+                  "Brand name: $brandName",
+                  style: const TextStyle(color: Colors.black54),
+                ),
+              if (genericName.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  "Generic name: $genericName",
+                  style: const TextStyle(color: Colors.black54),
+                ),
+              ],
+            ],
+
+            const SizedBox(height: 12),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: prescriptionRequired == true
+                    ? const Color(0xfffff1e8)
+                    : prescriptionRequired == false
+                        ? const Color(0xffeaf7ef)
+                        : const Color(0xfff3f4f6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    prescriptionRequired == true
+                        ? Icons.description_outlined
+                        : prescriptionRequired == false
+                            ? Icons.check_circle_outline
+                            : Icons.help_outline,
+                    color: prescriptionRequired == true
+                        ? Colors.deepOrange
+                        : prescriptionRequired == false
+                            ? Colors.green
+                            : Colors.blueGrey,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      prescriptionRequired == true
+                          ? "Doctor's prescription required"
+                          : prescriptionRequired == false
+                              ? "Prescription not required"
+                              : "Prescription status not provided",
+                      style: TextStyle(
+                        color: prescriptionRequired == true
+                            ? Colors.deepOrange.shade800
+                            : prescriptionRequired == false
+                                ? Colors.green.shade800
+                                : Colors.blueGrey.shade700,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             const SizedBox(
               height: 18,

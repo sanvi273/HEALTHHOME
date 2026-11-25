@@ -27,6 +27,8 @@ class _EditMedicinePageState
   // ============================================================
 
   late TextEditingController nameController;
+  late TextEditingController brandNameController;
+  late TextEditingController genericNameController;
   late TextEditingController priceController;
   late TextEditingController stockController;
   late TextEditingController descriptionController;
@@ -40,6 +42,7 @@ class _EditMedicinePageState
   Uint8List? selectedImageBytes;
   String? selectedImageFileName;
   String selectedCategory = "Tablet";
+  String selectedPrescriptionStatus = "notSet";
 
   bool isUpdating = false;
 
@@ -60,6 +63,21 @@ class _EditMedicinePageState
     nameController = TextEditingController(
       text: widget.medicine["medicineName"]?.toString() ?? "",
     );
+
+    brandNameController = TextEditingController(
+      text: widget.medicine["brandName"]?.toString() ?? "",
+    );
+    genericNameController = TextEditingController(
+      text: widget.medicine["genericName"]?.toString() ?? "",
+    );
+    final savedPrescriptionStatus = widget.medicine["prescriptionRequired"];
+    if (savedPrescriptionStatus == true ||
+        savedPrescriptionStatus?.toString().toLowerCase() == "true") {
+      selectedPrescriptionStatus = "required";
+    } else if (savedPrescriptionStatus == false ||
+        savedPrescriptionStatus?.toString().toLowerCase() == "false") {
+      selectedPrescriptionStatus = "notRequired";
+    }
 
     // ----------------------------------------------------------
     // PRICE
@@ -128,6 +146,8 @@ class _EditMedicinePageState
   @override
   void dispose() {
     nameController.dispose();
+    brandNameController.dispose();
+    genericNameController.dispose();
     priceController.dispose();
     stockController.dispose();
     descriptionController.dispose();
@@ -375,6 +395,17 @@ class _EditMedicinePageState
         medicineName:
             medicineName,
 
+        brandName:
+            brandNameController.text.trim(),
+
+        genericName:
+            genericNameController.text.trim(),
+
+        prescriptionRequired:
+            selectedPrescriptionStatus == "notSet"
+                ? null
+                : selectedPrescriptionStatus == "required",
+
         category:
             selectedCategory,
 
@@ -593,6 +624,70 @@ class _EditMedicinePageState
               ),
 
               const SizedBox(height: 28),
+
+              sectionTitle("Brand Name"),
+
+              const SizedBox(height: 8),
+
+              TextField(
+                controller: brandNameController,
+                textInputAction: TextInputAction.next,
+                decoration: fieldDecoration(
+                  hint: "Enter brand name (optional)",
+                  icon: Icons.sell_outlined,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              sectionTitle("Generic Name"),
+
+              const SizedBox(height: 8),
+
+              TextField(
+                controller: genericNameController,
+                textInputAction: TextInputAction.next,
+                decoration: fieldDecoration(
+                  hint: "Enter generic name (optional)",
+                  icon: Icons.science_outlined,
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              sectionTitle("Prescription Status"),
+
+              const SizedBox(height: 8),
+
+              DropdownButtonFormField<String>(
+                initialValue: selectedPrescriptionStatus,
+                decoration: fieldDecoration(
+                  hint: "Select prescription status",
+                  icon: Icons.description_outlined,
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: "notSet",
+                    child: Text("Not specified"),
+                  ),
+                  DropdownMenuItem(
+                    value: "notRequired",
+                    child: Text("Prescription not required"),
+                  ),
+                  DropdownMenuItem(
+                    value: "required",
+                    child: Text("Prescription required"),
+                  ),
+                ],
+                onChanged: isUpdating
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        setState(() => selectedPrescriptionStatus = value);
+                      },
+              ),
+
+              const SizedBox(height: 24),
 
               // ==================================================
               // CATEGORY

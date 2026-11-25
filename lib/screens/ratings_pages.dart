@@ -23,6 +23,9 @@ String _shortDate(dynamic raw) {
   return "${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}";
 }
 
+String _reviewErrorMessage(Object error) =>
+    error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+
 class PatientReviewsPage extends StatefulWidget {
   const PatientReviewsPage({super.key});
 
@@ -49,7 +52,7 @@ class _PatientReviewsPageState extends State<PatientReviewsPage> {
       setState(() { reviews = items; loading = false; });
     } catch (e) {
       if (!mounted) return;
-      setState(() { loading = false; error = e.toString(); });
+      setState(() { loading = false; error = _reviewErrorMessage(e); });
     }
   }
 
@@ -248,7 +251,7 @@ class _ProviderRatingsTabPageState extends State<ProviderRatingsTabPage> {
       setState(() { data = value; loading = false; });
     } catch (e) {
       if (!mounted) return;
-      setState(() { error = e.toString(); loading = false; });
+      setState(() { error = _reviewErrorMessage(e); loading = false; });
     }
   }
 
@@ -367,7 +370,7 @@ class _PublicProviderReviewsPageState extends State<PublicProviderReviewsPage> {
       setState(() { data = value; loading = false; });
     } catch (e) {
       if (!mounted) return;
-      setState(() { error = e.toString(); loading = false; });
+      setState(() { error = _reviewErrorMessage(e); loading = false; });
     }
   }
 
