@@ -206,14 +206,14 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> loginUser({
+  static Future<Map<String, dynamic>> initiateLoginOtp({
     required String phone,
     required String password,
     required String role,
     String? termsAcceptanceToken,
   }) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/login"),
+      Uri.parse("$baseUrl/api/auth/login/initiate"),
       headers: {
         "Content-Type": "application/json",
       },
