@@ -157,6 +157,7 @@ String doctorName = "";
 String doctorPhone = "";
 String doctorEmergencyNumber = "";
 String doctorHospital = "";
+String doctorAddress = "";
 String doctorSpecialization = "";
 String doctorExperience = "";
 String doctorFees = "";
@@ -199,6 +200,8 @@ Future<void> loadDoctor() async {
 
     final prefs =
         await SharedPreferences.getInstance();
+
+    doctorAddress = prefs.getString("doctorAddress") ?? "";
 
     // ================= BASIC LOGIN DATA =================
 
@@ -290,6 +293,7 @@ Future<void> loadDoctor() async {
       doctorHospital =
           doctor["hospital"]?.toString() ??
           "";
+      doctorAddress = doctor["address"]?.toString() ?? "";
 
       doctorSpecialization =
           doctor["specialization"]?.toString() ??
@@ -359,6 +363,11 @@ Future<void> loadDoctor() async {
       await prefs.setString(
         "doctorHospital",
         doctorHospital,
+      );
+
+      await prefs.setString(
+        "doctorAddress",
+        doctorAddress,
       );
 
       await prefs.setString(
@@ -436,6 +445,7 @@ Future<void> loadDoctor() async {
         "";
     doctorEmergencyNumber =
         prefs.getString("doctorEmergencyNumber") ?? doctorPhone;
+    doctorAddress = prefs.getString("doctorAddress") ?? "";
 
   }
 
@@ -3379,6 +3389,7 @@ if (isVideo) {
                 'videoConsultationFee': doctorVideoConsultationFee,
                 'hospitalVisitFee': doctorHospitalVisitFee,
                 'hospital': doctorHospital,
+                'address': doctorAddress,
                 'about': doctorAbout,
               },
               onProfileUpdated: (profile) async {
@@ -3401,6 +3412,7 @@ if (isVideo) {
                   doctorFees = doctorHospitalVisitFee;
                   doctorHospital =
                       profile['hospital']?.toString() ?? doctorHospital;
+                  doctorAddress = profile['address']?.toString() ?? doctorAddress;
                   doctorAbout = profile['about']?.toString() ?? doctorAbout;
                 });
               },
@@ -3434,6 +3446,13 @@ if (isVideo) {
             doctorHospital,
 
           ),
+
+          if (doctorAddress.trim().isNotEmpty)
+            profileTile(
+              Icons.location_on_outlined,
+              "Hospital Address",
+              doctorAddress,
+            ),
 
           profileTile(
 

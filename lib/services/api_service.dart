@@ -614,6 +614,7 @@ class ApiService {
     required String hospitalVisitFee,
     required String hospital,
     required String about,
+    String? address,
     String? token, // accepted for compatibility; auth sent via header
   }) async {
     final Map<String, String> headers = {
@@ -634,6 +635,8 @@ class ApiService {
         "videoConsultationFee": videoConsultationFee,
         "hospitalVisitFee": hospitalVisitFee,
         "hospital": hospital,
+        if (address != null && address.trim().isNotEmpty)
+          "address": address.trim(),
         "about": about,
       }),
     );

@@ -22,6 +22,7 @@ class _DoctorProfileSetupState extends State<DoctorProfileSetup> {
   final videoConsultationFeeController = TextEditingController();
   final hospitalVisitFeeController = TextEditingController();
   final hospitalController = TextEditingController();
+  final hospitalAddressController = TextEditingController();
   final aboutController = TextEditingController();
 
   final licenseNumberController = TextEditingController();
@@ -103,6 +104,7 @@ final profileResult = await ApiService.addDoctor(
   videoConsultationFee: videoConsultationFeeController.text.trim(),
   hospitalVisitFee: hospitalVisitFeeController.text.trim(),
   hospital: hospitalController.text.trim(),
+  address: hospitalAddressController.text.trim(),
   about: aboutController.text.trim(),
 );
 
@@ -180,6 +182,11 @@ final profileResult = await ApiService.addDoctor(
       await prefs.setString(
         "doctorHospital",
         hospitalController.text.trim(),
+      );
+
+      await prefs.setString(
+        "doctorAddress",
+        hospitalAddressController.text.trim(),
       );
 
       await prefs.setString(
@@ -308,6 +315,7 @@ final profileResult = await ApiService.addDoctor(
     videoConsultationFeeController.dispose();
     hospitalVisitFeeController.dispose();
     hospitalController.dispose();
+    hospitalAddressController.dispose();
     aboutController.dispose();
     licenseNumberController.dispose();
     licenseTypeController.dispose();
@@ -405,6 +413,14 @@ final profileResult = await ApiService.addDoctor(
               hospitalController,
               "Hospital / Clinic Name",
               icon: Icons.local_hospital_outlined,
+            ),
+            const SizedBox(height: 14),
+
+            _field(
+              hospitalAddressController,
+              "Hospital / Clinic Address (optional)",
+              icon: Icons.location_on_outlined,
+              maxLines: 3,
             ),
             const SizedBox(height: 14),
 

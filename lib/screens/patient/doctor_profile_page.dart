@@ -35,6 +35,9 @@ class DoctorProfilePage extends StatelessWidget {
     final String hospital =
         doctor["hospital"]?.toString() ?? "N/A";
 
+    final String hospitalAddress =
+        doctor["address"]?.toString().trim() ?? "";
+
     final String videoConsultationFee =
         doctor["videoConsultationFee"]?.toString() ??
             doctor["fees"]?.toString() ??
@@ -177,6 +180,13 @@ class DoctorProfilePage extends StatelessWidget {
               "hospital".tr(),
               hospital,
             ),
+
+            if (hospitalAddress.isNotEmpty)
+              _infoTile(
+                Icons.location_on_outlined,
+                "address".tr(),
+                hospitalAddress,
+              ),
 
             // ====================================================
             // FEES

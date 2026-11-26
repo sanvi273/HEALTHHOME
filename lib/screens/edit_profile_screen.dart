@@ -120,6 +120,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           const _ProfileField(key: 'videoConsultationFee', label: 'Video consultation fee', isRequired: true, keyboardType: TextInputType.numberWithOptions(decimal: true)),
           const _ProfileField(key: 'hospitalVisitFee', label: 'Hospital visit fee', isRequired: true, keyboardType: TextInputType.numberWithOptions(decimal: true)),
           const _ProfileField(key: 'hospital', label: 'Hospital / clinic', isRequired: true),
+          const _ProfileField(key: 'address', label: 'Hospital / clinic address', maxLines: 3),
           const _ProfileField(key: 'about', label: 'About', maxLines: 4),
         ];
       case 'laboratory':
@@ -229,6 +230,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'videoConsultationFee',
           'hospitalVisitFee',
           'hospital',
+          'address',
           'about',
           'emergencyNumber',
         ]) {
