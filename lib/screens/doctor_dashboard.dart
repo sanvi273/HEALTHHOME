@@ -175,6 +175,10 @@ List<dynamic> pendingAppointments = [];
 List<dynamic> acceptedAppointments = [];
 
 List<dynamic> completedAppointments = [];
+
+List<Map<String, dynamic>> doctorPrescriptionTemplates = [];
+bool isLoadingDoctorPrescriptionTemplates = true;
+String? doctorPrescriptionTemplatesError;
   //==========================================
   // INIT
   //==========================================
@@ -188,6 +192,32 @@ List<dynamic> completedAppointments = [];
   Future<void> initialize() async {
     await loadDoctor();
     await loadAppointments();
+    loadDoctorPrescriptionTemplates();
+  }
+
+  Future<void> loadDoctorPrescriptionTemplates() async {
+    if (mounted) {
+      setState(() {
+        isLoadingDoctorPrescriptionTemplates = true;
+        doctorPrescriptionTemplatesError = null;
+      });
+    }
+
+    try {
+      final templates = await ApiService.getDoctorPrescriptionTemplates();
+      if (!mounted) return;
+      setState(() {
+        doctorPrescriptionTemplates = templates;
+        isLoadingDoctorPrescriptionTemplates = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        isLoadingDoctorPrescriptionTemplates = false;
+        doctorPrescriptionTemplatesError =
+            error.toString().replaceFirst("Exception: ", "");
+      });
+    }
   }
 
   //==========================================
@@ -823,6 +853,7 @@ Future<void> loadAppointments() async {
         ),
       );
 
+      if (mounted) loadDoctorPrescriptionTemplates();
       if (refresh == true && mounted) {
         await loadAppointments();
       }
@@ -2977,6 +3008,10 @@ if (isVideo) {
 
             const SizedBox(height: 25),
 
+            buildQuickPrescriptionTemplatesCard(),
+
+            const SizedBox(height: 18),
+
             if (completedAppointments.isEmpty)
 
               Container(
@@ -3280,6 +3315,7 @@ if (isVideo) {
     ),
   );
 
+  if (mounted) loadDoctorPrescriptionTemplates();
   if (refresh == true) {
     await loadAppointments();
   }
@@ -3302,6 +3338,10 @@ if (isVideo) {
 
               ),
 
+            const SizedBox(height: 8),
+
+            buildPrescriptionLibraryCard(),
+
           ],
 
         ),
@@ -3311,6 +3351,299 @@ if (isVideo) {
     );
 
   }
+
+  Widget buildQuickPrescriptionTemplatesCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 7, offset: Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.bolt_rounded, color: Color(0xff14B8A6)),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  "Quick Prescription Templates",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              TextButton(
+                onPressed: showPrescriptionTemplateLibrary,
+                child: const Text("View All  ›"),
+              ),
+            ],
+          ),
+          if (isLoadingDoctorPrescriptionTemplates)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (doctorPrescriptionTemplatesError != null)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    doctorPrescriptionTemplatesError!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                  ),
+                ),
+                TextButton(
+                  onPressed: loadDoctorPrescriptionTemplates,
+                  child: const Text("Retry"),
+                ),
+              ],
+            )
+          else if (doctorPrescriptionTemplates.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: Text(
+                "Save common prescriptions from a patient visit to see them here.",
+                style: TextStyle(color: Colors.black54),
+              ),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: doctorPrescriptionTemplates.take(4).map((template) {
+                  final name = template["name"]?.toString() ?? "Prescription";
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 9),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: 112,
+                        height: 118,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xffFAFCFD),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xffE8EEF0)),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: const Color(0xffE7F8F6),
+                              child: Icon(
+                                prescriptionTemplateIcon(name),
+                                color: const Color(0xff14B8A6),
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildPrescriptionLibraryCard() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 7, offset: Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.medical_services_outlined, color: Color(0xff14B8A6)),
+              const SizedBox(width: 9),
+              const Expanded(
+                child: Text(
+                  "Your Prescription Library",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              TextButton(
+                onPressed: showPrescriptionTemplateLibrary,
+                child: const Text("Manage  ›"),
+              ),
+            ],
+          ),
+          if (isLoadingDoctorPrescriptionTemplates)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (doctorPrescriptionTemplatesError != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                doctorPrescriptionTemplatesError!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
+            )
+          else if (doctorPrescriptionTemplates.isEmpty)
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(4, 4, 4, 8),
+                child: Text(
+                  "Reusable prescriptions you save will appear here.",
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ),
+            )
+          else
+            ...doctorPrescriptionTemplates.take(3).map((template) {
+              final name = template["name"]?.toString() ?? "Prescription";
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                leading: CircleAvatar(
+                  backgroundColor: const Color(0xffE7F8F6),
+                  child: Icon(
+                    prescriptionTemplateIcon(name),
+                    color: const Color(0xff14B8A6),
+                  ),
+                ),
+                title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text(
+                  prescriptionTemplateSummary(template),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  IconData prescriptionTemplateIcon(String name) {
+    final normalized = name.toLowerCase();
+    if (normalized.contains("cold") || normalized.contains("fever")) {
+      return Icons.ac_unit;
+    }
+    if (normalized.contains("acidity") || normalized.contains("stomach")) {
+      return Icons.sick_outlined;
+    }
+    if (normalized.contains("cough") || normalized.contains("breath")) {
+      return Icons.air;
+    }
+    if (normalized.contains("pain")) return Icons.healing;
+    return Icons.medical_services_outlined;
+  }
+
+  String prescriptionTemplateSummary(Map<String, dynamic> template) {
+    final medicines = template["medicines"] is List
+        ? (template["medicines"] as List)
+            .whereType<Map>()
+            .map((medicine) => medicine["medicine"]?.toString().trim() ?? "")
+            .where((name) => name.isNotEmpty)
+            .toList()
+        : <String>[];
+    if (medicines.isNotEmpty) return medicines.take(2).join(" + ");
+
+    final labTests = template["labTests"] is List
+        ? (template["labTests"] as List)
+            .whereType<Map>()
+            .map((test) => test["testName"]?.toString().trim() ?? "")
+            .where((name) => name.isNotEmpty)
+            .toList()
+        : <String>[];
+    if (labTests.isNotEmpty) return labTests.take(2).join(" + ");
+
+    final diagnosis = template["diagnosis"]?.toString().trim() ?? "";
+    if (diagnosis.isNotEmpty) return diagnosis;
+    final symptoms = template["symptoms"]?.toString().trim() ?? "";
+    if (symptoms.isNotEmpty) return symptoms;
+    return "Advice and notes";
+  }
+
+  void showPrescriptionTemplateLibrary() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Your Prescription Library"),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: MediaQuery.of(dialogContext).size.height * 0.5,
+          child: isLoadingDoctorPrescriptionTemplates
+              ? const Center(child: CircularProgressIndicator())
+              : doctorPrescriptionTemplatesError != null
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            doctorPrescriptionTemplatesError!,
+                            textAlign: TextAlign.center,
+                          ),
+                          TextButton.icon(
+                            onPressed: loadDoctorPrescriptionTemplates,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text("Retry"),
+                          ),
+                        ],
+                      ),
+                    )
+                  : doctorPrescriptionTemplates.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "No saved templates yet. Save one from a patient's Write Prescription form.",
+                            textAlign: TextAlign.center,
+                          ),
+                        )
+                      : ListView(
+                          children: doctorPrescriptionTemplates.map((template) {
+                            final name = template["name"]?.toString() ?? "Prescription";
+                            return ListTile(
+                              leading: Icon(
+                                prescriptionTemplateIcon(name),
+                                color: const Color(0xff14B8A6),
+                              ),
+                              title: Text(name),
+                              subtitle: Text(prescriptionTemplateSummary(template)),
+                            );
+                          }).toList(),
+                        ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text("Close"),
+          ),
+          if (doctorPrescriptionTemplatesError != null)
+            IconButton(
+              tooltip: "Refresh templates",
+              onPressed: loadDoctorPrescriptionTemplates,
+              icon: const Icon(Icons.refresh),
+            ),
+        ],
+      ),
+    );
+  }
+
     //==================================================
   // PROFILE PAGE
   //==================================================
