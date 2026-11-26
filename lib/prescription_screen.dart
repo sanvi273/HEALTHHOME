@@ -1096,12 +1096,6 @@ class _PrescriptionScreenState
 
             const SizedBox(height: 14),
 
-            buildPrescriptionTemplateSection(),
-
-            const SizedBox(
-              height: 18,
-            ),
-
             buildTextCard(
               controller:
                   symptomsController,
@@ -1145,6 +1139,12 @@ class _PrescriptionScreenState
                   Icons.notes_outlined,
               maxLines: 5,
             ),
+
+            const SizedBox(
+              height: 18,
+            ),
+
+            buildPrescriptionTemplateSection(),
 
             const SizedBox(
               height: 22,
