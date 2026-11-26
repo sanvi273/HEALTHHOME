@@ -147,10 +147,8 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> registerUser({
+    required String idToken,
     required String name,
-    required String email,
-    required String password,
-    required String phone,
     required String role,
     required String label,
     required String fullAddress,
@@ -169,10 +167,8 @@ class ApiService {
           "Content-Type": "application/json",
         },
         body: jsonEncode({
+          "idToken": idToken,
           "name": name,
-          "email": email,
-          "password": password,
-          "phone": phone,
           "role": role,
           "label": label,
           "fullAddress": fullAddress,
@@ -186,12 +182,6 @@ class ApiService {
             "termsAcceptanceToken": termsAcceptanceToken,
         }),
       );
-
-      debugPrint("================================");
-      debugPrint("REGISTER USER");
-      debugPrint("STATUS = ${response.statusCode}");
-      debugPrint("BODY = ${response.body}");
-      debugPrint("================================");
 
       return Map<String, dynamic>.from(
         jsonDecode(response.body),
@@ -207,8 +197,7 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> loginUser({
-    required String phone,
-    required String password,
+    required String idToken,
     required String role,
     String? termsAcceptanceToken,
   }) async {
@@ -218,8 +207,7 @@ class ApiService {
         "Content-Type": "application/json",
       },
       body: jsonEncode({
-        "phone": phone,
-        "password": password,
+        "idToken": idToken,
         "role": role.trim().toLowerCase() == "lab"
             ? "laboratory"
             : role.trim().toLowerCase(),

@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'services/api_service.dart';
 import 'services/incoming_call_service.dart';
+import 'services/phone_auth_service.dart';
 import 'terms_acceptance_screen.dart';
 
 import 'screens/onboarding_screen.dart';
@@ -40,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final TextEditingController phoneController = TextEditingController();
 
-  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController otpController = TextEditingController();
 
   final TextEditingController nameController = TextEditingController();
 
@@ -68,6 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLogin = true;
 
   bool isLoading = false;
+  bool isCompletingPhoneVerification = false;
+  PhoneOtpChallenge? phoneOtpChallenge;
+  int? otpResendToken;
+  int otpRequestGeneration = 0;
+  String? otpPhoneNumber;
+  String? verifiedFirebaseIdToken;
+  String? verifiedPhoneNumber;
 
   // ================= DISPOSE =================
 
@@ -75,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     phoneController.dispose();
 
-    passwordController.dispose();
+    otpController.dispose();
 
     nameController.dispose();
 
@@ -162,9 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     GestureDetector(
                       onTap: () {
-                        setState(() {
-                          isLogin = true;
-                        });
+                    _setLoginMode(true);
                       },
                       child: Column(
                         children: [
@@ -344,18 +353,41 @@ class _LoginScreenState extends State<LoginScreen> {
                   hint: "mobileNumber".tr(),
                   icon: Icons.phone,
                   keyboardType: TextInputType.phone,
+                  onChanged: _handlePhoneChanged,
                 ),
 
-                // =================================================
-                // ================= PASSWORD ======================
-                // =================================================
-
-                buildField(
-                  controller: passwordController,
-                  hint: "password".tr(),
-                  icon: Icons.lock,
-                  obscure: true,
-                ),
+                if (phoneOtpChallenge != null && verifiedFirebaseIdToken == null) ...[
+                  buildField(
+                    controller: otpController,
+                    hint: "enterOtp".tr(),
+                    icon: Icons.sms_outlined,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                  ),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: isLoading ? null : _resendOtp,
+                        child: Text("resendOtp".tr()),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: isLoading ? null : _clearPhoneVerification,
+                        child: Text("changePhone".tr()),
+                      ),
+                    ],
+                  ),
+                ],
+                if (phoneOtpChallenge != null || verifiedFirebaseIdToken != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Text(
+                      "otpSentTo".tr(namedArgs: {
+                        "phone": otpPhoneNumber ?? verifiedPhoneNumber ?? "",
+                      }),
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ),
 
                 const SizedBox(height: 30),
 
@@ -393,7 +425,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           )
                         : Text(
-                            isLogin ? "login".tr() : "signUp".tr(),
+                            _buttonLabel.tr(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 20,
@@ -415,9 +447,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Center(
                     child: GestureDetector(
                       onTap: () {
-                        setState(() {
-                          isLogin = !isLogin;
-                        });
+                        _setLoginMode(!isLogin);
                       },
                       child: RichText(
                         text: TextSpan(
@@ -457,87 +487,215 @@ class _LoginScreenState extends State<LoginScreen> {
   // ====================== HANDLE SUBMIT ====================
   // =========================================================
 
-  Future<void> handleSubmit() async {
-    // ================= PHONE VALIDATION =================
-
-    final phone = phoneController.text.trim();
-
-    final password = passwordController.text.trim();
-
-    final validPhone = RegExp(r'^[6-9]\d{9}$').hasMatch(phone) ||
-        RegExp(r'^\+?[1-9]\d{7,14}$')
-            .hasMatch(phone.replaceAll(RegExp(r'[\s()-]'), ''));
-    if (!validPhone) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "validMobileNumber".tr(),
-          ),
-        ),
-      );
-
-      return;
+  String get _buttonLabel {
+    final currentPhone = _toE164Phone(phoneController.text);
+    if (verifiedFirebaseIdToken != null &&
+        currentPhone != null &&
+        currentPhone == verifiedPhoneNumber) {
+      return isLogin ? "continue" : "signUp";
     }
+    return phoneOtpChallenge == null ? "sendOtp" : "verifyOtp";
+  }
 
-    // ================= PASSWORD VALIDATION =================
-
-    if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "passwordMinimum".tr(),
-          ),
-        ),
-      );
-
-      return;
+  String? _toE164Phone(String rawPhone) {
+    final trimmed = rawPhone.trim();
+    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+    if (RegExp(r'^[6-9]\d{9}$').hasMatch(digits)) return '+91$digits';
+    if (RegExp(r'^91[6-9]\d{9}$').hasMatch(digits)) return '+$digits';
+    if (digits.length < 8 || digits.length > 15 || digits.startsWith('0')) {
+      return null;
     }
+    return '+$digits';
+  }
 
+  void _handlePhoneChanged(String value) {
+    final normalizedPhone = _toE164Phone(value);
+    if ((otpPhoneNumber != null && otpPhoneNumber != normalizedPhone) ||
+        (verifiedPhoneNumber != null && verifiedPhoneNumber != normalizedPhone)) {
+      _clearPhoneVerification();
+    }
+  }
+
+  void _setLoginMode(bool value) {
+    if (isLogin == value) return;
+    otpRequestGeneration++;
     setState(() {
+      isLogin = value;
+      phoneOtpChallenge = null;
+      otpResendToken = null;
+      otpPhoneNumber = null;
+      verifiedFirebaseIdToken = null;
+      verifiedPhoneNumber = null;
+      otpController.clear();
+    });
+  }
+
+  void _clearPhoneVerification() {
+    otpRequestGeneration++;
+    setState(() {
+      phoneOtpChallenge = null;
+      otpResendToken = null;
+      otpPhoneNumber = null;
+      verifiedFirebaseIdToken = null;
+      verifiedPhoneNumber = null;
+      otpController.clear();
+    });
+  }
+
+  Future<void> _requestOtp(String e164Phone, {bool resend = false}) async {
+    final generation = ++otpRequestGeneration;
+    try {
+      final challenge = await PhoneAuthService.sendCode(
+        e164Phone,
+        forceResendingToken: resend ? otpResendToken : null,
+        onAutoVerified: (credential) {
+          unawaited(_completeAutomatically(credential, e164Phone, generation));
+        },
+      );
+      if (!mounted || generation != otpRequestGeneration) return;
+      setState(() {
+        phoneOtpChallenge = challenge;
+        otpPhoneNumber = e164Phone;
+        otpResendToken = challenge.resendToken ?? otpResendToken;
+        otpController.clear();
+      });
+    } catch (error) {
+      _showAuthError(error);
+    }
+  }
+
+  Future<void> _resendOtp() async {
+    final e164Phone = _toE164Phone(phoneController.text);
+    if (e164Phone == null) return;
+    setState(() => isLoading = true);
+    try {
+      await _requestOtp(e164Phone, resend: true);
+    } finally {
+      if (mounted && !isCompletingPhoneVerification) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _completeAutomatically(
+    PhoneAuthCredential credential,
+    String e164Phone,
+    int generation,
+  ) async {
+    if (!mounted || generation != otpRequestGeneration || isCompletingPhoneVerification) {
+      return;
+    }
+    setState(() {
+      isCompletingPhoneVerification = true;
       isLoading = true;
     });
+    try {
+      final credentialResult = await PhoneAuthService.signInAutomatically(credential);
+      await _acceptVerifiedCredential(credentialResult, e164Phone, generation);
+    } catch (error) {
+      _showAuthError(error);
+    } finally {
+      isCompletingPhoneVerification = false;
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _acceptVerifiedCredential(
+    UserCredential credential,
+    String e164Phone,
+    int generation,
+  ) async {
+    if (!mounted || generation != otpRequestGeneration) return;
+    final user = credential.user;
+    final idToken = await user?.getIdToken(true);
+    if (!mounted) return;
+    if (idToken == null || idToken.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'phone-auth-token-missing',
+        message: 'Could not create a verified phone session. Please try again.',
+      );
+    }
+
+    otpRequestGeneration++;
+    setState(() {
+      verifiedFirebaseIdToken = idToken;
+      verifiedPhoneNumber = e164Phone;
+      otpPhoneNumber = e164Phone;
+      phoneOtpChallenge = null;
+      otpResendToken = null;
+      otpController.clear();
+    });
+    await _submitVerifiedPhone(e164Phone, idToken);
+  }
+
+  Future<void> _submitVerifiedPhone(String e164Phone, String idToken) async {
+    final inputPhone = phoneController.text.trim();
+    if (isLogin) {
+      await handleLogin(inputPhone.isEmpty ? e164Phone : inputPhone, idToken);
+    } else {
+      await handleSignUp(inputPhone.isEmpty ? e164Phone : inputPhone, idToken);
+    }
+  }
+
+  void _showAuthError(Object error) {
+    if (!mounted) return;
+    String message = error.toString();
+    if (error is FirebaseAuthException) {
+      message = switch (error.code) {
+        'invalid-phone-number' => 'Enter a valid phone number.',
+        'invalid-verification-code' => 'The OTP is incorrect. Check the code and try again.',
+        'session-expired' => 'The OTP expired. Request a new code.',
+        'too-many-requests' => 'Too many OTP attempts. Please wait and try again.',
+        'quota-exceeded' => 'SMS quota is unavailable. Please try again later.',
+        'network-request-failed' => 'Check your internet connection and try again.',
+        'app-not-authorized' => 'Phone sign-in is not configured for this app in Firebase.',
+        'phone-auth-unsupported-platform' =>
+          'Phone OTP is available in the mobile app and web browser.',
+        _ => error.message ?? 'Phone verification failed. Please try again.',
+      };
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> handleSubmit() async {
+    final phone = phoneController.text.trim();
+    final e164Phone = _toE164Phone(phone);
+    if (e164Phone == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("validMobileNumber".tr())),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
 
     try {
-      // =====================================================
-      // ======================= LOGIN ========================
-      // =====================================================
-
-      if (isLogin) {
-        await handleLogin(
-          phone,
-          password,
-        );
+      if (verifiedFirebaseIdToken != null && verifiedPhoneNumber == e164Phone) {
+        await _submitVerifiedPhone(e164Phone, verifiedFirebaseIdToken!);
+      } else if (phoneOtpChallenge == null || otpPhoneNumber != e164Phone) {
+        await _requestOtp(e164Phone);
+      } else {
+        final code = otpController.text.trim();
+        if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("enterOtp".tr())),
+          );
+          return;
+        }
+        final generation = otpRequestGeneration;
+        isCompletingPhoneVerification = true;
+        try {
+          final result = await PhoneAuthService.confirmCode(phoneOtpChallenge!, code);
+          await _acceptVerifiedCredential(result, e164Phone, generation);
+        } finally {
+          isCompletingPhoneVerification = false;
+        }
       }
-
-      // =====================================================
-      // ====================== SIGN UP =======================
-      // =====================================================
-
-      else {
-        await handleSignUp(
-          phone,
-          password,
-        );
-      }
-    } catch (e) {
-      debugPrint(
-        "SUBMIT ERROR = $e",
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString(),
-          ),
-        ),
-      );
+    } catch (error) {
+      _showAuthError(error);
     } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+      if (mounted && !isCompletingPhoneVerification) {
+        setState(() => isLoading = false);
       }
     }
   }
@@ -548,13 +706,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> handleLogin(
     String phone,
-    String password, {
+    String firebaseIdToken, {
     bool retryAfterTerms = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final response = await ApiService.loginUser(
-      phone: phone,
-      password: password,
+      idToken: retryAfterTerms
+          ? await PhoneAuthService.currentIdToken()
+          : firebaseIdToken,
       role: widget.role,
       termsAcceptanceToken:
           prefs.getString('termsAcceptanceToken_${widget.role.toLowerCase()}'),
@@ -581,9 +740,27 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
         final accepted = await _openCurrentTerms();
         if (accepted && mounted) {
-          await handleLogin(phone, password, retryAfterTerms: true);
+          await handleLogin(phone, firebaseIdToken, retryAfterTerms: true);
         }
         return;
+      }
+
+      if (response['code'] == 'ACCOUNT_NOT_FOUND') {
+        setState(() {
+          isLogin = false;
+          phoneOtpChallenge = null;
+          otpResendToken = null;
+          verifiedFirebaseIdToken = firebaseIdToken;
+          verifiedPhoneNumber = otpPhoneNumber ?? _toE164Phone(phone);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Phone verified. Complete your details to create an account.')),
+        );
+        return;
+      }
+
+      if (response['code'] == 'FIREBASE_ID_TOKEN_INVALID') {
+        _clearPhoneVerification();
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1267,7 +1444,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> handleSignUp(
     String phone,
-    String password, {
+    String firebaseIdToken, {
     bool retryAfterTerms = false,
   }) async {
     final name = nameController.text.trim();
@@ -1321,10 +1498,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     final initiation = await ApiService.registerUser(
+      idToken: retryAfterTerms
+          ? await PhoneAuthService.currentIdToken()
+          : firebaseIdToken,
       name: name,
-      email: "$phone@gmail.com",
-      password: password,
-      phone: phone,
       role: widget.role.toLowerCase(),
       label: selectedAddressLabel,
       fullAddress: fullAddressController.text.trim(),
@@ -1358,14 +1535,18 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
         final accepted = await _openCurrentTerms();
         if (accepted && mounted) {
-          await handleSignUp(phone, password, retryAfterTerms: true);
+          await handleSignUp(phone, firebaseIdToken, retryAfterTerms: true);
         }
         return;
       }
 
-      final errorMessage = initiation['code'] == 'OTP_PROVIDER_UNAVAILABLE'
-          ? 'Sign-up is being updated. Please try again shortly.'
-          : initiation['message']?.toString() ?? 'Registration failed';
+      if (initiation['code'] == 'ACCOUNT_ALREADY_EXISTS') {
+        setState(() => isLogin = true);
+      }
+      if (initiation['code'] == 'FIREBASE_ID_TOKEN_INVALID') {
+        _clearPhoneVerification();
+      }
+      final errorMessage = initiation['message']?.toString() ?? 'Registration failed';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -1386,54 +1567,52 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // The server has linked this one-time acceptance to the new account.
-    // Keep the device from reusing the token for a different account later.
     await _clearSavedTermsAcceptance(prefs);
-
-    // ================= SAVE BASIC STATE =================
-
-    await prefs.setBool(
-      "profileCompleted_$phone",
-      false,
-    );
-
-    if (!mounted) return;
-
     final roleKey = widget.role.trim().toLowerCase();
     final isProfessional =
         ["doctor", "laboratory", "lab", "pharmacy"].contains(roleKey);
-    if (isProfessional) {
-      final user = initiation["user"] is Map
-          ? Map<String, dynamic>.from(initiation["user"] as Map)
-          : <String, dynamic>{};
-      final token = initiation["token"]?.toString().trim() ?? "";
-      if (token.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Account created. Sign in to continue your verification.",
-            ),
-          ),
-        );
-        setState(() {
-          isLogin = true;
-          passwordController.clear();
-        });
-        return;
+    final user = initiation["user"] is Map
+        ? Map<String, dynamic>.from(initiation["user"] as Map)
+        : <String, dynamic>{};
+    final token = initiation["token"]?.toString().trim() ?? "";
+    if (token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Account created, but sign-in could not be completed. Please try again.")),
+      );
+      return;
+    }
+
+    final storedRole = roleKey == "lab" ? "laboratory" : roleKey;
+    final userName = user["name"]?.toString() ?? name;
+    final userPhone = user["phone"]?.toString() ?? phone;
+    await prefs.setString("token", token);
+    await prefs.setBool("isLoggedIn", true);
+    await prefs.setString("userName", userName);
+    await prefs.setString("userPhone", userPhone);
+    await prefs.setString("userRole", storedRole);
+    await prefs.setBool("profileCompleted_$userPhone", false);
+
+    if (storedRole == "patient") {
+      await prefs.setString("patientName", userName);
+      await prefs.setString("patientPhone", userPhone);
+    }
+    await IncomingCallService.registerCurrentDevice();
+    try {
+      final oneSignalId = OneSignal.User.pushSubscription.id;
+      if (oneSignalId != null) {
+        await ApiService.updateOneSignalId(phone: userPhone, oneSignalId: oneSignalId);
       }
+    } catch (error) {
+      debugPrint("ONESIGNAL REGISTRATION ERROR = $error");
+    }
 
-      await prefs.setString("token", token);
-      await prefs.setBool("isLoggedIn", true);
-      await prefs.setString("userName", user["name"]?.toString() ?? name);
-      await prefs.setString("userPhone", user["phone"]?.toString() ?? phone);
-      await prefs.setString("userRole", roleKey == "lab" ? "laboratory" : roleKey);
-
-      if (!mounted) return;
+    if (!mounted) return;
+    if (isProfessional) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => ProfessionalVerificationScreen(
-            role: roleKey == "lab" ? "laboratory" : roleKey,
+            role: storedRole,
           ),
         ),
       );
@@ -1441,20 +1620,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          initiation['message']?.toString() ?? "Account Created Successfully",
-        ),
-      ),
+      SnackBar(content: Text(initiation['message']?.toString() ?? "Account Created Successfully")),
     );
-
-    // Switch to login screen.
-
-    setState(() {
-      isLogin = true;
-
-      passwordController.clear();
-    });
+    await navigateAfterLogin(storedRole, userPhone);
   }
 
   Future<bool> _openCurrentTerms() async {
@@ -1612,6 +1780,8 @@ class _LoginScreenState extends State<LoginScreen> {
     required IconData icon,
     bool obscure = false,
     TextInputType keyboardType = TextInputType.text,
+    int? maxLength,
+    ValueChanged<String>? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.only(
@@ -1621,6 +1791,8 @@ class _LoginScreenState extends State<LoginScreen> {
         controller: controller,
         obscureText: obscure,
         keyboardType: keyboardType,
+        maxLength: maxLength,
+        onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hint,
           prefixIcon: Icon(

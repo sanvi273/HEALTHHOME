@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../login_screen.dart';
 import '../../services/api_service.dart';
 import '../../services/incoming_call_service.dart';
+import '../../services/phone_auth_service.dart';
 import '../payment/payment_history_page.dart';
 import '../../widgets/help_support_card.dart';
 import '../../widgets/profile_image.dart';
@@ -629,6 +630,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   final prefs =
                       await SharedPreferences
                           .getInstance();
+
+                  await PhoneAuthService.signOut();
 
                   await IncomingCallService.unregisterCurrentDevice();
                   await prefs.setBool(

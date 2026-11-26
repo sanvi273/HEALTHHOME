@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_service.dart';
 import '../services/incoming_call_service.dart';
+import '../services/phone_auth_service.dart';
 import '../services/telegram/AgoraVideoCallPage.dart';
 import '../models/patient_report.dart';
 import '../widgets/help_support_card.dart';
@@ -4165,6 +4166,8 @@ Future<void> logout() async {
 
   final prefs =
       await SharedPreferences.getInstance();
+
+  await PhoneAuthService.signOut();
 
   // ==========================================
   // CLEAR ONLY LOGIN SESSION

@@ -13,6 +13,7 @@ import 'screens/doctor_dashboard.dart';
 import 'role_selection_screen.dart';
 import 'services/api_service.dart';
 import 'services/incoming_call_service.dart';
+import 'services/phone_auth_service.dart';
 
 class ProfessionalVerificationScreen extends StatefulWidget {
   final String role;
@@ -494,6 +495,8 @@ class _ProfessionalVerificationScreenState
   Future<void> logout() async {
     final prefs =
         await SharedPreferences.getInstance();
+
+    await PhoneAuthService.signOut();
 
     await IncomingCallService.unregisterCurrentDevice();
     await prefs.remove("token");

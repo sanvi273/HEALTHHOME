@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../services/api_service.dart';
+import '../../services/phone_auth_service.dart';
 import '../../role_selection_screen.dart';
 import 'admin_analytics_page.dart';
 
@@ -383,6 +384,8 @@ Future<void> _reject(dynamic item) async {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      await PhoneAuthService.signOut();
 
       // Remove authentication/session values without clearing app preferences
       // such as language or theme.
