@@ -86,7 +86,6 @@ dependencies:
   url_launcher: ^6.3.2
   app_links: ^7.0.0
   tdlib_ex: ^0.43.0
-  sendotp_flutter_sdk: ^0.0.2
 
 dev_dependencies:
   flutter_test:

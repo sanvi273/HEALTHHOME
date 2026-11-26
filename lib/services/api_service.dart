@@ -206,14 +206,14 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> initiateLoginOtp({
+  static Future<Map<String, dynamic>> loginUser({
     required String phone,
     required String password,
     required String role,
     String? termsAcceptanceToken,
   }) async {
     final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/login/initiate"),
+      Uri.parse("$baseUrl/api/auth/login"),
       headers: {
         "Content-Type": "application/json",
       },
@@ -228,52 +228,6 @@ class ApiService {
       }),
     );
 
-    return Map<String, dynamic>.from(jsonDecode(response.body));
-  }
-
-  static Future<Map<String, dynamic>> verifyLoginOtp({
-    required String challengeId,
-    required String otp,
-    String? accessToken,
-  }) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/login/verify"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "challengeId": challengeId,
-        "otp": otp,
-        if (accessToken != null) "accessToken": accessToken
-      }),
-    );
-    return Map<String, dynamic>.from(jsonDecode(response.body));
-  }
-
-  static Future<Map<String, dynamic>> resendLoginOtp({
-    required String challengeId,
-    String purpose = "login",
-  }) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/otp/resend"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"challengeId": challengeId, "purpose": purpose}),
-    );
-    return Map<String, dynamic>.from(jsonDecode(response.body));
-  }
-
-  static Future<Map<String, dynamic>> verifyRegistrationOtp({
-    required String challengeId,
-    required String otp,
-    String? accessToken,
-  }) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/api/auth/register/verify"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "challengeId": challengeId,
-        "otp": otp,
-        if (accessToken != null) "accessToken": accessToken
-      }),
-    );
     return Map<String, dynamic>.from(jsonDecode(response.body));
   }
 

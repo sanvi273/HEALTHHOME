@@ -7,7 +7,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'services/api_service.dart';
 import 'services/incoming_call_service.dart';
 import 'terms_acceptance_screen.dart';
-import 'otp_verification_screen.dart';
 
 import 'screens/onboarding_screen.dart';
 
@@ -553,7 +552,7 @@ class _LoginScreenState extends State<LoginScreen> {
     bool retryAfterTerms = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final initiation = await ApiService.initiateLoginOtp(
+    final response = await ApiService.loginUser(
       phone: phone,
       password: password,
       role: widget.role,
@@ -563,9 +562,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     // ================= LOGIN FAILED =================
 
-    if (initiation["success"] != true) {
+    if (response["success"] != true) {
       if (!mounted) return;
-      if (initiation['code'] == 'TERMS_ACCEPTANCE_REQUIRED' &&
+      if (response['code'] == 'TERMS_ACCEPTANCE_REQUIRED' &&
           widget.role.toLowerCase() != 'admin') {
         if (retryAfterTerms) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -590,7 +589,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            initiation["message"]?.toString() ?? "loginFailed".tr(),
+            response["message"]?.toString() ?? "loginFailed".tr(),
           ),
         ),
       );
@@ -598,30 +597,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    final challengeId = initiation['challengeId']?.toString() ?? '';
-    final requestId = initiation['requestId']?.toString() ?? '';
-    if (challengeId.isEmpty || requestId.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to start phone verification. Please try again.'),
-        ),
-      );
-      return;
-    }
-
     if (!mounted) return;
-    final response = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OtpVerificationScreen(
-          phone: phone,
-          challengeId: challengeId,
-          requestId: requestId,
-        ),
-      ),
-    );
-    if (!mounted || response == null) return;
 
     // ================= GET USER DATA =================
 

@@ -48,11 +48,6 @@ String labName = "";
 
 String labPhone = "";
 
-  // ============================================================
-  // MSG91 WIDGET STATE
-  // ============================================================
-
-
 Future<void> loadLab() async {
   try {
     SharedPreferences prefs =
@@ -517,8 +512,7 @@ List<Map<String, dynamic>> rejected = [];
 // ============================================================
 // COLLECTION OTP
 // ============================================================
-// OTP is generated and sent by the backend through MSG91.
-// This Flutter screen does NOT use the MSG91 Widget SDK.
+// OTP generation and verification are handled by the backend.
 // ============================================================
 
 @override
@@ -1921,8 +1915,6 @@ if (status == "collector assigned") {
 // -> Collector enters patient's OTP -> Backend verifies hash
 // -> Sample Collected
 //
-// IMPORTANT:
-// This flow does NOT use MSG91 or OTPWidget.
 // ============================================================
 
 Future<void> _startCollectionOtpFlow(
