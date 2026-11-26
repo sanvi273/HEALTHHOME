@@ -13,6 +13,7 @@ import '../widgets/profile_image.dart';
 import 'edit_profile_screen.dart';
 import 'onboarding_screen.dart';
 import '../prescription_screen.dart';
+import 'doctor/doctor_prescription_template_editor.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class DoctorDashboard extends StatefulWidget {
@@ -217,6 +218,18 @@ String? doctorPrescriptionTemplatesError;
         doctorPrescriptionTemplatesError =
             error.toString().replaceFirst("Exception: ", "");
       });
+    }
+  }
+
+  Future<void> addDoctorPrescriptionTemplate() async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const DoctorPrescriptionTemplateEditor(),
+      ),
+    );
+    if (saved == true && mounted) {
+      await loadDoctorPrescriptionTemplates();
     }
   }
 
@@ -3377,8 +3390,20 @@ if (isVideo) {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
+              IconButton(
+                tooltip: "Add medicine template",
+                onPressed: addDoctorPrescriptionTemplate,
+                icon: const Icon(Icons.add_circle_outline),
+                color: const Color(0xff14B8A6),
+                visualDensity: VisualDensity.compact,
+              ),
               TextButton(
                 onPressed: showPrescriptionTemplateLibrary,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
                 child: const Text("View All  ›"),
               ),
             ],
@@ -3422,7 +3447,7 @@ if (isVideo) {
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         width: 112,
-                        height: 118,
+                        height: 132,
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: const Color(0xffFAFCFD),
