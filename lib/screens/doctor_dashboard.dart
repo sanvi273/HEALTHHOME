@@ -233,6 +233,72 @@ String? doctorPrescriptionTemplatesError;
     }
   }
 
+  Future<void> editDoctorPrescriptionTemplate(
+    Map<String, dynamic> template,
+    BuildContext libraryContext,
+  ) async {
+    Navigator.pop(libraryContext);
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DoctorPrescriptionTemplateEditor(
+          initialTemplate: template,
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      await loadDoctorPrescriptionTemplates();
+    }
+  }
+
+  Future<void> deleteSavedPrescriptionTemplate(
+    Map<String, dynamic> template,
+    BuildContext libraryContext,
+  ) async {
+    final templateId = template['_id']?.toString() ?? '';
+    if (templateId.isEmpty) return;
+
+    final shouldDelete = await showDialog<bool>(
+      context: libraryContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete template?'),
+        content: Text(
+          'Delete "${template['name'] ?? 'this template'}" from your prescription library?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true) return;
+
+    try {
+      await ApiService.deleteDoctorPrescriptionTemplate(templateId);
+      if (!mounted) return;
+      Navigator.pop(libraryContext);
+      await loadDoctorPrescriptionTemplates();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prescription template deleted.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
+  }
+
   //==========================================
   // LOAD DOCTOR
   //==========================================
@@ -3643,12 +3709,46 @@ if (isVideo) {
                           children: doctorPrescriptionTemplates.map((template) {
                             final name = template["name"]?.toString() ?? "Prescription";
                             return ListTile(
+                              dense: true,
                               leading: Icon(
                                 prescriptionTemplateIcon(name),
                                 color: const Color(0xff14B8A6),
                               ),
-                              title: Text(name),
-                              subtitle: Text(prescriptionTemplateSummary(template)),
+                              title: Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                prescriptionTemplateSummary(template),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: Wrap(
+                                spacing: 0,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Edit template',
+                                    onPressed: () => editDoctorPrescriptionTemplate(
+                                      template,
+                                      dialogContext,
+                                    ),
+                                    icon: const Icon(Icons.edit_outlined),
+                                    color: const Color(0xff0D9488),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Delete template',
+                                    onPressed: () => deleteSavedPrescriptionTemplate(
+                                      template,
+                                      dialogContext,
+                                    ),
+                                    icon: const Icon(Icons.delete_outline),
+                                    color: Colors.redAccent,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ],
+                              ),
                             );
                           }).toList(),
                         ),

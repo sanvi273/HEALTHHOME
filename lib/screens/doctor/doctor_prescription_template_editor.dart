@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 
 class DoctorPrescriptionTemplateEditor extends StatefulWidget {
-  const DoctorPrescriptionTemplateEditor({super.key});
+  const DoctorPrescriptionTemplateEditor({
+    super.key,
+    this.initialTemplate,
+  });
+
+  final Map<String, dynamic>? initialTemplate;
 
   @override
   State<DoctorPrescriptionTemplateEditor> createState() =>
@@ -16,8 +21,25 @@ class _DoctorPrescriptionTemplateEditorState
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final List<_TemplateMedicineDraft> _medicines = [_TemplateMedicineDraft()];
+  late final List<_TemplateMedicineDraft> _medicines;
   bool _isSaving = false;
+
+  bool get _isEditing => widget.initialTemplate != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final template = widget.initialTemplate;
+    _nameController.text = template?['name']?.toString() ?? '';
+    final savedMedicines = template?['medicines'];
+    _medicines = savedMedicines is List
+        ? savedMedicines
+            .whereType<Map>()
+            .map(_TemplateMedicineDraft.fromMap)
+            .toList()
+        : <_TemplateMedicineDraft>[];
+    if (_medicines.isEmpty) _medicines.add(_TemplateMedicineDraft());
+  }
 
   @override
   void dispose() {
@@ -47,23 +69,36 @@ class _DoctorPrescriptionTemplateEditorState
 
     setState(() => _isSaving = true);
     try {
-      final response = await ApiService.createDoctorPrescriptionTemplate(
-        template: {
-          'name': _nameController.text.trim(),
-          'medicines': _medicines
-              .map((medicine) => {
-                    'medicine': medicine.name.text.trim(),
-                    'dose': medicine.dose.text.trim(),
-                    'duration': medicine.duration.text.trim(),
-                    'food': medicine.food,
-                    'instruction': medicine.instruction.text.trim(),
-                    'morning': medicine.morning,
-                    'afternoon': medicine.afternoon,
-                    'night': medicine.night,
-                  })
-              .toList(),
-        },
-      );
+      final templateData = <String, dynamic>{
+        'name': _nameController.text.trim(),
+        'medicines': _medicines
+            .map((medicine) => {
+                  'medicine': medicine.name.text.trim(),
+                  'dose': medicine.dose.text.trim(),
+                  'duration': medicine.duration.text.trim(),
+                  'food': medicine.food,
+                  'instruction': medicine.instruction.text.trim(),
+                  'morning': medicine.morning,
+                  'afternoon': medicine.afternoon,
+                  'night': medicine.night,
+                })
+            .toList(),
+      };
+      for (final field in const ['symptoms', 'diagnosis', 'advice', 'labTests']) {
+        if (widget.initialTemplate?.containsKey(field) == true) {
+          templateData[field] = widget.initialTemplate![field];
+        }
+      }
+
+      final templateId = widget.initialTemplate?['_id']?.toString();
+      final response = _isEditing && templateId != null
+          ? await ApiService.updateDoctorPrescriptionTemplate(
+              templateId: templateId,
+              template: templateData,
+            )
+          : await ApiService.createDoctorPrescriptionTemplate(
+              template: templateData,
+            );
       if (response['success'] != true) {
         throw Exception(response['message'] ?? 'Unable to save template.');
       }
@@ -214,7 +249,7 @@ class _DoctorPrescriptionTemplateEditorState
     return Scaffold(
       backgroundColor: const Color(0xffF4F7FB),
       appBar: AppBar(
-        title: const Text('Add Medicine Template'),
+        title: Text(_isEditing ? 'Edit Medicine Template' : 'Add Medicine Template'),
         backgroundColor: _accent,
         foregroundColor: Colors.white,
       ),
@@ -263,7 +298,13 @@ class _DoctorPrescriptionTemplateEditorState
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.save_outlined),
-                label: Text(_isSaving ? 'Saving template…' : 'Save template'),
+                label: Text(
+                  _isSaving
+                      ? 'Saving template…'
+                      : _isEditing
+                          ? 'Save changes'
+                          : 'Save template',
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -275,14 +316,29 @@ class _DoctorPrescriptionTemplateEditorState
 }
 
 class _TemplateMedicineDraft {
-  final name = TextEditingController();
-  final dose = TextEditingController();
-  final duration = TextEditingController();
-  final instruction = TextEditingController();
-  bool morning = true;
-  bool afternoon = false;
-  bool night = true;
-  String food = 'After Food';
+  _TemplateMedicineDraft([Map? initial])
+      : name = TextEditingController(text: initial?['medicine']?.toString() ?? ''),
+        dose = TextEditingController(text: initial?['dose']?.toString() ?? ''),
+        duration = TextEditingController(text: initial?['duration']?.toString() ?? ''),
+        instruction = TextEditingController(text: initial?['instruction']?.toString() ?? ''),
+        morning = initial == null ? true : initial['morning'] == true,
+        afternoon = initial?['afternoon'] == true,
+        night = initial == null ? true : initial['night'] == true,
+        food = initial?['food']?.toString() == 'Before Food'
+            ? 'Before Food'
+            : 'After Food';
+
+  factory _TemplateMedicineDraft.fromMap(Map initial) =>
+      _TemplateMedicineDraft(initial);
+
+  final TextEditingController name;
+  final TextEditingController dose;
+  final TextEditingController duration;
+  final TextEditingController instruction;
+  bool morning;
+  bool afternoon;
+  bool night;
+  String food;
 
   void dispose() {
     name.dispose();

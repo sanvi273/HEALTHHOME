@@ -2987,6 +2987,26 @@ class ApiService {
     return data;
   }
 
+  static Future<Map<String, dynamic>> updateDoctorPrescriptionTemplate({
+    required String templateId,
+    required Map<String, dynamic> template,
+  }) async {
+    final response = await http.put(
+      Uri.parse(
+        "$baseUrl/api/prescriptions/templates/${Uri.encodeComponent(templateId)}",
+      ),
+      headers: await _getAuthHeaders(),
+      body: jsonEncode(template),
+    );
+    final data = Map<String, dynamic>.from(jsonDecode(response.body));
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        data["success"] != true) {
+      throw Exception(data["message"] ?? "Unable to update prescription template.");
+    }
+    return data;
+  }
+
   static Future<void> deleteDoctorPrescriptionTemplate(String templateId) async {
     final response = await http.delete(
       Uri.parse("$baseUrl/api/prescriptions/templates/${Uri.encodeComponent(templateId)}"),
