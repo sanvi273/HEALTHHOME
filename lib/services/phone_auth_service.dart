@@ -20,14 +20,32 @@ class PhoneOtpChallenge {
 class PhoneAuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Log only Firebase error codes/messages. Never log ID tokens, verification
+  // IDs, or phone numbers here.
+  static void _logError(String phase, Object error) {
+    if (error is FirebaseAuthException) {
+      debugPrint(
+        'PHONE AUTH $phase FAILED code=${error.code} message=${error.message}',
+      );
+      return;
+    }
+    debugPrint('PHONE AUTH $phase FAILED error=$error');
+  }
+
   static Future<PhoneOtpChallenge> sendCode(
     String e164Phone, {
     int? forceResendingToken,
     void Function(PhoneAuthCredential credential)? onAutoVerified,
   }) async {
     if (kIsWeb) {
-      final confirmation = await _auth.signInWithPhoneNumber(e164Phone);
-      return PhoneOtpChallenge(webConfirmation: confirmation);
+      try {
+        final confirmation = await _auth.signInWithPhoneNumber(e164Phone);
+        debugPrint('PHONE AUTH REQUEST/WEB SUCCEEDED');
+        return PhoneOtpChallenge(webConfirmation: confirmation);
+      } catch (error) {
+        _logError('REQUEST/WEB', error);
+        rethrow;
+      }
     }
     if (defaultTargetPlatform != TargetPlatform.android &&
         defaultTargetPlatform != TargetPlatform.iOS) {
@@ -45,9 +63,11 @@ class PhoneAuthService {
         onAutoVerified?.call(credential);
       },
       verificationFailed: (error) {
+        _logError('REQUEST/NATIVE', error);
         if (!result.isCompleted) result.completeError(error);
       },
       codeSent: (verificationId, resendToken) {
+        debugPrint('PHONE AUTH REQUEST/NATIVE SUCCEEDED');
         if (!result.isCompleted) {
           result.complete(PhoneOtpChallenge(
             verificationId: verificationId,
@@ -75,29 +95,45 @@ class PhoneAuthService {
     PhoneOtpChallenge challenge,
     String smsCode,
   ) async {
-    if (challenge.webConfirmation != null) {
-      return challenge.webConfirmation!.confirm(smsCode);
-    }
+    try {
+      if (challenge.webConfirmation != null) {
+        final result = await challenge.webConfirmation!.confirm(smsCode);
+        debugPrint('PHONE AUTH VERIFY/WEB SUCCEEDED');
+        return result;
+      }
 
-    final verificationId = challenge.verificationId;
-    if (verificationId == null || verificationId.isEmpty) {
-      throw FirebaseAuthException(
-        code: 'missing-verification-id',
-        message: 'Request a new OTP before verifying.',
+      final verificationId = challenge.verificationId;
+      if (verificationId == null || verificationId.isEmpty) {
+        throw FirebaseAuthException(
+          code: 'missing-verification-id',
+          message: 'Request a new OTP before verifying.',
+        );
+      }
+
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
       );
+      final result = await _auth.signInWithCredential(credential);
+      debugPrint('PHONE AUTH VERIFY/NATIVE SUCCEEDED');
+      return result;
+    } catch (error) {
+      _logError('VERIFY', error);
+      rethrow;
     }
-
-    final credential = PhoneAuthProvider.credential(
-      verificationId: verificationId,
-      smsCode: smsCode,
-    );
-    return _auth.signInWithCredential(credential);
   }
 
   static Future<UserCredential> signInAutomatically(
     PhoneAuthCredential credential,
-  ) {
-    return _auth.signInWithCredential(credential);
+  ) async {
+    try {
+      final result = await _auth.signInWithCredential(credential);
+      debugPrint('PHONE AUTH VERIFY/AUTO SUCCEEDED');
+      return result;
+    } catch (error) {
+      _logError('VERIFY/AUTO', error);
+      rethrow;
+    }
   }
 
   static Future<String> currentIdToken() async {

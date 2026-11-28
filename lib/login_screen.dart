@@ -641,6 +641,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     String message = error.toString();
     if (error is FirebaseAuthException) {
+      // Keep the exact Firebase code visible in logs. It distinguishes quota,
+      // region-policy, reCAPTCHA/domain, and Android app-verification failures.
+      debugPrint(
+        'PHONE AUTH UI ERROR code=${error.code} message=${error.message}',
+      );
+      final firebaseMessage = error.message?.trim() ?? '';
       message = switch (error.code) {
         'invalid-phone-number' => 'Enter a valid phone number.',
         'invalid-verification-code' => 'The OTP is incorrect. Check the code and try again.',
@@ -649,10 +655,18 @@ class _LoginScreenState extends State<LoginScreen> {
         'quota-exceeded' => 'SMS quota is unavailable. Please try again later.',
         'network-request-failed' => 'Check your internet connection and try again.',
         'app-not-authorized' => 'Phone sign-in is not configured for this app in Firebase.',
+        'operation-not-allowed' => 'Phone sign-in is disabled in Firebase Authentication.',
+        'captcha-check-failed' => 'reCAPTCHA verification failed. Please try again.',
+        'web-context-cancelled' => 'reCAPTCHA was closed before verification. Please try again.',
+        'invalid-app-credential' => 'Firebase app verification failed. Check web authorized domains or Android SHA fingerprints.',
         'phone-auth-unsupported-platform' =>
           'Phone OTP is available in the mobile app and web browser.',
-        _ => error.message ?? 'Phone verification failed. Please try again.',
+        _ => firebaseMessage.isNotEmpty
+            ? '$firebaseMessage (${error.code})'
+            : 'Phone verification failed (${error.code}).',
       };
+    } else {
+      debugPrint('PHONE AUTH UI ERROR error=$error');
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
